@@ -91,9 +91,10 @@ public static class Utils
 	/// <param name="filePath">An optional file path to attach to the message</param>
 	public static async Task SendEphemeralResponse(this CommandContext context, string message, string? filePath = null)
 	{
-		DiscordInteractionResponseBuilder interactionResponseBuilder = new DiscordInteractionResponseBuilder()
-			.WithContent(message)
-			.AsEphemeral(true);
+		DiscordInteractionResponseBuilder interactionResponseBuilder = new DiscordInteractionResponseBuilder() //
+			.WithContent(message) //
+			.AsEphemeral() //
+			.SuppressEmbeds();
 		if (filePath is not null)
 		{
 			FileStream fileStream = new(filePath, FileMode.Open);
