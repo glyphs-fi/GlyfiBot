@@ -36,10 +36,8 @@ public class SelectRangeCommand
 
 		List<DiscordMessage> messages = await GetMessagesBetween(channel, start, end);
 
-		StringBuilder sb = new();
-		sb.Append($"Selected messages: {messages.Count}\n\n");
-
-		uint caughtMessages = 0;
+		uint submissionMessageCount = 0;
+		Dictionary<DiscordUser, List<string>> submissions = [];
 		foreach(DiscordMessage message in messages)
 		{
 			if (message.Attachments.Count == 0) continue;
@@ -50,27 +48,45 @@ public class SelectRangeCommand
 
 				await foreach(DiscordUser user in message.GetReactionsAsync(emoji))
 				{
-					if (user == message.Author)
+					if (user != message.Author) continue;
+
+					submissionMessageCount++;
+					foreach(DiscordAttachment attachment in message.Attachments)
 					{
-						caughtMessages++;
-						foreach(DiscordAttachment attachment in message.Attachments)
+						if (attachment.Url is null) continue;
+
+						if (submissions.TryGetValue(message.Author, out List<string>? urls))
 						{
-							sb.Append($"- {attachment.Url}\n");
+							urls.Add(attachment.Url);
+						}
+						else
+						{
+							submissions.Add(message.Author, [attachment.Url]);
 						}
 					}
 				}
 			}
 		}
 
-		sb.Append($"\nCaught messages: {caughtMessages}");
+		StringBuilder sb = new();
+		sb.Append($"Selected messages: {messages.Count}\n");
+		sb.Append($"Found submission messages: {submissionMessageCount}\n");
+
+		long submissionsCount = submissions.Aggregate(0, (current, keyValuePair) => current + keyValuePair.Value.Count);
+		sb.Append($"Found total submissions: {submissionsCount}\n");
+
+		sb.Append('\n');
+		foreach((DiscordUser author, List<string> urls) in submissions)
+		{
+			sb.Append($"- {author.Mention}\n");
+			foreach(string url in urls)
+			{
+				sb.Append($"\t- {url}\n");
+			}
+		}
+
 		string total = sb.ToString();
 		Console.WriteLine(total);
-
-		if (string.IsNullOrWhiteSpace(total))
-		{
-			await context.SendEphemeralResponse("No results found!");
-			return;
-		}
 
 		await context.SendEphemeralResponse(total);
 	}
