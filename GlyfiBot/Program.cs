@@ -10,7 +10,9 @@ namespace GlyfiBot;
 
 static internal class Program
 {
-	private const string EMOJI_FILE = "emoji.json";
+	private const string DATA_DIR = "data";
+	private const string EMOJI_FILE = $"{DATA_DIR}/emoji.json";
+	public const string SELECTIONS_DIR = $"{DATA_DIR}/selections";
 
 	private static DiscordEmoji? _theEmojiBacking = null;
 
@@ -39,6 +41,9 @@ static internal class Program
 			Console.WriteLine("Error: No discord token found. Please provide a token via the GLYFI_TOKEN environment variable.");
 			Environment.Exit(1);
 		}
+
+		Directory.CreateDirectory(DATA_DIR);
+		Directory.CreateDirectory(SELECTIONS_DIR);
 
 		DiscordClientBuilder clientBuilder = DiscordClientBuilder.CreateDefault(token, SlashCommandProcessor.RequiredIntents);
 

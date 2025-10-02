@@ -88,11 +88,17 @@ public static class Utils
 	/// </summary>
 	/// <param name="context">The <see cref="CommandContext"/></param>
 	/// <param name="message">The contents of the message</param>
-	public static async Task SendEphemeralResponse(this CommandContext context, string message)
+	/// <param name="filePath">An optional file path to attach to the message</param>
+	public static async Task SendEphemeralResponse(this CommandContext context, string message, string? filePath = null)
 	{
-		DiscordInteractionResponseBuilder interactionResponseBuilder = new();
-		interactionResponseBuilder.Content = message;
-		interactionResponseBuilder.IsEphemeral = true;
+		DiscordInteractionResponseBuilder interactionResponseBuilder = new DiscordInteractionResponseBuilder()
+			.WithContent(message)
+			.AsEphemeral(true);
+		if (filePath is not null)
+		{
+			FileStream fileStream = new(filePath, FileMode.Open);
+			interactionResponseBuilder = interactionResponseBuilder.AddFile(Path.GetFileName(filePath), fileStream);
+		}
 		await context.RespondAsync(interactionResponseBuilder);
 	}
 }
