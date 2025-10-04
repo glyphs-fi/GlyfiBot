@@ -6,10 +6,11 @@ The goal of this project is to encourage very collaborative development on this 
 
 ## Current functionality:
 
+- `/emoji`: See the currently set emoji that marks something as a submission.
 - `/select`: Provide the IDs of two messages in the channel between where to look for submissions.  
   Submissions will be collected and provided in one message, for extra easy downloading!
-- `/set`: Set the emoji which to look for.
-- `/get`: See the currently set emoji.
+- `/set-emoji`: Set the emoji that will mark something as a submission.
+- `/set-role`: Set the role that can run the `/select` and `/set-emoji` commands.
 
 ## Tech Stack
 

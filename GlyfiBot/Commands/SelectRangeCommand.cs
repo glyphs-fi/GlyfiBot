@@ -2,7 +2,9 @@ using DSharpPlus.Commands;
 using DSharpPlus.Commands.Processors.SlashCommands;
 using DSharpPlus.Entities;
 using DSharpPlus.Exceptions;
+using GlyfiBot.CommandAttributes;
 using JetBrains.Annotations;
+using System.ComponentModel;
 using System.IO.Compression;
 using System.Text;
 using static GlyfiBot.Utils;
@@ -14,13 +16,15 @@ public class SelectRangeCommand
 	private record AttachmentFile(string DownloadUrl, string FileName);
 
 	[Command("select")]
+	[Description("Select messages to look through for submissions")]
+	[HasTheRole]
 	[UsedImplicitly]
 	public static async ValueTask ExecuteAsync(SlashCommandContext context, ulong start, ulong end)
 	{
-		DiscordEmoji? emoji = Program.TheEmoji;
+		DiscordEmoji? emoji = SetTheEmojiCommand.TheEmoji;
 		if (emoji is null)
 		{
-			await context.SendEphemeralResponse("Emoji has not been set! Use `/set` to set the emoji first");
+			await context.SendEphemeralResponse("Emoji has not been set! Use `/set-emoji` to set the emoji first");
 			return;
 		}
 

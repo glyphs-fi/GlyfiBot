@@ -102,4 +102,26 @@ public static class Utils
 		}
 		await context.RespondAsync(interactionResponseBuilder);
 	}
+
+	/// <summary>
+	/// Whether a specific member has a role or not.<br/>
+	/// Includes extra handling for @everyone.
+	/// </summary>
+	/// <param name="member">The member to check</param>
+	/// <param name="role">The role to check</param>
+	/// <returns></returns>
+	public static bool HasRole(this DiscordMember? member, DiscordRole? role)
+	{
+		//if there is no member, no roles can be had
+		if (member is null) return false;
+
+		//if there is no role, member can't have it
+		if (role is null) return false;
+
+		//role is everyone; of course member has that
+		if (role == member.Guild.EveryoneRole) return true;
+
+		//member has role
+		return member.Roles.Contains(role);
+	}
 }
