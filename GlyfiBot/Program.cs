@@ -53,6 +53,12 @@ static internal class Program
 
 		await client.ConnectAsync(status, DiscordUserStatus.Online);
 
+		if (client.Guilds.Count > 1)
+		{
+			Console.WriteLine("Error: The bot is in multiple Discord Servers. This is not supported.");
+			Environment.Exit(1);
+		}
+
 		await Task.Delay(-1);
 	}
 }
