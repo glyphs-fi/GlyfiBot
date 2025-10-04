@@ -49,7 +49,9 @@ static internal class Program
 		});
 		DiscordClient client = clientBuilder.Build();
 
-		DiscordActivity status = new("the Glyph Challenge", DiscordActivityType.Competing);
+		string[] challenges = ["Glyph", "Ambigram"];
+		string whichChallenge = challenges[new Random().Next(0, challenges.Length)];
+		DiscordActivity status = new($"the {whichChallenge} Challenge", DiscordActivityType.Competing);
 
 		await client.ConnectAsync(status, DiscordUserStatus.Online);
 
