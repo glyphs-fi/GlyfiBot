@@ -76,7 +76,10 @@ public class SelectRangeCommand
 
 	private static async Task<string> DownloadAttachments(DiscordInteraction interaction, Dictionary<DiscordUser, List<AttachmentFile>> submissions, StringBuilder sb)
 	{
-		string submissionPath = Path.Join(Program.SELECTIONS_DIR, interaction.Id.ToString());
+		string channelPath = Path.Join(Program.SELECTIONS_DIR, interaction.ChannelId.ToString());
+		Directory.CreateDirectory(channelPath);
+
+		string submissionPath = Path.Join(channelPath, interaction.Id.ToString());
 		Directory.CreateDirectory(submissionPath);
 
 		using HttpClient client = new();
