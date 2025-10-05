@@ -3,7 +3,6 @@ using DSharpPlus.Commands;
 using DSharpPlus.Commands.Processors.SlashCommands;
 using DSharpPlus.Commands.Processors.SlashCommands.InteractionNamingPolicies;
 using DSharpPlus.Entities;
-using GlyfiBot.CommandAttributes;
 using GlyfiBot.Commands;
 
 namespace GlyfiBot;
@@ -28,7 +27,6 @@ static internal class Program
 		Directory.CreateDirectory(SETTINGS_DIR);
 
 		SetTheEmojiCommand.Load();
-		SetTheRoleCommand.Load();
 
 		DiscordClientBuilder clientBuilder = DiscordClientBuilder.CreateDefault(token, SlashCommandProcessor.RequiredIntents);
 
@@ -39,12 +37,10 @@ static internal class Program
 				NamingPolicy = new KebabCaseNamingPolicy(),
 			});
 			extension.AddProcessor(slashCommandProcessor);
-			extension.AddCheck<HasTheRoleCheck>();
 			extension.AddCommands([
 				typeof(SelectRangeCommand),
 				typeof(SetTheEmojiCommand),
 				typeof(GetEmojiCommand),
-				typeof(SetTheRoleCommand),
 			]);
 		});
 		DiscordClient client = clientBuilder.Build();

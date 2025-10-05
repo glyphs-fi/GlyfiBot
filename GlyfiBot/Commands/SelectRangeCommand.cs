@@ -1,8 +1,8 @@
 using DSharpPlus.Commands;
+using DSharpPlus.Commands.ContextChecks;
 using DSharpPlus.Commands.Processors.SlashCommands;
 using DSharpPlus.Entities;
 using DSharpPlus.Exceptions;
-using GlyfiBot.CommandAttributes;
 using JetBrains.Annotations;
 using System.ComponentModel;
 using System.IO.Compression;
@@ -17,7 +17,7 @@ public class SelectRangeCommand
 
 	[Command("select")]
 	[Description("Select messages to look through for submissions")]
-	[HasTheRole]
+	[RequirePermissions([], [DiscordPermission.Administrator])]
 	[UsedImplicitly]
 	public static async ValueTask ExecuteAsync(SlashCommandContext context, ulong start, ulong end)
 	{

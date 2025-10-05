@@ -2,7 +2,6 @@ using DSharpPlus.Commands;
 using DSharpPlus.Commands.Processors.SlashCommands;
 using JetBrains.Annotations;
 using System.ComponentModel;
-using System.Text;
 
 namespace GlyfiBot.Commands;
 
@@ -15,11 +14,7 @@ public class GetEmojiCommand
 	{
 		if (SetTheEmojiCommand.TheEmoji is null)
 		{
-			StringBuilder sb = new("Emoji has not been set!");
-			sb.Append(context.Member.HasRole(SetTheRoleCommand.TheRole)
-				? " Use `/set-emoji` to set the emoji before using `/select`."
-				: " Contact an administrator.");
-			await context.SendEphemeralResponse(sb.ToString());
+			await context.SendEphemeralResponse("Emoji has not been set!");
 		}
 		else
 		{

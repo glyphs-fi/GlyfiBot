@@ -1,9 +1,11 @@
 using DSharpPlus.Commands;
 using DSharpPlus.Entities;
 using DSharpPlus.Exceptions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace GlyfiBot;
 
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public static class Utils
 {
 	public static T? TryParseOrFallback<T>(this string? input, T? fallback) where T : IParsable<T>
@@ -15,14 +17,15 @@ public static class Utils
 
 	/// <summary>
 	/// Gets all messages between two message IDs.
-	/// <br/><br/>
-	/// Before using this function, you should verify that both <c><see cref="start"/></c> and <c><see cref="end"/></c>
-	/// are in the same channel with <see cref="GetMessage"/> and that they are in the correct order.
 	/// </summary>
 	/// <param name="channel"><see cref="DiscordChannel"/> in which to look for the messages</param>
-	/// <param name="start"></param>
-	/// <param name="end"></param>
-	/// <returns></returns>
+	/// <param name="start">ID of the message where to start getting (inclusive)</param>
+	/// <param name="end">ID of the message where to end getting (inclusive)</param>
+	/// <returns>A <see cref="List{T}"/> of <see cref="DiscordMessage"/>s</returns>
+	/// <remarks>
+	/// Before using this function, you should verify that both <c><see cref="start"/></c> and <c><see cref="end"/></c>
+	/// are in the same channel with <see cref="GetMessage"/> and that they are in the correct order.
+	/// </remarks>
 	public static async Task<List<DiscordMessage>> GetMessagesBetween(DiscordChannel channel, ulong start, ulong end)
 	{
 		// List<DiscordMessage> messages = [await channel.GetMessageAsync(start)]; //start with the first one, because `GetMessagesAfterAsync` does not include the first one

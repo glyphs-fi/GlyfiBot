@@ -1,8 +1,8 @@
 using DSharpPlus.Commands;
+using DSharpPlus.Commands.ContextChecks;
 using DSharpPlus.Commands.Processors.SlashCommands;
 using DSharpPlus.Entities;
 using DSharpPlus.Net.Serialization;
-using GlyfiBot.CommandAttributes;
 using JetBrains.Annotations;
 using Newtonsoft.Json.Linq;
 using System.ComponentModel;
@@ -46,9 +46,10 @@ public class SetTheEmojiCommand
 			Console.WriteLine("Emoji has not been set.");
 		}
 	}
+
 	[Command("set-emoji")]
 	[Description("Set the emoji that will mark something as a submission")]
-	[HasTheRole] //May need to be changed to only Administrators if issues arise. Remember to then also change the check in GetEmojiCommand
+	[RequirePermissions([], [DiscordPermission.Administrator])]
 	[UsedImplicitly]
 	public static async ValueTask EmojiAsync(SlashCommandContext context,
 		[Description("Type a `:` and then the rest of the emoji. Let the autocomplete guide you!")]
