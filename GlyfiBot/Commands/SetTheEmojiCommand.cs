@@ -4,7 +4,7 @@ using DSharpPlus.Commands.Processors.SlashCommands;
 using DSharpPlus.Entities;
 using DSharpPlus.Net.Serialization;
 using JetBrains.Annotations;
-using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using System.ComponentModel;
 
 namespace GlyfiBot.Commands;
@@ -36,9 +36,7 @@ public class SetTheEmojiCommand
 	{
 		if (File.Exists(EMOJI_FILE))
 		{
-			string jsonString = File.ReadAllText(EMOJI_FILE);
-			JToken jToken = JToken.Parse(jsonString);
-			TheEmoji = jToken.ToDiscordObject<DiscordEmoji>();
+			TheEmoji = JsonConvert.DeserializeObject<DiscordEmoji>(File.ReadAllText(EMOJI_FILE));
 			Console.WriteLine($"Loaded emoji to {TheEmoji}");
 		}
 		else
