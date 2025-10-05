@@ -33,6 +33,14 @@ In here, choose each the command you wish to assign a role to, and then click **
 
 </details>
 
+## Running
+
+1. Create a new Bot in the Discord Developer Panel
+2. Clone this repository
+3. Build it
+4. Set the `GLYFI_TOKEN` environment variable to your token
+5. Run it
+
 ## Tech Stack
 
 For the Programming Language, I chose [C#](https://dotnet.microsoft.com/en-us/languages/csharp), because it is relatively accessible for any programmer.
