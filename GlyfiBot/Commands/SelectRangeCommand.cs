@@ -13,13 +13,19 @@ namespace GlyfiBot.Commands;
 
 public class SelectRangeCommand
 {
+	public enum DownloadType
+	{
+		Raw,
+		Flat,
+	}
+
 	private record AttachmentFile(string DownloadUrl, string FileName);
 
 	[Command("select")]
 	[Description("Select messages to look through for submissions")]
 	[RequirePermissions([], [DiscordPermission.Administrator])]
 	[UsedImplicitly]
-	public static async ValueTask ExecuteAsync(SlashCommandContext context, ulong start, ulong end)
+	public static async ValueTask ExecuteAsync(SlashCommandContext context, ulong start, ulong end, DownloadType downloadType = DownloadType.Flat)
 	{
 		DiscordEmoji? emoji = SetTheEmojiCommand.TheEmoji;
 		if (emoji is null)
@@ -56,9 +62,15 @@ public class SelectRangeCommand
 		if (submissionsCount > 0)
 		{
 			sb.AppendLine();
-			string submissionPath = await DownloadAttachments(context.Interaction, submissions, sb);
-			submissionArchivePath = Path.Join(Path.GetDirectoryName(submissionPath), Path.GetFileName(submissionPath) + ".zip");
-			ZipFile.CreateFromDirectory(submissionPath, submissionArchivePath, CompressionLevel.SmallestSize, includeBaseDirectory: true);
+			string directoryToArchive = await DownloadAttachments(context.Interaction, submissions, sb, downloadType);
+			submissionArchivePath = Path.Join(Path.GetDirectoryName(directoryToArchive), $"{context.Interaction.Id}_{Path.GetFileName(directoryToArchive)}.zip");
+			bool includeBaseDirectory = downloadType switch
+			{
+				DownloadType.Raw => true,
+				DownloadType.Flat => false,
+				_ => throw new ArgumentOutOfRangeException(nameof(downloadType), downloadType, null),
+			};
+			ZipFile.CreateFromDirectory(directoryToArchive, submissionArchivePath, CompressionLevel.SmallestSize, includeBaseDirectory);
 		}
 
 		string total = sb.ToString();
@@ -74,7 +86,7 @@ public class SelectRangeCommand
 		}
 	}
 
-	private static async Task<string> DownloadAttachments(DiscordInteraction interaction, Dictionary<DiscordUser, List<AttachmentFile>> submissions, StringBuilder sb)
+	private static async Task<string> DownloadAttachments(DiscordInteraction interaction, Dictionary<DiscordUser, List<AttachmentFile>> submissions, StringBuilder sb, DownloadType downloadType)
 	{
 		string channelPath = Path.Join(Program.SELECTIONS_DIR, interaction.ChannelId.ToString());
 		Directory.CreateDirectory(channelPath);
@@ -82,15 +94,25 @@ public class SelectRangeCommand
 		string submissionPath = Path.Join(channelPath, interaction.Id.ToString());
 		Directory.CreateDirectory(submissionPath);
 
+		string rawPath = Path.Join(submissionPath, "raw");
+		Directory.CreateDirectory(rawPath);
+
+		string flatPath = Path.Join(submissionPath, "flat");
+		if (downloadType == DownloadType.Flat)
+		{
+			Directory.CreateDirectory(flatPath);
+		}
+
 		using HttpClient client = new();
 		foreach((DiscordUser author, List<AttachmentFile> attachmentFiles) in submissions)
 		{
 			sb.AppendLine($"- {author.Mention}");
-			string submissionUserPath = Path.Join(submissionPath, author.Id.ToString());
+			string submissionUserPath = Path.Join(rawPath, author.Id.ToString());
 			Directory.CreateDirectory(submissionUserPath);
 			uint antiDuplicateCounter = 0;
-			foreach(AttachmentFile attachmentFile in attachmentFiles)
+			for(int i = 0; i < attachmentFiles.Count; i++)
 			{
+				AttachmentFile attachmentFile = attachmentFiles[i];
 				sb.AppendLine($"  - {attachmentFile.DownloadUrl}");
 				string path = CreateDownloadFilePath();
 				if (File.Exists(path))
@@ -99,9 +121,17 @@ public class SelectRangeCommand
 					path = CreateDownloadFilePath();
 				}
 
-				await using Stream networkStream = await client.GetStreamAsync(attachmentFile.DownloadUrl);
-				await using FileStream fileStream = new(path, FileMode.CreateNew);
-				await networkStream.CopyToAsync(fileStream);
+				{
+					await using Stream networkStream = await client.GetStreamAsync(attachmentFile.DownloadUrl);
+					await using FileStream fileStream = new(path, FileMode.CreateNew);
+					await networkStream.CopyToAsync(fileStream);
+				}
+
+				if (downloadType == DownloadType.Flat)
+				{
+					string flatFilename = author.Username + (attachmentFiles.Count > 1 ? $"_{i}" : "") + Path.GetExtension(path);
+					File.Copy(path, Path.Join(flatPath, flatFilename));
+				}
 				continue;
 
 				string CreateDownloadFilePath() => antiDuplicateCounter == 0
@@ -110,7 +140,12 @@ public class SelectRangeCommand
 			}
 		}
 
-		return submissionPath;
+		return downloadType switch
+		{
+			DownloadType.Raw => rawPath,
+			DownloadType.Flat => flatPath,
+			_ => throw new ArgumentOutOfRangeException(nameof(downloadType), downloadType, null),
+		};
 	}
 
 	private static async Task<(Dictionary<DiscordUser, List<AttachmentFile>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessages(List<DiscordMessage> messages, DiscordEmoji emoji)
