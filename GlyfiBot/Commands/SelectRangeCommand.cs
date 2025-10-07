@@ -157,28 +157,25 @@ public class SelectRangeCommand
 		{
 			if (message.Attachments.Count == 0) continue;
 
-			foreach(DiscordReaction reaction in message.Reactions)
+			if (!message.HasBeenReactedToWith(emoji)) continue;
+
+			await foreach(DiscordUser user in message.GetReactionsAsync(emoji))
 			{
-				if (reaction.Emoji != emoji) continue;
+				if (user != message.Author) continue;
 
-				await foreach(DiscordUser user in message.GetReactionsAsync(emoji))
+				submissionMessageCount++;
+				foreach(DiscordAttachment attachment in message.Attachments)
 				{
-					if (user != message.Author) continue;
+					if (attachment.Url is null) continue;
 
-					submissionMessageCount++;
-					foreach(DiscordAttachment attachment in message.Attachments)
+					AttachmentFile attachmentFile = new(attachment.Url, attachment.FileName ?? attachment.Id.ToString());
+					if (submissions.TryGetValue(message.Author, out List<AttachmentFile>? attachmentFiles))
 					{
-						if (attachment.Url is null) continue;
-
-						AttachmentFile attachmentFile = new(attachment.Url, attachment.FileName ?? attachment.Id.ToString());
-						if (submissions.TryGetValue(message.Author, out List<AttachmentFile>? attachmentFiles))
-						{
-							attachmentFiles.Add(attachmentFile);
-						}
-						else
-						{
-							submissions.Add(message.Author, [attachmentFile]);
-						}
+						attachmentFiles.Add(attachmentFile);
+					}
+					else
+					{
+						submissions.Add(message.Author, [attachmentFile]);
 					}
 				}
 			}

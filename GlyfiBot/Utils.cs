@@ -138,4 +138,25 @@ public static class Utils
 		//member has role
 		return member.Roles.Contains(role);
 	}
+
+	/// <summary>
+	/// Whether a specific message has been reacted to with this specific emoji.
+	/// </summary>
+	///
+	/// <param name="message">The message</param>
+	/// <param name="emoji">The emoji</param>
+	///
+	/// <returns>Whether it's happened or not</returns>
+	public static bool HasBeenReactedToWith(this DiscordMessage message, DiscordEmoji emoji)
+	{
+		foreach(DiscordReaction reaction in message.Reactions)
+		{
+			if (reaction.Emoji == emoji)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
 }
