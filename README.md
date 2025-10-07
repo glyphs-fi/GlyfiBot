@@ -45,4 +45,4 @@ In here, choose each the command you wish to assign a role to, and then click **
 
 For the Programming Language, I chose [C#](https://dotnet.microsoft.com/en-us/languages/csharp), because it is relatively accessible for any programmer.
 
-For the Discord Library, I chose [DSharpPlus](https://github.com/DSharpPlus/DSharpPlus), because it looked pretty good.
+For the Discord Library, I chose [Netcord](https://github.com/NetCordDev/NetCord), because it looked pretty good.
