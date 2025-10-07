@@ -1,55 +1,41 @@
-using DSharpPlus.Commands;
-using DSharpPlus.Entities;
-using DSharpPlus.Exceptions;
+using NetCord;
+using NetCord.Gateway;
+using NetCord.Rest;
+using NetCord.Services.ApplicationCommands;
+using NetCord.Services.Commands;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Text;
 
 namespace GlyfiBot;
 
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 public static class Utils
 {
-	public static T? TryParseOrFallback<T>(this string? input, T? fallback) where T : IParsable<T>
-	{
-		return T.TryParse(input, null, out T? result)
-			? result
-			: fallback;
-	}
-
 	/// <summary>
 	/// Gets all messages between two message IDs.
 	/// </summary>
 	///
-	/// <param name="channel"><see cref="DiscordChannel"/> in which to look for the messages</param>
+	/// <param name="context"><see cref="SlashCommandContext"/> in which to look for the messages</param>
 	/// <param name="start">ID of the message where to start getting (inclusive)</param>
 	/// <param name="end">ID of the message where to end getting (inclusive)</param>
 	///
-	/// <returns>A <see cref="List{T}"/> of <see cref="DiscordMessage"/>s</returns>
+	/// <returns>A <see cref="List{T}"/> of <see cref="RestMessage"/>s</returns>
 	///
 	/// <remarks>
 	/// Before using this function, you should verify that both <c><see cref="start"/></c> and <c><see cref="end"/></c>
 	/// are in the same channel with <see cref="GetMessageAsync"/> and that they are in the correct order.
 	/// </remarks>
-	public static async Task<List<DiscordMessage>> GetMessagesBetweenAsync(DiscordChannel channel, ulong start, ulong end)
+	public static async Task<List<RestMessage>> GetMessagesBetweenAsync(SlashCommandContext context, ulong start, ulong end)
 	{
-		// List<DiscordMessage> messages = [await channel.GetMessageAsync(start)]; //start with the first one, because `GetMessagesAfterAsync` does not include the first one
-		List<DiscordMessage> messages = [];
-		bool looping = true;
-		ulong readHead = start - 1; //-1, because `GetMessagesAfterAsync` does not include the first one otherwise
-		// ulong readHead = start;
-		while(looping)
-		{
-			await foreach(DiscordMessage message in channel.GetMessagesAfterAsync(readHead))
+		IAsyncEnumerable<RestMessage> asyncEnumerable = context.Client.Rest.GetMessagesAsync(
+			context.Channel.Id,
+			new PaginationProperties<ulong>
 			{
-				messages.Add(message);
-				if (message.Id == end)
-				{
-					looping = false;
-					break;
-				}
-				readHead = message.Id;
-			}
-		}
-		return messages;
+				Direction = PaginationDirection.After,
+				From = start - 1,
+			});
+		return await asyncEnumerable.WhereAsync(message => message.Id <= end).ToListAsync();
 	}
 
 	/// <summary>
@@ -58,37 +44,35 @@ public static class Utils
 	/// </summary>
 	///
 	/// <param name="context">The <see cref="CommandContext"/></param>
-	/// <param name="id">The message ID</param>
+	/// <param name="messageId">The message ID</param>
 	///
-	/// <returns>The <see cref="DiscordMessage"/> if it can be got, otherwise <c>null</c></returns>
-	public static async ValueTask<DiscordMessage?> GetMessageAsync(CommandContext context, ulong id)
+	/// <returns>The <see cref="RestMessage"/> if it can be got, otherwise <c>null</c></returns>
+	public static async ValueTask<RestMessage?> GetMessageAsync(SlashCommandContext context, ulong messageId)
 	{
-		DiscordMessage msgStart;
 		try
 		{
-			msgStart = await context.Channel.GetMessageAsync(id);
+			return await context.Client.Rest.GetMessageAsync(context.Channel.Id, messageId);
 		}
-		catch(UnauthorizedException)
+		catch(RestException e)
 		{
-			await context.SendEphemeralResponseAsync("Message ID `{id}`: Unauthorized");
+			await context.SendEphemeralResponseAsync($"Error on message `{messageId}`: {e.Error?.Message}");
 			return null;
 		}
-		catch(NotFoundException)
+	}
+
+	/// <summary>
+	/// Sends a message as an ephemeral message as a response to a command, through its interaction.
+	/// </summary>
+	///
+	/// <param name="interaction">The <see cref="Interaction"/></param>
+	/// <param name="content">The contents of the message</param>
+	public static async Task SendEphemeralResponseAsync(this Interaction interaction, string content)
+	{
+		await interaction.SendResponseAsync(InteractionCallback.Message(new InteractionMessageProperties
 		{
-			await context.SendEphemeralResponseAsync($"Message ID `{id}`: Not Found (in this channel)");
-			return null;
-		}
-		catch(BadRequestException)
-		{
-			await context.SendEphemeralResponseAsync($"Message ID `{id}`:  Bad Request");
-			return null;
-		}
-		catch(ServerErrorException)
-		{
-			await context.SendEphemeralResponseAsync($"Message ID `{id}`: Server Error");
-			return null;
-		}
-		return msgStart;
+			Content = content,
+			Flags = MessageFlags.Ephemeral,
+		}));
 	}
 
 	/// <summary>
@@ -96,47 +80,10 @@ public static class Utils
 	/// </summary>
 	///
 	/// <param name="context">The <see cref="CommandContext"/></param>
-	/// <param name="message">The contents of the message</param>
-	/// <param name="filePath">An optional file path to attach to the message</param>
-	public static async Task SendEphemeralResponseAsync(this CommandContext context, string message, string? filePath = null)
+	/// <param name="content">The contents of the message</param>
+	public static async Task SendEphemeralResponseAsync(this SlashCommandContext context, string content)
 	{
-		DiscordInteractionResponseBuilder interactionResponseBuilder = new DiscordInteractionResponseBuilder() //
-			.WithContent(message) //
-			.AsEphemeral() //
-			.SuppressEmbeds();
-		if (filePath is not null)
-		{
-			FileStream fileStream = new(filePath, FileMode.Open);
-			interactionResponseBuilder = interactionResponseBuilder.AddFile(Path.GetFileName(filePath), fileStream);
-		}
-		await context.RespondAsync(interactionResponseBuilder);
-	}
-
-	/// <summary>
-	/// Whether a specific member has a role or not
-	/// </summary>
-	///
-	/// <param name="member">The member to check</param>
-	/// <param name="role">The role to check</param>
-	///
-	/// <returns>Whether the <see cref="DiscordMember"/> has this <see cref="DiscordRole"/></returns>
-	///
-	/// <remarks>
-	/// Includes extra handling for @everyone.
-	/// </remarks>
-	public static bool HasRole(this DiscordMember? member, DiscordRole? role)
-	{
-		//if there is no member, no roles can be had
-		if (member is null) return false;
-
-		//if there is no role, member can't have it
-		if (role is null) return false;
-
-		//role is everyone; of course member has that
-		if (role == member.Guild.EveryoneRole) return true;
-
-		//member has role
-		return member.Roles.Contains(role);
+		await context.Interaction.SendEphemeralResponseAsync(content);
 	}
 
 	/// <summary>
@@ -147,16 +94,68 @@ public static class Utils
 	/// <param name="emoji">The emoji</param>
 	///
 	/// <returns>Whether it's happened or not</returns>
-	public static bool HasBeenReactedToWith(this DiscordMessage message, DiscordEmoji emoji)
+	public static bool HasBeenReactedToWith(this RestMessage message, ReactionEmojiProperties emoji)
 	{
-		foreach(DiscordReaction reaction in message.Reactions)
+		ulong? id = emoji.Id;
+		string name = emoji.Name;
+
+		foreach(MessageReaction messageReaction in message.Reactions)
 		{
-			if (reaction.Emoji == emoji)
+			ulong? reactionId = messageReaction.Emoji.Id;
+			string? reactionName = messageReaction.Emoji.Name;
+
+			if (id is not null && reactionId is not null)
 			{
-				return true;
+				if (id == reactionId) return true;
+			}
+			else
+			{
+				if (name == reactionName) return true;
 			}
 		}
 
 		return false;
 	}
+
+	public static async Task<List<T>> ToListAsync<T>(this IAsyncEnumerable<T> enumerable)
+	{
+		List<T> list = [];
+
+		await foreach(T item in enumerable)
+		{
+			list.Add(item);
+		}
+
+		return list;
+	}
+
+	public static async IAsyncEnumerable<T> WhereAsync<T>(this IAsyncEnumerable<T> enumerable, Predicate<T> condition)
+	{
+		await foreach(T item in enumerable)
+		{
+			if (condition(item))
+			{
+				yield return item;
+			}
+		}
+	}
+
+	public static GuildEmoji? GetEmojiByName(this Guild? guild, string emojiName)
+	{
+		return guild?.Emojis.Values.FirstOrDefault(emoji => emoji.Name == emojiName);
+	}
+
+	public static string String(this ReactionEmojiProperties emoji)
+	{
+		return $"`{emoji.Name}:{emoji.Id}`";
+	}
+
+	public static string? FirstEmoji(string s)
+	{
+		//Source: https://stackoverflow.com/a/75146758/8109619
+		string e = StringInfo.GetNextTextElement(s);
+		Rune r = e.EnumerateRunes().First();
+		return Rune.IsSymbol(r) ? e : null;
+	}
+
 }

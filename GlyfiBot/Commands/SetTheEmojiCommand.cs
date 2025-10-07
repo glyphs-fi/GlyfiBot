@@ -1,21 +1,17 @@
-using DSharpPlus.Commands;
-using DSharpPlus.Commands.ContextChecks;
-using DSharpPlus.Commands.Processors.SlashCommands;
-using DSharpPlus.Entities;
-using DSharpPlus.Net.Serialization;
 using JetBrains.Annotations;
-using Newtonsoft.Json;
-using System.ComponentModel;
+using NetCord;
+using NetCord.Rest;
+using NetCord.Services.ApplicationCommands;
 
 namespace GlyfiBot.Commands;
 
-public class SetTheEmojiCommand
+public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 {
-	private const string EMOJI_FILE = $"{Program.SETTINGS_DIR}/emoji.json";
+	private const string EMOJI_FILE = $"{Program.SETTINGS_DIR}/emoji.txt";
 
-	private static DiscordEmoji? _theEmojiBacking = null;
+	private static ReactionEmojiProperties? _theEmojiBacking = null;
 
-	public static DiscordEmoji? TheEmoji
+	public static ReactionEmojiProperties? TheEmoji
 	{
 		get => _theEmojiBacking;
 		private set
@@ -26,7 +22,7 @@ public class SetTheEmojiCommand
 			}
 			else
 			{
-				File.WriteAllText(EMOJI_FILE, DiscordJson.SerializeObject(value));
+				File.WriteAllText(EMOJI_FILE, value.Name + "\n" + value.Id);
 			}
 			_theEmojiBacking = value;
 		}
@@ -36,8 +32,15 @@ public class SetTheEmojiCommand
 	{
 		if (File.Exists(EMOJI_FILE))
 		{
-			TheEmoji = JsonConvert.DeserializeObject<DiscordEmoji>(File.ReadAllText(EMOJI_FILE));
-			Console.WriteLine($"Loaded emoji to {TheEmoji}");
+			string[] contents = File.ReadAllLines(EMOJI_FILE);
+			TheEmoji = contents.Length switch
+			{
+				1 => new ReactionEmojiProperties(contents[0]),
+				2 => new ReactionEmojiProperties(contents[0], ulong.Parse(contents[1])),
+				_ => null,
+			};
+			if (TheEmoji is not null)
+				Console.WriteLine($"Loaded emoji to {TheEmoji.String()}");
 		}
 		else
 		{
@@ -45,39 +48,57 @@ public class SetTheEmojiCommand
 		}
 	}
 
-	[Command("set-emoji")]
-	[Description("Set the emoji that will mark something as a submission")]
-	[RequirePermissions([], [DiscordPermission.Administrator])]
+	[SlashCommand("set-emoji",
+		"Set the emoji that will mark something as a submission",
+		DefaultGuildPermissions = Permissions.Administrator)]
 	[UsedImplicitly]
-	public static async ValueTask EmojiAsync(SlashCommandContext context,
-		[Description("Type a `:` and then the rest of the emoji. Let the autocomplete guide you!")]
-		string emoji)
+	public async Task ExecuteAsync(
+		[SlashCommandParameter(Description = "Type a `:` and then the rest of the emoji. Let the autocomplete guide you!")]
+		string? emoji = null)
 	{
-		if (emoji is "null" or "clear" or "empty" or "nothing")
+		if (emoji is null)
 		{
 			TheEmoji = null;
-			await context.SendEphemeralResponseAsync("Cleared emoji. Remember to `/set-emoji` it to something again before using `/select`!");
+			await Context.SendEphemeralResponseAsync("Cleared emoji. Remember to `/set-emoji` it to something again before using `/select`!");
 			return;
 		}
 
-		if (DiscordEmoji.TryFromUnicode(context.Client, emoji, out DiscordEmoji emojiReal) ||
-		    DiscordEmoji.TryFromName(context.Client, emoji, out emojiReal) ||
-		    DiscordEmoji.TryFromName(context.Client, $":{emoji}:", out emojiReal) ||
-		    DiscordEmoji.TryFromName(context.Client, $":{emoji.TrimStart('<').TrimEnd('>').TrimStart('a').Trim(':').Split(":").FirstOrDefault("")}:", out emojiReal))
+		if (emoji.Contains(':'))
 		{
-			if (emojiReal.Id != 0 && !emojiReal.IsAvailable)
+			try
 			{
-				await context.SendEphemeralResponseAsync($"Emoji {emojiReal} is not available...");
+				string emojiClean = emoji.TrimStart('<').TrimEnd('>').TrimStart('a').Trim(':');
+				string[] parts = emojiClean.Split(":");
+				string name = parts[0];
+				ulong id = ulong.Parse(parts[1]);
+				TheEmoji = new ReactionEmojiProperties(name, id);
+			}
+			catch(SystemException e) when(e is IndexOutOfRangeException or FormatException)
+			{
+				await Context.SendEphemeralResponseAsync($"Invalid emoji: `{emoji}`");
 				return;
 			}
+		}
+		else
+		{
+			GuildEmoji? guildEmoji = Context.Guild.GetEmojiByName(emoji);
+			if (guildEmoji is not null)
+			{
+				TheEmoji = new ReactionEmojiProperties(guildEmoji.Name, guildEmoji.Id);
+			}
+			else
+			{
+				string? firstEmoji = Utils.FirstEmoji(emoji);
+				if (firstEmoji is null)
+				{
+					await Context.SendEphemeralResponseAsync($"Invalid emoji: `{emoji}`");
+					return;
+				}
 
-			TheEmoji = emojiReal;
-			string message = $"Set emoji to {emojiReal}";
-			Console.WriteLine(message);
-			await context.SendEphemeralResponseAsync(message);
-			return;
+				TheEmoji = new ReactionEmojiProperties(firstEmoji);
+			}
 		}
 
-		await context.SendEphemeralResponseAsync($"Could not set emoji `{emoji}`");
+		await Context.SendEphemeralResponseAsync($"Set emoji to {TheEmoji.String()}");
 	}
 }

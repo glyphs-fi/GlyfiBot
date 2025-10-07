@@ -1,17 +1,14 @@
-using DSharpPlus.Commands;
-using DSharpPlus.Commands.ContextChecks;
-using DSharpPlus.Commands.Processors.SlashCommands;
-using DSharpPlus.Entities;
-using DSharpPlus.Exceptions;
 using JetBrains.Annotations;
-using System.ComponentModel;
+using NetCord;
+using NetCord.Rest;
+using NetCord.Services.ApplicationCommands;
 using System.IO.Compression;
 using System.Text;
 using static GlyfiBot.Utils;
 
 namespace GlyfiBot.Commands;
 
-public class SelectRangeCommand
+public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	public enum DownloadType
 	{
@@ -21,35 +18,45 @@ public class SelectRangeCommand
 
 	private record AttachmentFile(string DownloadUrl, string FileName);
 
-	[Command("select")]
-	[Description("Select messages to look through for submissions")]
-	[RequirePermissions([], [DiscordPermission.Administrator])]
+	[SlashCommand("select",
+		"Select messages to look through for submissions",
+		DefaultGuildPermissions = Permissions.Administrator)]
 	[UsedImplicitly]
-	public static async ValueTask ExecuteAsync(SlashCommandContext context, ulong start, ulong end, DownloadType downloadType = DownloadType.Flat)
+	public async Task ExecuteAsync(string start, string end, DownloadType downloadType = DownloadType.Flat)
 	{
-		DiscordEmoji? emoji = SetTheEmojiCommand.TheEmoji;
+		ReactionEmojiProperties? emoji = SetTheEmojiCommand.TheEmoji;
 		if (emoji is null)
 		{
-			await context.SendEphemeralResponseAsync("Emoji has not been set! Use `/set-emoji` to set the emoji first");
+			await Context.SendEphemeralResponseAsync("Emoji has not been set! Use `/set-emoji` to set the emoji first");
 			return;
 		}
 
-		DiscordChannel channel = context.Channel;
+		if (!ulong.TryParse(start, null, out ulong startId))
+		{
+			await Context.SendEphemeralResponseAsync("Start needs to be a number");
+			return;
+		}
+
+		if (!ulong.TryParse(end, null, out ulong endId))
+		{
+			await Context.SendEphemeralResponseAsync("End needs to be a number");
+			return;
+		}
 
 		// If the order is wrong, swap them into the correct order
-		if (start > end) (start, end) = (end, start);
+		if (startId > endId) (startId, endId) = (endId, startId);
 
-		DiscordMessage? msgStart = await GetMessageAsync(context, start);
-		if (msgStart is null) return;
+		RestMessage? messageStart = await GetMessageAsync(Context, startId);
+		if (messageStart is null) return;
 
-		DiscordMessage? msgEnd = await GetMessageAsync(context, end);
-		if (msgEnd is null) return;
+		RestMessage? messageEnd = await GetMessageAsync(Context, endId);
+		if (messageEnd is null) return;
 
-		await context.DeferResponseAsync(true);
+		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
 
-		List<DiscordMessage> messages = await GetMessagesBetweenAsync(channel, start, end);
+		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, startId, endId);
 
-		(Dictionary<DiscordUser, List<AttachmentFile>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(messages, emoji);
+		(Dictionary<User, List<AttachmentFile>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(messages, emoji);
 
 		StringBuilder sb = new();
 		sb.AppendLine($"Selected messages: {messages.Count}");
@@ -62,8 +69,8 @@ public class SelectRangeCommand
 		if (submissionsCount > 0)
 		{
 			sb.AppendLine();
-			string directoryToArchive = await DownloadAttachmentsAsync(context.Interaction, submissions, sb, downloadType);
-			submissionArchivePath = Path.Join(Path.GetDirectoryName(directoryToArchive), $"{context.Interaction.Id}_{Path.GetFileName(directoryToArchive)}.zip");
+			string directoryToArchive = await DownloadAttachmentsAsync(Context.Interaction, submissions, sb, downloadType);
+			submissionArchivePath = Path.Join(Path.GetDirectoryName(directoryToArchive), $"{Context.Interaction.Id}_{Path.GetFileName(directoryToArchive)}.zip");
 			bool includeBaseDirectory = downloadType switch
 			{
 				DownloadType.Raw => true,
@@ -76,19 +83,21 @@ public class SelectRangeCommand
 		string total = sb.ToString();
 		Console.WriteLine(total);
 
-		try
+		await ModifyResponseAsync(msg =>
 		{
-			await context.SendEphemeralResponseAsync(total, submissionArchivePath);
-		}
-		catch(RequestSizeException)
-		{
-			await context.SendEphemeralResponseAsync(total + "# Archive too big, could not upload...");
-		}
+			msg.Content = total;
+			msg.Flags = MessageFlags.Ephemeral | MessageFlags.SuppressEmbeds;
+
+			if (submissionArchivePath is not null)
+			{
+				msg.Attachments = [new AttachmentProperties(Path.GetFileName(submissionArchivePath), new FileStream(submissionArchivePath, FileMode.Open))];
+			}
+		});
 	}
 
-	private static async Task<string> DownloadAttachmentsAsync(DiscordInteraction interaction, Dictionary<DiscordUser, List<AttachmentFile>> submissions, StringBuilder sb, DownloadType downloadType)
+	private static async Task<string> DownloadAttachmentsAsync(SlashCommandInteraction interaction, Dictionary<User, List<AttachmentFile>> submissions, StringBuilder sb, DownloadType downloadType)
 	{
-		string channelPath = Path.Join(Program.SELECTIONS_DIR, interaction.ChannelId.ToString());
+		string channelPath = Path.Join(Program.SELECTIONS_DIR, interaction.Channel.Id.ToString());
 		Directory.CreateDirectory(channelPath);
 
 		string submissionPath = Path.Join(channelPath, interaction.Id.ToString());
@@ -104,9 +113,9 @@ public class SelectRangeCommand
 		}
 
 		using HttpClient client = new();
-		foreach((DiscordUser author, List<AttachmentFile> attachmentFiles) in submissions)
+		foreach((User author, List<AttachmentFile> attachmentFiles) in submissions)
 		{
-			sb.AppendLine($"- {author.Mention}");
+			sb.AppendLine($"- {author.ToString()}");
 			string submissionUserPath = Path.Join(rawPath, author.Id.ToString());
 			Directory.CreateDirectory(submissionUserPath);
 			uint antiDuplicateCounter = 0;
@@ -148,27 +157,25 @@ public class SelectRangeCommand
 		};
 	}
 
-	private static async Task<(Dictionary<DiscordUser, List<AttachmentFile>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(List<DiscordMessage> messages, DiscordEmoji emoji)
+	private static async Task<(Dictionary<User, List<AttachmentFile>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(List<RestMessage> messages, ReactionEmojiProperties emoji)
 	{
-		Dictionary<DiscordUser, List<AttachmentFile>> submissions = [];
+		Dictionary<User, List<AttachmentFile>> submissions = [];
 		uint submissionMessageCount = 0;
 
-		foreach(DiscordMessage message in messages)
+		foreach(RestMessage message in messages)
 		{
 			if (message.Attachments.Count == 0) continue;
 
 			if (!message.HasBeenReactedToWith(emoji)) continue;
 
-			await foreach(DiscordUser user in message.GetReactionsAsync(emoji))
+			await foreach(User user in message.GetReactionsAsync(emoji))
 			{
 				if (user != message.Author) continue;
 
 				submissionMessageCount++;
-				foreach(DiscordAttachment attachment in message.Attachments)
+				foreach(Attachment attachment in message.Attachments)
 				{
-					if (attachment.Url is null) continue;
-
-					AttachmentFile attachmentFile = new(attachment.Url, attachment.FileName ?? attachment.Id.ToString());
+					AttachmentFile attachmentFile = new(attachment.Url, attachment.FileName);
 					if (submissions.TryGetValue(message.Author, out List<AttachmentFile>? attachmentFiles))
 					{
 						attachmentFiles.Add(attachmentFile);

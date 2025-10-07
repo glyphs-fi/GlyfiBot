@@ -10,9 +10,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02551" />
-	  <PackageReference Include="DSharpPlus.Commands" Version="5.0.0-nightly-02551" />
-	  <PackageReference Include="JetBrains.Annotations" Version="2025.2.2" />
+	  <PackageReference Include="NetCord" Version="1.0.0-alpha.430"/>
+	  <PackageReference Include="NetCord.Services" Version="1.0.0-alpha.430"/>
+	  <PackageReference Include="JetBrains.Annotations" Version="2025.2.2"/>
 	</ItemGroup>
 
 </Project>
