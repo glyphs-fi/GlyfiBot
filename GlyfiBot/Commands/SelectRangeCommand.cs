@@ -16,8 +16,6 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		Flat,
 	}
 
-	private record AttachmentFile(string DownloadUrl, string FileName);
-
 	[SlashCommand("select",
 		"Select messages to look through for submissions",
 		DefaultGuildPermissions = Permissions.Administrator)]
@@ -56,7 +54,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 
 		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, startId, endId);
 
-		(Dictionary<User, List<AttachmentFile>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(messages, emoji);
+		(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(messages, emoji);
 
 		StringBuilder sbStats = new();
 		sbStats.AppendLine($"Selected messages: {messages.Count}");
@@ -129,7 +127,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		}
 	}
 
-	private static async Task<string> DownloadAttachmentsAsync(SlashCommandInteraction interaction, Dictionary<User, List<AttachmentFile>> submissions, StringBuilder sb, DownloadType downloadType)
+	private static async Task<string> DownloadAttachmentsAsync(SlashCommandInteraction interaction, Dictionary<User, List<Attachment>> submissions, StringBuilder sb, DownloadType downloadType)
 	{
 		string channelPath = Path.Join(Program.SELECTIONS_DIR, interaction.Channel.Id.ToString());
 		Directory.CreateDirectory(channelPath);
@@ -147,7 +145,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		}
 
 		using HttpClient client = new();
-		foreach((User author, List<AttachmentFile> attachmentFiles) in submissions)
+		foreach((User author, List<Attachment> attachmentFiles) in submissions)
 		{
 			sb.AppendLine($"- {author.ToString()}");
 			string submissionUserPath = Path.Join(rawPath, author.Id.ToString());
@@ -155,8 +153,8 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			uint antiDuplicateCounter = 0;
 			for(int i = 0; i < attachmentFiles.Count; i++)
 			{
-				AttachmentFile attachmentFile = attachmentFiles[i];
-				sb.AppendLine($"  - {attachmentFile.DownloadUrl}");
+				Attachment attachmentFile = attachmentFiles[i];
+				sb.AppendLine($"  - {attachmentFile.Url}");
 				string path = CreateDownloadFilePath();
 				if (File.Exists(path))
 				{
@@ -165,7 +163,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 				}
 
 				{
-					await using Stream networkStream = await client.GetStreamAsync(attachmentFile.DownloadUrl);
+					await using Stream networkStream = await client.GetStreamAsync(attachmentFile.Url);
 					await using FileStream fileStream = new(path, FileMode.CreateNew);
 					await networkStream.CopyToAsync(fileStream);
 				}
@@ -191,9 +189,9 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		};
 	}
 
-	private static async Task<(Dictionary<User, List<AttachmentFile>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(List<RestMessage> messages, ReactionEmojiProperties emoji)
+	private static async Task<(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(List<RestMessage> messages, ReactionEmojiProperties emoji)
 	{
-		Dictionary<User, List<AttachmentFile>> submissions = [];
+		Dictionary<User, List<Attachment>> submissions = [];
 		uint submissionMessageCount = 0;
 
 		foreach(RestMessage message in messages)
@@ -209,14 +207,13 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 				submissionMessageCount++;
 				foreach(Attachment attachment in message.Attachments)
 				{
-					AttachmentFile attachmentFile = new(attachment.Url, attachment.FileName);
-					if (submissions.TryGetValue(message.Author, out List<AttachmentFile>? attachmentFiles))
+					if (submissions.TryGetValue(message.Author, out List<Attachment>? attachmentFiles))
 					{
-						attachmentFiles.Add(attachmentFile);
+						attachmentFiles.Add(attachment);
 					}
 					else
 					{
-						submissions.Add(message.Author, [attachmentFile]);
+						submissions.Add(message.Author, [attachment]);
 					}
 				}
 			}
