@@ -1,9 +1,9 @@
-﻿using DSharpPlus;
-using DSharpPlus.Commands;
-using DSharpPlus.Commands.Processors.SlashCommands;
-using DSharpPlus.Commands.Processors.SlashCommands.InteractionNamingPolicies;
-using DSharpPlus.Entities;
-using GlyfiBot.Commands;
+﻿using GlyfiBot.Commands;
+using NetCord;
+using NetCord.Gateway;
+using NetCord.Logging;
+using NetCord.Services;
+using NetCord.Services.ApplicationCommands;
 
 namespace GlyfiBot;
 
@@ -28,30 +28,43 @@ static internal class Program
 
 		SetTheEmojiCommand.Load();
 
-		DiscordClientBuilder clientBuilder = DiscordClientBuilder.CreateDefault(token, SlashCommandProcessor.RequiredIntents);
-
-		clientBuilder.UseCommands((IServiceProvider provider, CommandsExtension extension) =>
-		{
-			SlashCommandProcessor slashCommandProcessor = new(new SlashCommandConfiguration
+		GatewayClient client = new(
+			new BotToken(token),
+			new GatewayClientConfiguration
 			{
-				NamingPolicy = new KebabCaseNamingPolicy(),
-			});
-			extension.AddProcessor(slashCommandProcessor);
-			extension.AddCommands([
-				typeof(SelectRangeCommand),
-				typeof(SetTheEmojiCommand),
-				typeof(GetEmojiCommand),
-			]);
-		});
-		DiscordClient client = clientBuilder.Build();
+				Intents = GatewayIntents.AllNonPrivileged | GatewayIntents.MessageContent,
+				Logger = new ConsoleLogger(),
+			}
+		);
+
+		ApplicationCommandService<SlashCommandContext> applicationCommandService = new();
+
+		client.InteractionCreate += async interaction =>
+		{
+			if (interaction is not SlashCommandInteraction slashCommandInteraction)
+				return;
+
+			IExecutionResult result = await applicationCommandService.ExecuteAsync(new SlashCommandContext(slashCommandInteraction, client));
+
+			if (result is IFailResult failResult)
+			{
+				await slashCommandInteraction.SendEphemeralResponseAsync(failResult.Message);
+			}
+		};
+
+		applicationCommandService.AddModule<SelectRangeCommand>();
+		applicationCommandService.AddModule<SetTheEmojiCommand>();
+		applicationCommandService.AddModule<GetTheEmojiCommand>();
+
+		await applicationCommandService.RegisterCommandsAsync(client.Rest, client.Id);
 
 		string[] challenges = ["Glyph", "Ambigram"];
 		string whichChallenge = challenges[new Random().Next(0, challenges.Length)];
-		DiscordActivity status = new($"the {whichChallenge} Challenge", DiscordActivityType.Competing);
+		UserActivityProperties[] activity = [new($"the {whichChallenge} Challenge", UserActivityType.Competing)];
 
-		await client.ConnectAsync(status, DiscordUserStatus.Online);
+		await client.StartAsync(new PresenceProperties(UserStatusType.Online) {Activities = activity});
 
-		if (client.Guilds.Count > 1)
+		if (client.Cache.Guilds.Count > 1)
 		{
 			Console.WriteLine("Error: The bot is in multiple Discord Servers. This is not supported.");
 			Environment.Exit(1);

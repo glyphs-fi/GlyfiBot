@@ -1,24 +1,24 @@
-using DSharpPlus.Commands;
-using DSharpPlus.Commands.Processors.SlashCommands;
 using JetBrains.Annotations;
-using System.ComponentModel;
+using NetCord.Rest;
+using NetCord.Services.ApplicationCommands;
 
 namespace GlyfiBot.Commands;
 
-public class GetEmojiCommand
+public class GetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 {
-	[Command("emoji")]
-	[Description("Which emoji do I need to use to mark something as a submission?")]
+	[SlashCommand("emoji",
+		"Which emoji do I need to use to mark something as a submission?")]
 	[UsedImplicitly]
-	public static async ValueTask ExecuteAsync(SlashCommandContext context)
+	public async Task ExecuteAsync()
 	{
-		if (SetTheEmojiCommand.TheEmoji is null)
+		ReactionEmojiProperties? theEmoji = SetTheEmojiCommand.TheEmoji;
+		if (theEmoji is null)
 		{
-			await context.SendEphemeralResponseAsync("Emoji has not been set!");
+			await Context.SendEphemeralResponseAsync("Emoji has not been set!");
 		}
 		else
 		{
-			await context.SendEphemeralResponseAsync($"Emoji is set to {SetTheEmojiCommand.TheEmoji}");
+			await Context.SendEphemeralResponseAsync($"Emoji is set to {theEmoji.String()}");
 		}
 	}
 }
