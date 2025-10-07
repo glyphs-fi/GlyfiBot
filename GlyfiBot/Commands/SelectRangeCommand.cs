@@ -58,18 +58,18 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 
 		(Dictionary<User, List<AttachmentFile>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(messages, emoji);
 
-		StringBuilder sb = new();
-		sb.AppendLine($"Selected messages: {messages.Count}");
-		sb.AppendLine($"Found submission messages: {submissionMessageCount}");
+		StringBuilder sbSummary = new();
+		sbSummary.AppendLine($"Selected messages: {messages.Count}");
+		sbSummary.AppendLine($"Found submission messages: {submissionMessageCount}");
 
 		long submissionsCount = submissions.Aggregate(0, (current, keyValuePair) => current + keyValuePair.Value.Count);
-		sb.AppendLine($"Found total submissions: {submissionsCount}");
+		sbSummary.AppendLine($"Found total submissions: {submissionsCount}");
 
 		string? submissionArchivePath = null;
+		StringBuilder sbList = new();
 		if (submissionsCount > 0)
 		{
-			sb.AppendLine();
-			string directoryToArchive = await DownloadAttachmentsAsync(Context.Interaction, submissions, sb, downloadType);
+			string directoryToArchive = await DownloadAttachmentsAsync(Context.Interaction, submissions, sbList, downloadType);
 			submissionArchivePath = Path.Join(Path.GetDirectoryName(directoryToArchive), $"{Context.Interaction.Id}_{Path.GetFileName(directoryToArchive)}.zip");
 			bool includeBaseDirectory = downloadType switch
 			{
@@ -80,19 +80,46 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			ZipFile.CreateFromDirectory(directoryToArchive, submissionArchivePath, CompressionLevel.SmallestSize, includeBaseDirectory);
 		}
 
-		string total = sb.ToString();
-		Console.WriteLine(total);
-
-		await ModifyResponseAsync(msg =>
+		try
 		{
-			msg.Content = total;
-			msg.Flags = MessageFlags.Ephemeral | MessageFlags.SuppressEmbeds;
-
-			if (submissionArchivePath is not null)
+			await ModifyResponseAsync(msg =>
 			{
-				msg.Attachments = [new AttachmentProperties(Path.GetFileName(submissionArchivePath), new FileStream(submissionArchivePath, FileMode.Open))];
+				msg.Flags = MessageFlags.Ephemeral | MessageFlags.SuppressEmbeds;
+
+				List<AttachmentProperties> attachments = [];
+
+				string summary = sbSummary.ToString();
+				string fileList = sbList.ToString();
+				if (summary.Length + fileList.Length >= 1950) //a bit of a margin to the 2000 max
+				{
+					msg.Content = summary;
+					attachments.Add(new AttachmentProperties("filelist.txt", new MemoryStream(Encoding.UTF8.GetBytes(fileList))));
+				}
+				else
+				{
+					msg.Content = summary + "\n" + fileList;
+				}
+
+				if (submissionArchivePath is not null)
+				{
+					attachments.Add(new AttachmentProperties(Path.GetFileName(submissionArchivePath), new FileStream(submissionArchivePath, FileMode.Open)));
+				}
+
+				msg.Attachments = attachments;
+			});
+		}
+		catch(RestException e)
+		{
+			if (e.HasInternalError("BASE_TYPE_MAX_LENGTH"))
+			{
+				await ModifyResponseAsync(msg => msg.Content =
+					"Message was too long to fit. Please file a bug report and paste the _exact_ command you used into it: <https://github.com/glyphs-fi/GlyfiBot/issues/new>");
 			}
-		});
+			else
+			{
+				Console.WriteLine(e);
+			}
+		}
 	}
 
 	private static async Task<string> DownloadAttachmentsAsync(SlashCommandInteraction interaction, Dictionary<User, List<AttachmentFile>> submissions, StringBuilder sb, DownloadType downloadType)

@@ -158,4 +158,12 @@ public static class Utils
 		return Rune.IsSymbol(r) ? e : null;
 	}
 
+	public static bool HasInternalError(this RestException e, string errorKey)
+	{
+		RestError? restError = e.Error;
+		IRestErrorGroup? iRestErrorGroup = restError?.Error;
+		if (iRestErrorGroup is not RestErrorGroup restErrorGroup) return false;
+		IRestErrorGroup? errorGroup = restErrorGroup.Errors.GetValueOrDefault("content");
+		return errorGroup is RestErrorDetailGroup group && group.Errors.Any(restErrorDetail => restErrorDetail.Code == errorKey);
+	}
 }
