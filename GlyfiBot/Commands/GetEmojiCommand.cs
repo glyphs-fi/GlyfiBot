@@ -14,11 +14,11 @@ public class GetEmojiCommand
 	{
 		if (SetTheEmojiCommand.TheEmoji is null)
 		{
-			await context.SendEphemeralResponse("Emoji has not been set!");
+			await context.SendEphemeralResponseAsync("Emoji has not been set!");
 		}
 		else
 		{
-			await context.SendEphemeralResponse($"Emoji is set to {SetTheEmojiCommand.TheEmoji}");
+			await context.SendEphemeralResponseAsync($"Emoji is set to {SetTheEmojiCommand.TheEmoji}");
 		}
 	}
 }

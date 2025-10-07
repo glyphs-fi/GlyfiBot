@@ -30,7 +30,7 @@ public class SelectRangeCommand
 		DiscordEmoji? emoji = SetTheEmojiCommand.TheEmoji;
 		if (emoji is null)
 		{
-			await context.SendEphemeralResponse("Emoji has not been set! Use `/set-emoji` to set the emoji first");
+			await context.SendEphemeralResponseAsync("Emoji has not been set! Use `/set-emoji` to set the emoji first");
 			return;
 		}
 
@@ -39,17 +39,17 @@ public class SelectRangeCommand
 		// If the order is wrong, swap them into the correct order
 		if (start > end) (start, end) = (end, start);
 
-		DiscordMessage? msgStart = await GetMessage(context, start);
+		DiscordMessage? msgStart = await GetMessageAsync(context, start);
 		if (msgStart is null) return;
 
-		DiscordMessage? msgEnd = await GetMessage(context, end);
+		DiscordMessage? msgEnd = await GetMessageAsync(context, end);
 		if (msgEnd is null) return;
 
 		await context.DeferResponseAsync(true);
 
-		List<DiscordMessage> messages = await GetMessagesBetween(channel, start, end);
+		List<DiscordMessage> messages = await GetMessagesBetweenAsync(channel, start, end);
 
-		(Dictionary<DiscordUser, List<AttachmentFile>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessages(messages, emoji);
+		(Dictionary<DiscordUser, List<AttachmentFile>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(messages, emoji);
 
 		StringBuilder sb = new();
 		sb.AppendLine($"Selected messages: {messages.Count}");
@@ -62,7 +62,7 @@ public class SelectRangeCommand
 		if (submissionsCount > 0)
 		{
 			sb.AppendLine();
-			string directoryToArchive = await DownloadAttachments(context.Interaction, submissions, sb, downloadType);
+			string directoryToArchive = await DownloadAttachmentsAsync(context.Interaction, submissions, sb, downloadType);
 			submissionArchivePath = Path.Join(Path.GetDirectoryName(directoryToArchive), $"{context.Interaction.Id}_{Path.GetFileName(directoryToArchive)}.zip");
 			bool includeBaseDirectory = downloadType switch
 			{
@@ -78,15 +78,15 @@ public class SelectRangeCommand
 
 		try
 		{
-			await context.SendEphemeralResponse(total, submissionArchivePath);
+			await context.SendEphemeralResponseAsync(total, submissionArchivePath);
 		}
 		catch(RequestSizeException)
 		{
-			await context.SendEphemeralResponse(total + "# Archive too big, could not upload...");
+			await context.SendEphemeralResponseAsync(total + "# Archive too big, could not upload...");
 		}
 	}
 
-	private static async Task<string> DownloadAttachments(DiscordInteraction interaction, Dictionary<DiscordUser, List<AttachmentFile>> submissions, StringBuilder sb, DownloadType downloadType)
+	private static async Task<string> DownloadAttachmentsAsync(DiscordInteraction interaction, Dictionary<DiscordUser, List<AttachmentFile>> submissions, StringBuilder sb, DownloadType downloadType)
 	{
 		string channelPath = Path.Join(Program.SELECTIONS_DIR, interaction.ChannelId.ToString());
 		Directory.CreateDirectory(channelPath);
@@ -148,7 +148,7 @@ public class SelectRangeCommand
 		};
 	}
 
-	private static async Task<(Dictionary<DiscordUser, List<AttachmentFile>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessages(List<DiscordMessage> messages, DiscordEmoji emoji)
+	private static async Task<(Dictionary<DiscordUser, List<AttachmentFile>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(List<DiscordMessage> messages, DiscordEmoji emoji)
 	{
 		Dictionary<DiscordUser, List<AttachmentFile>> submissions = [];
 		uint submissionMessageCount = 0;

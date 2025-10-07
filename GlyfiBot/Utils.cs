@@ -18,15 +18,18 @@ public static class Utils
 	/// <summary>
 	/// Gets all messages between two message IDs.
 	/// </summary>
+	///
 	/// <param name="channel"><see cref="DiscordChannel"/> in which to look for the messages</param>
 	/// <param name="start">ID of the message where to start getting (inclusive)</param>
 	/// <param name="end">ID of the message where to end getting (inclusive)</param>
+	///
 	/// <returns>A <see cref="List{T}"/> of <see cref="DiscordMessage"/>s</returns>
+	///
 	/// <remarks>
 	/// Before using this function, you should verify that both <c><see cref="start"/></c> and <c><see cref="end"/></c>
-	/// are in the same channel with <see cref="GetMessage"/> and that they are in the correct order.
+	/// are in the same channel with <see cref="GetMessageAsync"/> and that they are in the correct order.
 	/// </remarks>
-	public static async Task<List<DiscordMessage>> GetMessagesBetween(DiscordChannel channel, ulong start, ulong end)
+	public static async Task<List<DiscordMessage>> GetMessagesBetweenAsync(DiscordChannel channel, ulong start, ulong end)
 	{
 		// List<DiscordMessage> messages = [await channel.GetMessageAsync(start)]; //start with the first one, because `GetMessagesAfterAsync` does not include the first one
 		List<DiscordMessage> messages = [];
@@ -51,12 +54,14 @@ public static class Utils
 
 	/// <summary>
 	/// Tries to get a message from the context.
-	/// Sends an error response with <see cref="SendEphemeralResponse"/> if the message cannot be got.
+	/// Sends an error response with <see cref="SendEphemeralResponseAsync"/> if the message cannot be got.
 	/// </summary>
+	///
 	/// <param name="context">The <see cref="CommandContext"/></param>
 	/// <param name="id">The message ID</param>
+	///
 	/// <returns>The <see cref="DiscordMessage"/> if it can be got, otherwise <c>null</c></returns>
-	public static async ValueTask<DiscordMessage?> GetMessage(CommandContext context, ulong id)
+	public static async ValueTask<DiscordMessage?> GetMessageAsync(CommandContext context, ulong id)
 	{
 		DiscordMessage msgStart;
 		try
@@ -65,22 +70,22 @@ public static class Utils
 		}
 		catch(UnauthorizedException)
 		{
-			await context.SendEphemeralResponse("Message ID `{id}`: Unauthorized");
+			await context.SendEphemeralResponseAsync("Message ID `{id}`: Unauthorized");
 			return null;
 		}
 		catch(NotFoundException)
 		{
-			await context.SendEphemeralResponse($"Message ID `{id}`: Not Found (in this channel)");
+			await context.SendEphemeralResponseAsync($"Message ID `{id}`: Not Found (in this channel)");
 			return null;
 		}
 		catch(BadRequestException)
 		{
-			await context.SendEphemeralResponse($"Message ID `{id}`:  Bad Request");
+			await context.SendEphemeralResponseAsync($"Message ID `{id}`:  Bad Request");
 			return null;
 		}
 		catch(ServerErrorException)
 		{
-			await context.SendEphemeralResponse($"Message ID `{id}`: Server Error");
+			await context.SendEphemeralResponseAsync($"Message ID `{id}`: Server Error");
 			return null;
 		}
 		return msgStart;
@@ -89,10 +94,11 @@ public static class Utils
 	/// <summary>
 	/// Sends a message as an ephemeral message as a response to a command, through its context.
 	/// </summary>
+	///
 	/// <param name="context">The <see cref="CommandContext"/></param>
 	/// <param name="message">The contents of the message</param>
 	/// <param name="filePath">An optional file path to attach to the message</param>
-	public static async Task SendEphemeralResponse(this CommandContext context, string message, string? filePath = null)
+	public static async Task SendEphemeralResponseAsync(this CommandContext context, string message, string? filePath = null)
 	{
 		DiscordInteractionResponseBuilder interactionResponseBuilder = new DiscordInteractionResponseBuilder() //
 			.WithContent(message) //
@@ -107,12 +113,17 @@ public static class Utils
 	}
 
 	/// <summary>
-	/// Whether a specific member has a role or not.<br/>
-	/// Includes extra handling for @everyone.
+	/// Whether a specific member has a role or not
 	/// </summary>
+	///
 	/// <param name="member">The member to check</param>
 	/// <param name="role">The role to check</param>
-	/// <returns></returns>
+	///
+	/// <returns>Whether the <see cref="DiscordMember"/> has this <see cref="DiscordRole"/></returns>
+	///
+	/// <remarks>
+	/// Includes extra handling for @everyone.
+	/// </remarks>
 	public static bool HasRole(this DiscordMember? member, DiscordRole? role)
 	{
 		//if there is no member, no roles can be had

@@ -1,0 +1,300 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = tab
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{markdown,md}]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+[*.cs]
+# C# Naming styles
+## UPPER_CASE
+dotnet_naming_style.upper_case.capitalization = all_upper
+dotnet_naming_style.upper_case.word_separator = _
+
+## PascalCase
+dotnet_naming_style.pascalcase.capitalization = pascal_case
+
+## PascalCaseAsync
+dotnet_naming_style.pascalcaseasync.required_suffix = Async
+dotnet_naming_style.pascalcaseasync.capitalization = pascal_case
+
+## IPascalCase
+dotnet_naming_style.ipascalcase.required_prefix = I
+dotnet_naming_style.ipascalcase.capitalization = pascal_case
+
+## TPascalCase
+dotnet_naming_style.tpascalcase.required_prefix = T
+dotnet_naming_style.tpascalcase.capitalization = pascal_case
+
+## camelCase
+dotnet_naming_style.camelcase.capitalization = camel_case
+
+## _camelCase
+dotnet_naming_style._camelcase.required_prefix = _
+dotnet_naming_style._camelcase.capitalization = camel_case
+
+
+# C# Symbol specifications
+## Namespaces
+dotnet_naming_symbols.namespace.applicable_kinds = namespace
+dotnet_naming_symbols.namespace.applicable_accessibilities = *
+
+## Classes
+dotnet_naming_symbols.class.applicable_kinds = class
+dotnet_naming_symbols.class.applicable_accessibilities = *
+
+## Structs
+dotnet_naming_symbols.struct.applicable_kinds = class
+dotnet_naming_symbols.struct.applicable_accessibilities = *
+
+## Interfaces
+dotnet_naming_symbols.interface.applicable_kinds = interface
+dotnet_naming_symbols.interface.applicable_accessibilities = *
+
+## Enums
+dotnet_naming_symbols.enum.applicable_kinds = enum
+dotnet_naming_symbols.enum.applicable_accessibilities = *
+
+## Delegates
+dotnet_naming_symbols.delegate.applicable_kinds = delegate
+dotnet_naming_symbols.delegate.applicable_accessibilities = *
+
+## Constants
+dotnet_naming_symbols.constant.applicable_kinds = field
+dotnet_naming_symbols.constant.applicable_accessibilities = *
+dotnet_naming_symbols.constant.required_modifiers = const
+
+## Private fields
+dotnet_naming_symbols.private_field.applicable_kinds = field
+dotnet_naming_symbols.private_field.applicable_accessibilities = private
+
+## Async methods / Functions
+dotnet_naming_symbols.async_method.applicable_kinds = method, local_function
+dotnet_naming_symbols.async_method.applicable_accessibilities = *
+dotnet_naming_symbols.async_method.required_modifiers = async
+
+## Generic parameters
+dotnet_naming_symbols.generic_parameter.applicable_kinds = type_parameter
+dotnet_naming_symbols.generic_parameter.applicable_accessibilities = *
+
+## Parameters
+dotnet_naming_symbols.parameter.applicable_kinds = parameter
+dotnet_naming_symbols.parameter.applicable_accessibilities = *
+
+## Local variables
+dotnet_naming_symbols.variable.applicable_kinds = local
+dotnet_naming_symbols.variable.applicable_accessibilities = *
+
+## Non-private members (field, property, event, method)
+dotnet_naming_symbols.non_private_member.applicable_kinds = field, property, event, method
+dotnet_naming_symbols.non_private_member.applicable_accessibilities = public, internal, protected, protected_internal, private_protected
+
+
+# .NET naming rules
+## Namespaces
+dotnet_naming_rule.namespace_should_be_pascalcase.severity = warning
+dotnet_naming_rule.namespace_should_be_pascalcase.symbols = namespace
+dotnet_naming_rule.namespace_should_be_pascalcase.style = pascalcase
+
+## Classes
+dotnet_naming_rule.class_should_be_pascalcase.severity = warning
+dotnet_naming_rule.class_should_be_pascalcase.symbols = class
+dotnet_naming_rule.class_should_be_pascalcase.style = pascalcase
+
+## Structs
+dotnet_naming_rule.struct_should_be_pascalcase.severity = warning
+dotnet_naming_rule.struct_should_be_pascalcase.symbols = struct
+dotnet_naming_rule.struct_should_be_pascalcase.style = pascalcase
+
+## Interfaces
+dotnet_naming_rule.interface_should_be_ipascalcase.severity = warning
+dotnet_naming_rule.interface_should_be_ipascalcase.symbols = interface
+dotnet_naming_rule.interface_should_be_ipascalcase.style = ipascalcase
+
+## Enums
+dotnet_naming_rule.enum_should_be_pascalcase.severity = warning
+dotnet_naming_rule.enum_should_be_pascalcase.symbols = enum
+dotnet_naming_rule.enum_should_be_pascalcase.style = pascalcase
+
+## Delegates
+dotnet_naming_rule.delegate_should_be_pascalcase.severity = warning
+dotnet_naming_rule.delegate_should_be_pascalcase.symbols = delegate
+dotnet_naming_rule.delegate_should_be_pascalcase.style = pascalcase
+
+## Constants
+dotnet_naming_rule.constant_should_be_upper_case.severity = warning
+dotnet_naming_rule.constant_should_be_upper_case.symbols = constant
+dotnet_naming_rule.constant_should_be_upper_case.style = upper_case
+
+## Private fields
+dotnet_naming_rule.private_field_should_be__camelcase.severity = warning
+dotnet_naming_rule.private_field_should_be__camelcase.symbols = private_field
+dotnet_naming_rule.private_field_should_be__camelcase.style = _camelcase
+
+## Async methods / Functions
+dotnet_naming_rule.async_method_should_be_pascalcaseasync.severity = warning
+dotnet_naming_rule.async_method_should_be_pascalcaseasync.symbols = async_method
+dotnet_naming_rule.async_method_should_be_pascalcaseasync.style = pascalcaseasync
+
+## Generic parameters
+dotnet_naming_rule.generic_parameter_should_be_tpascalcase.severity = warning
+dotnet_naming_rule.generic_parameter_should_be_tpascalcase.symbols = generic_parameter
+dotnet_naming_rule.generic_parameter_should_be_tpascalcase.style = tpascalcase
+
+## Parameters
+dotnet_naming_rule.parameter_should_be_camelcase.severity = warning
+dotnet_naming_rule.parameter_should_be_camelcase.symbols = parameter
+dotnet_naming_rule.parameter_should_be_camelcase.style = camelcase
+
+## Local variables
+dotnet_naming_rule.variable_should_be_camelcase.severity = warning
+dotnet_naming_rule.variable_should_be_camelcase.symbols = variable
+dotnet_naming_rule.variable_should_be_camelcase.style = camelcase
+
+## Non-private members (field, property, event, method)
+dotnet_naming_rule.non_private_member_should_be_pascalcase.severity = warning
+dotnet_naming_rule.non_private_member_should_be_pascalcase.symbols = non_private_member
+dotnet_naming_rule.non_private_member_should_be_pascalcase.style = pascalcase
+
+
+# .NET Properties
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:suggestion
+csharp_preferred_modifier_order = private, public, static, internal, file, new, protected, abstract, override, sealed, virtual, extern, readonly, unsafe, volatile, async, required:suggestion
+csharp_style_prefer_utf8_string_literals = true:suggestion
+dotnet_sort_system_directives_first = false
+csharp_new_line_before_members_in_object_initializers = false
+
+csharp_style_var_elsewhere = false:suggestion
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = false:suggestion
+
+dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity:none
+dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:none
+dotnet_style_parentheses_in_relational_binary_operators = never_if_unnecessary:none
+
+dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
+dotnet_style_predefined_type_for_member_access = true:suggestion
+
+dotnet_style_qualification_for_event = false:suggestion
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+
+
+# ReSharper properties
+resharper_apply_auto_detected_rules = false
+resharper_arguments_skip_single = true
+resharper_blank_lines_after_block_statements = 0
+resharper_blank_lines_after_start_comment = 0
+resharper_blank_lines_after_using_list = 0
+resharper_blank_lines_around_function_definition = 0
+resharper_blank_lines_around_single_line_type = 0
+resharper_braces_for_foreach = required_for_multiline
+resharper_braces_for_ifelse = not_required
+resharper_braces_for_while = required_for_multiline_statement
+resharper_braces_redundant = false
+resharper_continuous_line_indent = none
+resharper_csharp_align_multiline_binary_expressions_chain = false
+resharper_csharp_blank_lines_around_field = 0
+resharper_csharp_blank_lines_around_invocable = 0
+resharper_csharp_blank_lines_around_type = 0
+resharper_csharp_empty_block_style = together_same_line
+resharper_csharp_indent_statement_pars = outside
+resharper_csharp_indent_style = tab
+resharper_csharp_insert_final_newline = true
+resharper_csharp_keep_blank_lines_in_code = 100
+resharper_csharp_keep_blank_lines_in_declarations = 100
+resharper_csharp_max_line_length = 487
+resharper_csharp_remove_blank_lines_near_braces_in_declarations = false
+resharper_csharp_wrap_before_ternary_opsigns = false
+resharper_csharp_wrap_ternary_expr_style = wrap_if_long
+resharper_disable_space_changes_before_trailing_comment = true
+resharper_formatter_off_tag = @formatter:off
+resharper_formatter_on_tag = @formatter:on
+resharper_formatter_tags_enabled = true
+resharper_indent_comment = false
+resharper_indent_nested_foreach_stmt = true
+resharper_indent_nested_for_stmt = true
+resharper_indent_nested_while_stmt = true
+resharper_indent_pars = outside
+resharper_indent_preprocessor_directives = do_not_change
+resharper_indent_preprocessor_if = do_not_change
+resharper_indent_preprocessor_region = no_indent
+resharper_instance_members_qualify_declared_in = 
+resharper_keep_existing_attribute_arrangement = true
+resharper_keep_existing_embedded_block_arrangement = true
+resharper_parentheses_redundancy_style = remove
+resharper_parentheses_same_type_operations = true
+resharper_place_field_attribute_on_same_line = false
+resharper_place_simple_accessorholder_on_single_line = true
+resharper_place_simple_anonymousmethod_on_single_line = false
+resharper_remove_blank_lines_near_braces_in_code = false
+resharper_show_autodetect_configure_formatting_tip = false
+resharper_simple_block_style = line_break
+resharper_simple_embedded_statement_style = on_single_line
+resharper_space_before_catch_parentheses = false
+resharper_space_before_foreach_parentheses = false
+resharper_space_before_for_parentheses = false
+resharper_space_before_switch_parentheses = false
+resharper_space_before_while_parentheses = false
+resharper_space_within_empty_braces = false
+resharper_space_within_single_line_array_initializer_braces = false
+resharper_toplevel_function_definition_return_type_style = on_single_line
+resharper_trailing_comma_in_multiline_lists = true
+resharper_use_indent_from_vs = false
+resharper_wrap_after_dot_in_method_calls = true
+resharper_wrap_after_expression_lbrace = false
+resharper_wrap_before_expression_rbrace = false
+resharper_wrap_object_and_collection_initializer_style = chop_always
+
+
+# ReSharper inspection severities
+resharper_arrange_namespace_body_highlighting = suggestion
+resharper_arrange_redundant_parentheses_highlighting = hint
+resharper_arrange_this_qualifier_highlighting = hint
+resharper_arrange_type_member_modifiers_highlighting = hint
+resharper_arrange_type_modifiers_highlighting = hint
+resharper_built_in_type_reference_style_for_member_access_highlighting = hint
+resharper_built_in_type_reference_style_highlighting = hint
+resharper_enforce_do_while_statement_braces_highlighting = hint
+resharper_enforce_fixed_statement_braces_highlighting = hint
+resharper_enforce_foreach_statement_braces_highlighting = hint
+resharper_enforce_for_statement_braces_highlighting = hint
+resharper_enforce_lock_statement_braces_highlighting = hint
+resharper_enforce_using_statement_braces_highlighting = hint
+resharper_enforce_while_statement_braces_highlighting = hint
+resharper_heuristic_unreachable_code_highlighting = hint
+resharper_inconsistent_naming_highlighting = suggestion
+resharper_mvc_action_not_resolved_highlighting = warning
+resharper_mvc_area_not_resolved_highlighting = warning
+resharper_mvc_controller_not_resolved_highlighting = warning
+resharper_mvc_masterpage_not_resolved_highlighting = warning
+resharper_mvc_partial_view_not_resolved_highlighting = warning
+resharper_mvc_template_not_resolved_highlighting = warning
+resharper_mvc_view_component_not_resolved_highlighting = warning
+resharper_mvc_view_component_view_not_resolved_highlighting = warning
+resharper_mvc_view_not_resolved_highlighting = warning
+resharper_razor_assembly_not_resolved_highlighting = warning
+resharper_redundant_argument_default_value_highlighting = none
+resharper_redundant_base_qualifier_highlighting = warning
+resharper_redundant_default_member_initializer_highlighting = none
+resharper_redundant_lambda_parameter_type_highlighting = none
+resharper_redundant_using_directive_highlighting = suggestion
+resharper_suggest_var_or_type_built_in_types_highlighting = hint
+resharper_suggest_var_or_type_elsewhere_highlighting = hint
+resharper_suggest_var_or_type_simple_types_highlighting = hint
+resharper_switch_statement_handles_some_known_enum_values_with_default_highlighting = warning
+resharper_tail_recursive_call_highlighting = none
+resharper_unnecessary_whitespace_highlighting = hint
+resharper_unused_parameter_local_highlighting = suggestion
+resharper_unused_type_global_highlighting = warning
+resharper_web_config_module_not_resolved_highlighting = warning
+resharper_web_config_type_not_resolved_highlighting = warning
+resharper_web_config_wrong_module_highlighting = warning

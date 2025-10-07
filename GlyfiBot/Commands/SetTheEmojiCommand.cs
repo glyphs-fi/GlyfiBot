@@ -56,7 +56,7 @@ public class SetTheEmojiCommand
 		if (emoji is "null" or "clear" or "empty" or "nothing")
 		{
 			TheEmoji = null;
-			await context.SendEphemeralResponse("Cleared emoji. Remember to `/set-emoji` it to something again before using `/select`!");
+			await context.SendEphemeralResponseAsync("Cleared emoji. Remember to `/set-emoji` it to something again before using `/select`!");
 			return;
 		}
 
@@ -67,17 +67,17 @@ public class SetTheEmojiCommand
 		{
 			if (emojiReal.Id != 0 && !emojiReal.IsAvailable)
 			{
-				await context.SendEphemeralResponse($"Emoji {emojiReal} is not available...");
+				await context.SendEphemeralResponseAsync($"Emoji {emojiReal} is not available...");
 				return;
 			}
 
 			TheEmoji = emojiReal;
 			string message = $"Set emoji to {emojiReal}";
 			Console.WriteLine(message);
-			await context.SendEphemeralResponse(message);
+			await context.SendEphemeralResponseAsync(message);
 			return;
 		}
 
-		await context.SendEphemeralResponse($"Could not set emoji `{emoji}`");
+		await context.SendEphemeralResponseAsync($"Could not set emoji `{emoji}`");
 	}
 }
