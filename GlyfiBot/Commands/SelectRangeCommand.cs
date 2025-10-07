@@ -58,12 +58,12 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 
 		(Dictionary<User, List<AttachmentFile>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(messages, emoji);
 
-		StringBuilder sbSummary = new();
-		sbSummary.AppendLine($"Selected messages: {messages.Count}");
-		sbSummary.AppendLine($"Found submission messages: {submissionMessageCount}");
+		StringBuilder sbStats = new();
+		sbStats.AppendLine($"Selected messages: {messages.Count}");
+		sbStats.AppendLine($"Found submission messages: {submissionMessageCount}");
 
 		long submissionsCount = submissions.Aggregate(0, (current, keyValuePair) => current + keyValuePair.Value.Count);
-		sbSummary.AppendLine($"Found total submissions: {submissionsCount}");
+		sbStats.AppendLine($"Found total submissions: {submissionsCount}");
 
 		string? submissionArchivePath = null;
 		StringBuilder sbList = new();
@@ -80,6 +80,8 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			ZipFile.CreateFromDirectory(directoryToArchive, submissionArchivePath, CompressionLevel.SmallestSize, includeBaseDirectory);
 		}
 
+		string stats = sbStats.ToString();
+		string fileList = sbList.ToString();
 		try
 		{
 			await ModifyResponseAsync(msg =>
@@ -88,16 +90,14 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 
 				List<AttachmentProperties> attachments = [];
 
-				string summary = sbSummary.ToString();
-				string fileList = sbList.ToString();
-				if (summary.Length + fileList.Length >= 1950) //a bit of a margin to the 2000 max
+				if (stats.Length + fileList.Length >= 1950) //a bit of a margin to the 2000 max
 				{
-					msg.Content = summary;
+					msg.Content = stats;
 					attachments.Add(new AttachmentProperties("filelist.txt", new MemoryStream(Encoding.UTF8.GetBytes(fileList))));
 				}
 				else
 				{
-					msg.Content = summary + "\n" + fileList;
+					msg.Content = stats + "\n" + fileList;
 				}
 
 				if (submissionArchivePath is not null)
@@ -118,6 +118,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			else if (e.Error is {Code: 40005}) //Request entity too large
 			{
 				await ModifyResponseAsync(msg => msg.Content =
+					stats + "\n" +
 					"Archive ended up being too big for Discord...\n" +
 					"I'm afraid you'll have to collect the submissions manually until [#2](<https://github.com/glyphs-fi/GlyfiBot/issues/2>) and [#3](<https://github.com/glyphs-fi/GlyfiBot/issues/3>) are implemented...");
 			}
