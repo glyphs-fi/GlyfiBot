@@ -8,14 +8,14 @@ using static GlyfiBot.Utils;
 
 namespace GlyfiBot.Commands;
 
+public enum DownloadType
+{
+	Raw,
+	Flat,
+}
+
 public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 {
-	public enum DownloadType
-	{
-		Raw,
-		Flat,
-	}
-
 	[SlashCommand("select",
 		"Select messages to look through for submissions",
 		DefaultGuildPermissions = Permissions.Administrator)]
