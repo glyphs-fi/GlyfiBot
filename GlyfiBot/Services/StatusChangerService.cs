@@ -13,6 +13,16 @@ public static class StatusChangerService
 	[
 		new(BotActivityType.CompetingIn, "the Glyph Challenge"),
 		new(BotActivityType.CompetingIn, "the Ambigram Challenge"),
+		new(BotActivityType.Playing, "with their tittles"),
+		new(BotActivityType.Streaming, "[IRL] Hunting for Glyphs!1!!(gone typosexual)"),
+		new(BotActivityType.Watching, "obscure linguistic videos"),
+		new(BotActivityType.ListeningTo, "wikipedia IPA sound examples"),
+		new(BotActivityType.Playing, "\"dive into the rabbithole\" on Wikipedia"),
+		new(BotActivityType.Watching, "Calligraphy ASMR"),
+		new(BotActivityType.Playing, "with broad nibs"),
+		new(BotActivityType.Playing, "with variable fonts"),
+		new(BotActivityType.Playing, "with brushes"),
+		new(BotActivityType.ListeningTo, "ABC songs of other languages"),
 	];
 
 	/// <summary>
