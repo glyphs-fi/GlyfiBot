@@ -6,7 +6,24 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      # Ensure that feedback is delivered for all matrix combinations.
+      fail-fast: false
+      
+      matrix:
+          os: [ ubuntu-latest, windows-latest ]
+          runtime: [ linux-x64, linux-arm64, windows-x64 ]
+          configuration: [ Release ]
+          exclude:
+            - os: windows-latest
+              runtime: linux-x64
+            - os: windows-latest
+              runtime: linux-arm64
+            - os: ubuntu-latest
+              runtime: windows-x64
+
     steps:
     - name: Checkout
       uses: actions/checkout@v5
@@ -17,10 +34,14 @@ jobs:
         dotnet-version: 9.0.x
 
     - name: Publish
-      run: dotnet publish -r linux-x64 -c Release
+      run: >
+        dotnet publish
+        --runtime ${{ matrix.runtime }}
+        --self-contained
+        --configuration ${{ matrix.configuration }}
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: GlyfiBot_linux-x64
-        path: "GlyfiBot/bin/Release/net9.0/linux-x64/publish/"
+        name: GlyfiBot_${{ matrix.runtime }}
+        path: "GlyfiBot/bin/Release/net9.0/${{ matrix.runtime }}/publish/"
