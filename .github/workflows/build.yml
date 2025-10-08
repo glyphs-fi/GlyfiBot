@@ -22,7 +22,7 @@ jobs:
             - os: windows-latest
               runtime: linux-arm64
             - os: ubuntu-latest
-              runtime: windows-x64
+              runtime: win-x64
 
     steps:
     - name: Checkout
