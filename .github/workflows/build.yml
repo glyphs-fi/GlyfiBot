@@ -35,7 +35,8 @@ jobs:
 
     - name: Install Cross-compilation Tooling
       if: ${{ matrix.runtime == 'linux-arm64' }}
-      run: sudo apt update && sudo apt install binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu-dbg
+      # Packages from https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/cross-compile#linux
+      run: sudo apt update && sudo apt install clang llvm binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu zlib1g-dev:arm64
 
     - name: Publish
       run: >
