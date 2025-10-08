@@ -35,7 +35,7 @@ In here, choose each the command you wish to assign a role to, and then click **
 
 ## Running
 
-1. Create a new Bot in the Discord Developer Panel
+1. Create a new Bot in the Discord Developer Panel (You can follow the **Step 1** from [here](https://netcord.dev/guides/getting-started/making-a-bot.html))
 2. Download a build from [GitHub Actions](https://github.com/glyphs-fi/GlyfiBot/actions/workflows/build.yml) **OR** Clone this repository and build it
 3. Set the `GLYFI_TOKEN` environment variable to your token
 4. Run it
