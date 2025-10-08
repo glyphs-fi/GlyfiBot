@@ -1,4 +1,5 @@
 ﻿using GlyfiBot.Commands;
+using GlyfiBot.Services;
 using NetCord;
 using NetCord.Gateway;
 using NetCord.Logging;
@@ -58,11 +59,7 @@ static internal class Program
 
 		await applicationCommandService.RegisterCommandsAsync(client.Rest, client.Id);
 
-		string[] challenges = ["Glyph", "Ambigram"];
-		string whichChallenge = challenges[new Random().Next(0, challenges.Length)];
-		UserActivityProperties[] activity = [new($"the {whichChallenge} Challenge", UserActivityType.Competing)];
-
-		await client.StartAsync(new PresenceProperties(UserStatusType.Online) {Activities = activity});
+		await client.StartAsync();
 
 		if (client.Cache.Guilds.Count > 1)
 		{
@@ -70,6 +67,9 @@ static internal class Program
 			Environment.Exit(1);
 		}
 
-		await Task.Delay(-1);
+		await Task.WhenAll(
+			ForeverService.RunAsync(),
+			StatusChangerService.RunAsync(client)
+		);
 	}
 }
