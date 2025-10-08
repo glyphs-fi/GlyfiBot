@@ -33,6 +33,10 @@ jobs:
       with:
         dotnet-version: 9.0.x
 
+    - name: Install Cross-compilation Tooling
+      if: ${{ matrix.runtime }} == linux-arm64
+      run: sudo apt update && sudo apt install binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu-dbg
+
     - name: Publish
       run: >
         dotnet publish
