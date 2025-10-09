@@ -5,6 +5,7 @@ using NetCord.Gateway;
 using NetCord.Logging;
 using NetCord.Services;
 using NetCord.Services.ApplicationCommands;
+using System.Reflection;
 
 namespace GlyfiBot;
 
@@ -66,6 +67,20 @@ static internal class Program
 			Console.WriteLine("Error: The bot is in multiple Discord Servers. This is not supported.");
 			Environment.Exit(1);
 		}
+
+		await client.Rest.ModifyCurrentApplicationAsync(options =>
+		{
+			Assembly? assembly = Assembly.GetEntryAssembly();
+			AssemblyInformationalVersionAttribute? info = assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+			string? gitHash = info?.InformationalVersion.Split('+').Last();
+			options.Description = $"""
+			                       Hi! I'm Glyfi, your local G&A bot :)
+
+			                       Bot Information:
+			                       Source: https://github.com/glyphs-fi/GlyfiBot
+			                       Version: {gitHash}
+			                       """;
+		});
 
 		await Task.WhenAll(
 			ForeverService.RunAsync(),
