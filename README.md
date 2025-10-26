@@ -13,6 +13,8 @@ The goal of this project is to encourage very collaborative development on this 
   - By default, only Administrators can run this.
 - `/set-emoji`: Set the emoji that will mark something as a submission.
   - By default, only Administrators can run this.
+- `/pfps`: Get the profile pictures of one or multiple users in bulk.
+  - By default, only Administrators can run this.
 
 To allow a specific role to run these commands instead of just Administrators,
 go to your **Server Settings** > **APPS: Integrations** > **GlyfiBot: Manage**.  

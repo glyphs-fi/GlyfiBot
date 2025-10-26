@@ -13,6 +13,7 @@ static internal class Program
 {
 	private const string DATA_DIR = "data";
 	public const string SELECTIONS_DIR = $"{DATA_DIR}/selections";
+	public const string PFPS_DIR = $"{DATA_DIR}/pfps";
 	public const string SETTINGS_DIR = $"{DATA_DIR}/settings";
 
 	private static async Task Main()
@@ -26,6 +27,7 @@ static internal class Program
 
 		Directory.CreateDirectory(DATA_DIR);
 		Directory.CreateDirectory(SELECTIONS_DIR);
+		Directory.CreateDirectory(PFPS_DIR);
 		Directory.CreateDirectory(SETTINGS_DIR);
 
 		SetTheEmojiCommand.Load();
@@ -57,6 +59,7 @@ static internal class Program
 		applicationCommandService.AddModule<SelectRangeCommand>();
 		applicationCommandService.AddModule<SetTheEmojiCommand>();
 		applicationCommandService.AddModule<GetTheEmojiCommand>();
+		applicationCommandService.AddModule<ProfilePicturesCommand>();
 
 		await applicationCommandService.RegisterCommandsAsync(client.Rest, client.Id);
 

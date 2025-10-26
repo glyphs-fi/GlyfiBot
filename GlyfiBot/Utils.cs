@@ -166,4 +166,23 @@ public static class Utils
 		IRestErrorGroup? errorGroup = restErrorGroup.Errors.GetValueOrDefault("content");
 		return errorGroup is RestErrorDetailGroup group && group.Errors.Any(restErrorDetail => restErrorDetail.Code == errorKey);
 	}
+
+	public static ImageUrl AlwaysGetAvatarUrl(this User user, ImageFormat? format = null)
+	{
+		ImageUrl? avatarUrl = user.GetAvatarUrl(format);
+		return avatarUrl ?? user.DefaultAvatarUrl;
+	}
+
+	/// <remarks>
+	/// Includes the <c>.</c> of the extension.
+	/// </remarks>
+	public static string GetExtension(this ImageUrl imageUrl)
+	{
+		return Path.GetExtension(imageUrl.ToString());
+	}
+
+	public static bool IsAnimated(this ImageUrl imageUrl)
+	{
+		return imageUrl.GetExtension() == ".gif";
+	}
 }
