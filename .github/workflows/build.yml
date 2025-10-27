@@ -46,7 +46,7 @@ jobs:
         --configuration ${{ matrix.configuration }}
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: GlyfiBot_${{ matrix.runtime }}
         path: "GlyfiBot/bin/Release/net9.0/${{ matrix.runtime }}/publish/"
