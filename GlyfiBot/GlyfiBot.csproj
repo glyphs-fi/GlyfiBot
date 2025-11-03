@@ -14,7 +14,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="NetCord" Version="1.0.0-alpha.439"/>
+		<PackageReference Include="NetCord" Version="1.0.0-alpha.444"/>
 		<PackageReference Include="NetCord.Services" Version="1.0.0-alpha.439"/>
 		<PackageReference Include="JetBrains.Annotations" Version="2025.2.2"/>
 	</ItemGroup>
