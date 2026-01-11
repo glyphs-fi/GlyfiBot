@@ -55,15 +55,15 @@ public static class StatusChangerService
 
 	public static async Task RunAsync(GatewayClient client)
 	{
+		await SetRandomActivity(client); //initial
+
 		using PeriodicTimer timer = new(_timeSpan);
 
 		while(await timer.WaitForNextTickAsync())
 		{
 			try
 			{
-				PotentialActivity botActivity = _potentialActivities[Random.Shared.Next(0, _potentialActivities.Count)];
-				UserActivityProperties[] userActivity = [new(botActivity.Text, Convert(botActivity.Type))];
-				await client.UpdatePresenceAsync(new PresenceProperties(UserStatusType.Online) {Activities = userActivity});
+				await SetRandomActivity(client);
 			}
 			catch(Exception e)
 			{
@@ -71,5 +71,12 @@ public static class StatusChangerService
 				await Task.Delay(TimeSpan.FromSeconds(10)); // Some delay to prevent an exception from being thrown repeatedly
 			}
 		}
+	}
+
+	private static async Task SetRandomActivity(GatewayClient client)
+	{
+		PotentialActivity botActivity = _potentialActivities[Random.Shared.Next(0, _potentialActivities.Count)];
+		UserActivityProperties[] userActivity = [new(botActivity.Text, Convert(botActivity.Type))];
+		await client.UpdatePresenceAsync(new PresenceProperties(UserStatusType.Online) {Activities = userActivity});
 	}
 }
