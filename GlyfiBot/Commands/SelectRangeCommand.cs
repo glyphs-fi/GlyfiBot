@@ -75,7 +75,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 				DownloadType.Flat => false,
 				_ => throw new ArgumentOutOfRangeException(nameof(downloadType), downloadType, null),
 			};
-			ZipFile.CreateFromDirectory(directoryToArchive, submissionArchivePath, CompressionLevel.SmallestSize, includeBaseDirectory);
+			await ZipFile.CreateFromDirectoryAsync(directoryToArchive, submissionArchivePath, CompressionLevel.SmallestSize, includeBaseDirectory);
 		}
 
 		string stats = sbStats.ToString();
