@@ -4,13 +4,15 @@ using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using static GlyfiBot.Utils;
 
 namespace GlyfiBot.Commands;
 
-public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
+public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	private const string TYPST_VERSION = "v0.14.2";
+	private const string SCRIPTS_REPO_NAME = "weekly-challenges-typst";
 
 	[SlashCommand("typst",
 		"Does a Typst thing!")]
@@ -37,7 +39,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			msg.Content = $"Typst found at `{typstExe}`";
 		});
 
-		Process typstCmd = new() {StartInfo =  new ProcessStartInfo(typstExe, ["--version"]) {RedirectStandardOutput = true}};
+		Process typstCmd = new() {StartInfo = new ProcessStartInfo(typstExe, ["--version"]) {RedirectStandardOutput = true}};
 		typstCmd.Start();
 		await typstCmd.WaitForExitAsync();
 
@@ -46,7 +48,93 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			msg.Flags = MessageFlags.Ephemeral;
 			msg.Content = $"Typst found at `{typstExe}` with version `{typstCmd.StandardOutput.ReadToEnd()}`";
 		});
+
+		string? scriptPath = await SetupScript(client);
+		if (scriptPath is null)
+		{
+			await ModifyResponseAsync(msg =>
+			{
+				msg.Flags = MessageFlags.Ephemeral;
+				msg.Content = "Typst failed to install!";
+			});
+			return;
+		}
+
+		await ModifyResponseAsync(msg =>
+		{
+			msg.Flags = MessageFlags.Ephemeral;
+			msg.Content = $"Script found at `{scriptPath}`";
+		});
 	}
+
+#region Setup Script
+
+	// ReSharper disable once InconsistentNaming
+	private async Task<string?> SetupScript(HttpClient client)
+	{
+		string? latestCommitHash = await GetLatestCommitHash(client);
+		if (latestCommitHash is null)
+		{
+			await ModifyResponseAsync(msg =>
+			{
+				msg.Flags = MessageFlags.Ephemeral;
+				msg.Content = "Failed to retrieve the latest commit hash of the Typst script!";
+			});
+			return null;
+		}
+
+		string scriptDir = Path.Join(Program.TYPST_SCRIPT_DIR, $"{SCRIPTS_REPO_NAME}-{latestCommitHash}");
+		if (!Directory.Exists(scriptDir))
+		{
+			await ModifyResponseAsync(msg =>
+			{
+				msg.Flags = MessageFlags.Ephemeral;
+				msg.Content = "Downloading script... (This will only happen once)";
+			});
+
+			Directory.CreateDirectory(scriptDir);
+			string zipPath = Path.Join(Program.TYPST_SCRIPT_DIR, $"{latestCommitHash}.zip");
+			{
+				await using Stream networkStream = await client.GetStreamAsync($"https://github.com/glyphs-fi/{SCRIPTS_REPO_NAME}/archive/{latestCommitHash}.zip");
+				await using FileStream fileStream = new(zipPath, FileMode.CreateNew);
+				await networkStream.CopyToAsync(fileStream);
+			}
+
+			await ModifyResponseAsync(msg =>
+			{
+				msg.Flags = MessageFlags.Ephemeral;
+				msg.Content = "Extracting script zip... (This will only happen once)";
+			});
+			await ExtractArchive(zipPath);
+		}
+
+		string scriptPath = Path.Join(scriptDir, "main.typ");
+		return File.Exists(scriptPath) ? scriptPath : null;
+	}
+
+	[GeneratedRegex("""<meta\s+property=(["'])og:url\1\s+content=(["']).+/commit/(.+?)/?\2\s*/>""")]
+	private static partial Regex HashRegex();
+
+	// ReSharper disable once InconsistentNaming
+	private static async Task<string?> GetLatestCommitHash(HttpClient client)
+	{
+		await using Stream networkStream = await client.GetStreamAsync($"https://github.com/glyphs-fi/{SCRIPTS_REPO_NAME}/commit/main");
+		using StreamReader streamReader = new(networkStream);
+
+		Regex pattern = HashRegex();
+		while(await streamReader.ReadLineAsync() is {} line)
+		{
+			Match match = pattern.Match(line);
+			if (match.Success)
+			{
+				return match.Groups[3].Value;
+			}
+		}
+
+		return null;
+	}
+
+#endregion
 
 #region Setup Typst
 
