@@ -40,7 +40,7 @@ public static class Utils
 
 	/// <summary>
 	/// Tries to get a message from the context.
-	/// Sends an error response with <see cref="SendEphemeralResponseAsync"/> if the message cannot be got.
+	/// Sends an error response with <see cref="SendEphemeralResponseAsync(SlashCommandContext, string)"/> if the message cannot be got.
 	/// </summary>
 	///
 	/// <param name="context">The <see cref="CommandContext"/></param>
