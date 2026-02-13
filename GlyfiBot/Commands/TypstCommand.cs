@@ -23,28 +23,21 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		using HttpClient client = new();
 
 		string? typstExe = await SetupTypst(client);
-		if (typstExe is null)
-		{
-			await Context.ModifyEphemeralResponseAsync("Typst failed to install!");
-			return;
-		}
+		if (typstExe is null) return; //no need to message, that was already done in the function
 
-		await Context.ModifyEphemeralResponseAsync($"Typst found at `{typstExe}`");
+		string? scriptPath = await SetupScript(client);
+		if (scriptPath is null) return; //no need to message, that was already done in the function
 
-		Process typstCmd = new() {StartInfo = new ProcessStartInfo(typstExe, ["--version"]) {RedirectStandardOutput = true}};
+		Process typstCmd = new() {StartInfo = new ProcessStartInfo(typstExe, ["compile", scriptPath]) {RedirectStandardOutput = true, RedirectStandardError = true}};
 		typstCmd.Start();
 		await typstCmd.WaitForExitAsync();
 
-		await Context.ModifyEphemeralResponseAsync($"Typst found at `{typstExe}` with version `{await typstCmd.StandardOutput.ReadToEndAsync()}`");
-
-		string? scriptPath = await SetupScript(client);
-		if (scriptPath is null)
-		{
-			await Context.ModifyEphemeralResponseAsync("Typst failed to install!");
-			return;
-		}
-
-		await Context.ModifyEphemeralResponseAsync($"Script found at `{scriptPath}`");
+		await Context.ModifyEphemeralResponseAsync($"""
+		                                            ```
+		                                            {await typstCmd.StandardOutput.ReadToEndAsync()}
+		                                            {await typstCmd.StandardError.ReadToEndAsync()}
+		                                            ```
+		                                            """);
 	}
 
 #region Setup Script
@@ -77,7 +70,13 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		}
 
 		string scriptPath = Path.Join(scriptDir, "main.typ");
-		return File.Exists(scriptPath) ? scriptPath : null;
+		if (!File.Exists(scriptPath))
+		{
+			await Context.ModifyEphemeralResponseAsync("Could not find `main.typ` in the script folder!");
+			return null;
+		}
+
+		return scriptPath;
 	}
 
 	[GeneratedRegex("""<meta\s+property=(["'])og:url\1\s+content=(["']).+/commit/(.+?)/?\2\s*/>""")]
@@ -133,7 +132,14 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			await ExtractArchive(archivePath);
 		}
 
-		return FindExe(typstExeVersionDir, "typst");
+		string? exeLocation = FindExe(typstExeVersionDir, "typst");
+		if (exeLocation is null)
+		{
+			await Context.ModifyEphemeralResponseAsync("Could not find a Typst executable in the unpacked archive!");
+			return null;
+		}
+
+		return exeLocation;
 	}
 
 	private const string URL = $"https://github.com/typst/typst/releases/download/{TYPST_VERSION}";
