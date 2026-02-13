@@ -70,7 +70,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			});
 
 			Directory.CreateDirectory(typstExeVersionDir);
-			string archivePath = Path.Join(typstExeVersionDir, typstDownloadURL.Split('/').Last());
+			string archivePath = Path.Join(typstExeVersionDir, Path.GetFileName(typstDownloadURL));
 			{
 				await using Stream networkStream = await client.GetStreamAsync(typstDownloadURL);
 				await using FileStream fileStream = new(archivePath, FileMode.CreateNew);
