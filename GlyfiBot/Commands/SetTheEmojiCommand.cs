@@ -9,11 +9,9 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	private const string EMOJI_FILE = $"{Program.SETTINGS_DIR}/emoji.txt";
 
-	private static ReactionEmojiProperties? _theEmojiBacking = null;
-
 	public static ReactionEmojiProperties? TheEmoji
 	{
-		get => _theEmojiBacking;
+		get;
 		private set
 		{
 			if (value is null)
@@ -24,9 +22,9 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 			{
 				File.WriteAllText(EMOJI_FILE, value.Name + "\n" + value.Id);
 			}
-			_theEmojiBacking = value;
+			field = value;
 		}
-	}
+	} = null;
 
 	public static void Load()
 	{
