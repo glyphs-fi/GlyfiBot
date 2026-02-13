@@ -68,7 +68,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 		{
 			string directoryToArchive = await DownloadPfpsAsync(Context.Interaction, users, sbList, downloadFormat, downloadAnimated, animatedDownloadFormat);
 			pfpsArchivePath = Path.Join(Path.GetDirectoryName(directoryToArchive), $"{Path.GetFileName(directoryToArchive)}.zip");
-			ZipFile.CreateFromDirectory(directoryToArchive, pfpsArchivePath, CompressionLevel.SmallestSize, includeBaseDirectory: false);
+			await ZipFile.CreateFromDirectoryAsync(directoryToArchive, pfpsArchivePath, CompressionLevel.SmallestSize, includeBaseDirectory: false);
 		}
 
 		string stats = sbStats.ToString();
