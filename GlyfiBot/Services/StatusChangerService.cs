@@ -73,6 +73,7 @@ public static class StatusChangerService
 		}
 	}
 
+	// ReSharper disable once InconsistentNaming
 	private static async Task SetRandomActivity(GatewayClient client)
 	{
 		PotentialActivity botActivity = _potentialActivities[Random.Shared.Next(0, _potentialActivities.Count)];
