@@ -3,8 +3,10 @@ using NetCord.Gateway;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
 using NetCord.Services.Commands;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO.Compression;
 using System.Text;
 
 namespace GlyfiBot;
@@ -198,5 +200,48 @@ public static class Utils
 	public static bool IsAnimated(this ImageUrl imageUrl)
 	{
 		return imageUrl.GetExtension() == ".gif";
+	}
+
+
+	/// <summary>
+	/// Extracts the archive at the provided path into its parent directory.
+	/// </summary>
+	/// <param name="archivePath"></param>
+	/// <exception cref="DirectoryNotFoundException"></exception>
+	// ReSharper disable once InconsistentNaming
+	public static async Task ExtractArchive(string archivePath)
+	{
+		DirectoryInfo? directoryInfo = Directory.GetParent(archivePath);
+		if (directoryInfo is null) throw new DirectoryNotFoundException($"Parent not found: {archivePath}");
+
+		string targetDir = directoryInfo.FullName;
+		if (archivePath.EndsWith(".zip"))
+		{
+			await ZipFile.ExtractToDirectoryAsync(archivePath, targetDir);
+		}
+		else if (archivePath.EndsWith(".tar.xz"))
+		{
+			Process unpacker = new() {StartInfo = new ProcessStartInfo("tar", ["xf", archivePath, "-C", targetDir])};
+			unpacker.Start();
+			await unpacker.WaitForExitAsync();
+		}
+	}
+
+	/// <summary>
+	/// Finds an exe in the provided directory, or a subdirectory of it.
+	/// </summary>
+	/// <param name="searchPath">The directory in which to look (and its subdirectories)</param>
+	/// <param name="exeName">The name of the executable to look for. Do not include ".exe" as that will automatically be added if necessary!</param>
+	/// <returns></returns>
+	public static string? FindExe(string searchPath, string exeName)
+	{
+		string[] files = Directory.GetFiles(searchPath, $"{exeName}*", new EnumerationOptions
+		{
+			RecurseSubdirectories = true,
+			MaxRecursionDepth = 1,
+			MatchCasing = MatchCasing.CaseInsensitive,
+			MatchType = MatchType.Simple,
+		});
+		return files.FirstOrDefault(file => file.EndsWith(".exe") || Path.GetFileName(file) == exeName);
 	}
 }
