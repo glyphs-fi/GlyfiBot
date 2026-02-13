@@ -52,7 +52,7 @@ static internal class Program
 
 			if (result is IFailResult failResult)
 			{
-				await slashCommandInteraction.SendEphemeralResponseAsync(failResult.Message);
+				await slashCommandInteraction.SendEphemeralFollowupMessageAsync(failResult.Message);
 			}
 		};
 

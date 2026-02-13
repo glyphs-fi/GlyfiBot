@@ -87,6 +87,20 @@ public static class Utils
 	}
 
 	/// <summary>
+	/// Sends a followup message as an ephemeral message as a response to a command, through its interaction.
+	/// </summary>
+	/// <param name="interaction">The <see cref="Interaction"/></param>
+	/// <param name="content">The contents of the message</param>
+	public static async Task SendEphemeralFollowupMessageAsync(this Interaction interaction, string content)
+	{
+		await interaction.SendFollowupMessageAsync(new InteractionMessageProperties
+		{
+			Content = content,
+			Flags = MessageFlags.Ephemeral,
+		});
+	}
+
+	/// <summary>
 	/// Whether a specific message has been reacted to with this specific emoji.
 	/// </summary>
 	///
