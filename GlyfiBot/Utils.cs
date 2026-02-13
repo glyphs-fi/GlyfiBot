@@ -89,6 +89,20 @@ public static class Utils
 	}
 
 	/// <summary>
+	/// Modifies the response to the provided content, while setting/keeping the response ephemeral.
+	/// </summary>
+	/// <param name="context">The <see cref="CommandContext"/></param>
+	/// <param name="content">The contents of the message</param>
+	public static async Task ModifyEphemeralResponseAsync(this SlashCommandContext context, string content)
+	{
+		await context.Interaction.ModifyResponseAsync(msg =>
+		{
+			msg.Flags = MessageFlags.Ephemeral;
+			msg.Content = content;
+		});
+	}
+
+	/// <summary>
 	/// Sends a followup message as an ephemeral message as a response to a command, through its interaction.
 	/// </summary>
 	/// <param name="interaction">The <see cref="Interaction"/></param>

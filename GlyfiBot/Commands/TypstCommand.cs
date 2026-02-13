@@ -25,46 +25,26 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		string? typstExe = await SetupTypst(client);
 		if (typstExe is null)
 		{
-			await ModifyResponseAsync(msg =>
-			{
-				msg.Flags = MessageFlags.Ephemeral;
-				msg.Content = "Typst failed to install!";
-			});
+			await Context.ModifyEphemeralResponseAsync("Typst failed to install!");
 			return;
 		}
 
-		await ModifyResponseAsync(msg =>
-		{
-			msg.Flags = MessageFlags.Ephemeral;
-			msg.Content = $"Typst found at `{typstExe}`";
-		});
+		await Context.ModifyEphemeralResponseAsync($"Typst found at `{typstExe}`");
 
 		Process typstCmd = new() {StartInfo = new ProcessStartInfo(typstExe, ["--version"]) {RedirectStandardOutput = true}};
 		typstCmd.Start();
 		await typstCmd.WaitForExitAsync();
 
-		await ModifyResponseAsync(msg =>
-		{
-			msg.Flags = MessageFlags.Ephemeral;
-			msg.Content = $"Typst found at `{typstExe}` with version `{typstCmd.StandardOutput.ReadToEnd()}`";
-		});
+		await Context.ModifyEphemeralResponseAsync($"Typst found at `{typstExe}` with version `{await typstCmd.StandardOutput.ReadToEndAsync()}`");
 
 		string? scriptPath = await SetupScript(client);
 		if (scriptPath is null)
 		{
-			await ModifyResponseAsync(msg =>
-			{
-				msg.Flags = MessageFlags.Ephemeral;
-				msg.Content = "Typst failed to install!";
-			});
+			await Context.ModifyEphemeralResponseAsync("Typst failed to install!");
 			return;
 		}
 
-		await ModifyResponseAsync(msg =>
-		{
-			msg.Flags = MessageFlags.Ephemeral;
-			msg.Content = $"Script found at `{scriptPath}`";
-		});
+		await Context.ModifyEphemeralResponseAsync($"Script found at `{scriptPath}`");
 	}
 
 #region Setup Script
@@ -75,22 +55,14 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		string? latestCommitHash = await GetLatestCommitHash(client);
 		if (latestCommitHash is null)
 		{
-			await ModifyResponseAsync(msg =>
-			{
-				msg.Flags = MessageFlags.Ephemeral;
-				msg.Content = "Failed to retrieve the latest commit hash of the Typst script!";
-			});
+			await Context.ModifyEphemeralResponseAsync("Failed to retrieve the latest commit hash of the Typst script!");
 			return null;
 		}
 
 		string scriptDir = Path.Join(Program.TYPST_SCRIPT_DIR, $"{SCRIPTS_REPO_NAME}-{latestCommitHash}");
 		if (!Directory.Exists(scriptDir))
 		{
-			await ModifyResponseAsync(msg =>
-			{
-				msg.Flags = MessageFlags.Ephemeral;
-				msg.Content = "Downloading script... (This will only happen once)";
-			});
+			await Context.ModifyEphemeralResponseAsync("Downloading script... (This will only happen once)");
 
 			Directory.CreateDirectory(scriptDir);
 			string zipPath = Path.Join(Program.TYPST_SCRIPT_DIR, $"{latestCommitHash}.zip");
@@ -100,11 +72,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 				await networkStream.CopyToAsync(fileStream);
 			}
 
-			await ModifyResponseAsync(msg =>
-			{
-				msg.Flags = MessageFlags.Ephemeral;
-				msg.Content = "Extracting script zip... (This will only happen once)";
-			});
+			await Context.ModifyEphemeralResponseAsync("Extracting script zip... (This will only happen once)");
 			await ExtractArchive(zipPath);
 		}
 
@@ -144,18 +112,14 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		string? typstDownloadURL = GetTypstDownloadURLForPlatform();
 		if (typstDownloadURL is null)
 		{
-			await Context.SendEphemeralResponseAsync("The server isn't running on a platform that this bot supports, so Typst cannot be installed...");
+			await Context.ModifyEphemeralResponseAsync("The server isn't running on a platform that this bot supports, so Typst cannot be installed...");
 			return null;
 		}
 
 		string typstExeVersionDir = Path.Join(Program.TYPST_EXE_DIR, TYPST_VERSION);
 		if (!Directory.Exists(typstExeVersionDir))
 		{
-			await ModifyResponseAsync(msg =>
-			{
-				msg.Flags = MessageFlags.Ephemeral;
-				msg.Content = "Downloading Typst... (This will only happen once)";
-			});
+			await Context.ModifyEphemeralResponseAsync("Downloading Typst... (This will only happen once)");
 
 			Directory.CreateDirectory(typstExeVersionDir);
 			string archivePath = Path.Join(typstExeVersionDir, Path.GetFileName(typstDownloadURL));
@@ -165,11 +129,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 				await networkStream.CopyToAsync(fileStream);
 			}
 
-			await ModifyResponseAsync(msg =>
-			{
-				msg.Flags = MessageFlags.Ephemeral;
-				msg.Content = "Extracting Typst... (This will only happen once)";
-			});
+			await Context.ModifyEphemeralResponseAsync("Extracting Typst... (This will only happen once)");
 			await ExtractArchive(archivePath);
 		}
 
