@@ -103,12 +103,11 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 		{
 			if (e.HasInternalError("BASE_TYPE_MAX_LENGTH"))
 			{
-				await ModifyResponseAsync(msg => msg.Content =
-					"Message was too long to fit. Please file a bug report and paste the _exact_ command you used into it: <https://github.com/glyphs-fi/GlyfiBot/issues/new>");
+				await Context.ModifyEphemeralResponseAsync("Message was too long to fit. Please file a bug report and paste the _exact_ command you used into it: <https://github.com/glyphs-fi/GlyfiBot/issues/new>");
 			}
 			else if (e.Error is {Code: 40005}) //Request entity too large
 			{
-				await ModifyResponseAsync(msg => msg.Content =
+				await Context.ModifyEphemeralResponseAsync(
 					stats + "\n" +
 					"Archive ended up being too big for Discord...\n" +
 					"I'm afraid you'll have to collect the submissions manually until [#2](<https://github.com/glyphs-fi/GlyfiBot/issues/2>) and [#3](<https://github.com/glyphs-fi/GlyfiBot/issues/3>) are implemented...");
