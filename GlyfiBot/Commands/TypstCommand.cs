@@ -18,14 +18,15 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	public async Task ExecuteAsync()
 	{
 		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
+		using HttpClient client = new();
 
-		string? typstExe = await SetupTypst();
+		string? typstExe = await SetupTypst(client);
 		if (typstExe is null)
 		{
 			await ModifyResponseAsync(msg =>
 			{
 				msg.Flags = MessageFlags.Ephemeral;
-				msg.Content = "Typst failed to install! :'(";
+				msg.Content = "Typst failed to install!";
 			});
 			return;
 		}
@@ -50,7 +51,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 #region Setup Typst
 
 	// ReSharper disable once InconsistentNaming
-	private async Task<string?> SetupTypst()
+	private async Task<string?> SetupTypst(HttpClient client)
 	{
 		string? typstDownloadURL = GetTypstDownloadURLForPlatform();
 		if (typstDownloadURL is null)
@@ -70,10 +71,11 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 
 			Directory.CreateDirectory(typstExeVersionDir);
 			string archivePath = Path.Join(typstExeVersionDir, typstDownloadURL.Split('/').Last());
-			using HttpClient client = new();
-			await using Stream networkStream = await client.GetStreamAsync(typstDownloadURL);
-			await using FileStream fileStream = new(archivePath, FileMode.CreateNew);
-			await networkStream.CopyToAsync(fileStream);
+			{
+				await using Stream networkStream = await client.GetStreamAsync(typstDownloadURL);
+				await using FileStream fileStream = new(archivePath, FileMode.CreateNew);
+				await networkStream.CopyToAsync(fileStream);
+			}
 
 			await ModifyResponseAsync(msg =>
 			{

@@ -15,7 +15,7 @@ static internal class Program
 	public const string SELECTIONS_DIR = $"{DATA_DIR}/selections";
 	public const string PFPS_DIR = $"{DATA_DIR}/pfps";
 	public const string SETTINGS_DIR = $"{DATA_DIR}/settings";
-	public const string TYPST_EXE_DIR = $"{DATA_DIR}/typst";
+	public const string TYPST_EXE_DIR = $"{DATA_DIR}/typst-exe";
 
 	private static async Task Main()
 	{
