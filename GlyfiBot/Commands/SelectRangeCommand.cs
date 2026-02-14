@@ -19,7 +19,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		"Select messages to look through for submissions",
 		DefaultGuildPermissions = Permissions.Administrator)]
 	[UsedImplicitly]
-	public async Task ExecuteAsync(string start, string end, DownloadType downloadType = DownloadType.Flat)
+	public async Task ExecuteAsync(string start, string? end = null, DownloadType downloadType = DownloadType.Flat)
 	{
 		ReactionEmojiProperties? emoji = SetTheEmojiCommand.TheEmoji;
 		if (emoji is null)
@@ -34,20 +34,26 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			return;
 		}
 
-		if (!ulong.TryParse(end, null, out ulong endId))
-		{
-			await Context.SendEphemeralResponseAsync("End needs to be a number");
-			return;
-		}
-
-		// If the order is wrong, swap them into the correct order
-		if (startId > endId) (startId, endId) = (endId, startId);
-
 		RestMessage? messageStart = await GetMessageAsync(Context, startId);
 		if (messageStart is null) return;
 
-		RestMessage? messageEnd = await GetMessageAsync(Context, endId);
-		if (messageEnd is null) return;
+		ulong? endId = null;
+		if (end is not null)
+		{
+			if (!ulong.TryParse(end, null, out ulong endIdLocal))
+			{
+				await Context.SendEphemeralResponseAsync("End needs to be a number");
+				return;
+			}
+
+			// If the order is wrong, swap them into the correct order
+			if (startId > endIdLocal) (startId, endIdLocal) = (endIdLocal, startId);
+
+			RestMessage? messageEnd = await GetMessageAsync(Context, endIdLocal);
+			if (messageEnd is null) return;
+
+			endId = endIdLocal;
+		}
 
 		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
 

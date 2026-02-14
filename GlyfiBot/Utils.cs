@@ -28,7 +28,7 @@ public static class Utils
 	/// Before using this function, you should verify that both <c><see cref="start"/></c> and <c><see cref="end"/></c>
 	/// are in the same channel with <see cref="GetMessageAsync"/> and that they are in the correct order.
 	/// </remarks>
-	public static async Task<List<RestMessage>> GetMessagesBetweenAsync(SlashCommandContext context, ulong start, ulong end)
+	public static async Task<List<RestMessage>> GetMessagesBetweenAsync(SlashCommandContext context, ulong start, ulong? end)
 	{
 		IAsyncEnumerable<RestMessage> asyncEnumerable = context.Client.Rest.GetMessagesAsync(
 			context.Channel.Id,
@@ -37,7 +37,9 @@ public static class Utils
 				Direction = PaginationDirection.After,
 				From = start - 1,
 			});
-		return await asyncEnumerable.WhereAsync(message => message.Id <= end).ToListAsync();
+		return end == null
+			? await asyncEnumerable.ToListAsync()
+			: await asyncEnumerable.WhereAsync(message => message.Id <= end).ToListAsync();
 	}
 
 	/// <summary>
