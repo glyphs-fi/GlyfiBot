@@ -33,6 +33,10 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	private const string PPI_DESC = "Only used when the output_format is PNG or Both. If not provided, Typst defaults to 144";
 	private const string END_DATE_NOT_IMPLEMENTED = "\n:warning: Provided `end_date` parameter was ignored, as the Typst script does not support that yet.";
 
+	/// All the file types Typst supports
+	/// https://typst.app/docs/reference/visualize/image/#parameters-format
+	private static readonly HashSet<string> _supportedExtensions = new(StringComparer.OrdinalIgnoreCase) {".png", ".jpg", ".jpeg", ".gif", ".svg", ".pdf", ".webp"};
+
 	private static readonly HttpClient _client = new();
 
 	/// To prevent multiple commands from running at the same time, each command has a blocker from this.
@@ -184,7 +188,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		(Dictionary<User, List<Attachment>> submissions, uint _) = await SelectRangeCommand.FilterSubmissionsFromMessagesAsync(messages, emoji);
 		List<Attachment> allSubmissions = submissions.Values //
 			.SelectMany(attachments => attachments) //
-			.Where(attachment => attachment.FileName.EndsWith("png", StringComparison.OrdinalIgnoreCase)) //TODO: Remove once the script supports more file-types
+			.Where(attachment => _supportedExtensions.Contains(Path.GetExtension(attachment.FileName))) //
 			.ToList();
 
 		// Download submission message attachments
@@ -196,7 +200,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 					ChallengeType.Glyph => "Glyph",
 					ChallengeType.Ambigram => "Ambi",
 					_ => throw new ArgumentOutOfRangeException(nameof(challengeType), challengeType, null),
-				} + $"_{i + 1}.png");
+				} + $"_{i + 1}");
 
 			await using Stream networkStream = await _client.GetStreamAsync(submission.Url);
 			await using FileStream fileStream = new(path, FileMode.CreateNew);
