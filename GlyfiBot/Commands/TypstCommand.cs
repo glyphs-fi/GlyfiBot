@@ -86,8 +86,8 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			"--input", $"{inputKey}={input}",
 			"--input", $"current-week={weekNumber}",
 		];
-		if (startDate != null) args.AddRange(["--input", $"announcement-start-date={startDate}"]);
-		if (endDate != null) args.AddRange(["--input", $"announcement-end-date={endDate}"]);
+		if (startDate is not null) args.AddRange(["--input", $"announcement-start-date={startDate}"]);
+		if (endDate is not null) args.AddRange(["--input", $"announcement-end-date={endDate}"]);
 
 		List<AttachmentProperties> attachments = [];
 		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, outputFormat, args, ppi, attachments);
@@ -213,8 +213,8 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			"--input", $"current-week={weekNumber}",
 			"--input", $"image-dir={Path.GetRelativePath(scriptDir, imagesDir)}",
 		];
-		if (startDate != null) args.AddRange(["--input", $"showcase-start-date={startDate}"]);
-		if (endDate != null) args.AddRange(["--input", $"showcase-end-date={endDate}"]);
+		if (startDate is not null) args.AddRange(["--input", $"showcase-start-date={startDate}"]);
+		if (endDate is not null) args.AddRange(["--input", $"showcase-end-date={endDate}"]);
 
 		List<AttachmentProperties> attachments = [];
 		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, outputFormat, args, ppi, attachments);
@@ -243,7 +243,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 		if (outputFormat is OutputFormat.PNG or OutputFormat.Both)
 		{
-			content += await GenerateAttachmentForFormat(typstExe, scriptPath, outputDir, OutputFormat.PNG, ppi == null ? args : [..args, "--ppi", $"{ppi}"], attachments);
+			content += await GenerateAttachmentForFormat(typstExe, scriptPath, outputDir, OutputFormat.PNG, ppi is null ? args : [..args, "--ppi", $"{ppi}"], attachments);
 		}
 
 		return content;
