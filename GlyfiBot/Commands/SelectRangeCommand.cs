@@ -193,7 +193,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		};
 	}
 
-	private static async Task<(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(List<RestMessage> messages, ReactionEmojiProperties emoji)
+	public static async Task<(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(List<RestMessage> messages, ReactionEmojiProperties emoji)
 	{
 		Dictionary<User, List<Attachment>> submissions = [];
 		uint submissionMessageCount = 0;

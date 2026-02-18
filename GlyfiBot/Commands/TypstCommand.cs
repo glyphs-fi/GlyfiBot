@@ -142,7 +142,65 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		string imagesDir = Path.Join(outputDir, "images");
 		Directory.CreateDirectory(imagesDir);
 
-		//TODO: Download all the images
+		// Select messages in the provided range
+		ReactionEmojiProperties? emoji = SetTheEmojiCommand.TheEmoji;
+		if (emoji is null)
+		{
+			await Context.SendEphemeralResponseAsync("Emoji has not been set! Use `/set-emoji` to set the emoji first");
+			return;
+		}
+
+		if (!ulong.TryParse(start, null, out ulong startId))
+		{
+			await Context.SendEphemeralResponseAsync("Start needs to be a number");
+			return;
+		}
+
+		RestMessage? messageStart = await GetMessageAsync(Context, startId);
+		if (messageStart is null) return;
+
+		ulong? endId = null;
+		if (end is not null)
+		{
+			if (!ulong.TryParse(end, null, out ulong endIdLocal))
+			{
+				await Context.SendEphemeralResponseAsync("End needs to be a number");
+				return;
+			}
+
+			// If the order is wrong, swap them into the correct order
+			if (startId > endIdLocal) (startId, endIdLocal) = (endIdLocal, startId);
+
+			RestMessage? messageEnd = await GetMessageAsync(Context, endIdLocal);
+			if (messageEnd is null) return;
+
+			endId = endIdLocal;
+		}
+
+		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, startId, endId);
+
+		// Filter submissions from the messages
+		(Dictionary<User, List<Attachment>> submissions, uint _) = await SelectRangeCommand.FilterSubmissionsFromMessagesAsync(messages, emoji);
+		List<Attachment> allSubmissions = submissions.Values //
+			.SelectMany(attachments => attachments) //
+			.Where(attachment => attachment.FileName.EndsWith("png", StringComparison.OrdinalIgnoreCase)) //TODO: Remove once the script supports more file-types
+			.ToList();
+
+		// Download submission message attachments
+		for(int i = 0; i < allSubmissions.Count; i++)
+		{
+			Attachment submission = allSubmissions[i];
+			string path = Path.Join(imagesDir, challengeType switch
+				{
+					ChallengeType.Glyph => "Glyph",
+					ChallengeType.Ambigram => "Ambi",
+					_ => throw new ArgumentOutOfRangeException(nameof(challengeType), challengeType, null),
+				} + $"_{i + 1}.png");
+
+			await using Stream networkStream = await _client.GetStreamAsync(submission.Url);
+			await using FileStream fileStream = new(path, FileMode.CreateNew);
+			await networkStream.CopyToAsync(fileStream);
+		}
 
 		string scriptDir = Path.GetDirectoryName(scriptPath) ?? throw new InvalidOperationException($"Could not find script directory of path `{scriptPath}`");
 		List<string> args =
