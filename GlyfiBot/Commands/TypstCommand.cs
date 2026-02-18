@@ -31,7 +31,6 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	private const string TYPST_VERSION = "v0.14.2";
 	private const string SCRIPTS_REPO_NAME = "weekly-challenges-typst";
 	private const string PPI_DESC = "Only used when the output_format is PNG or Both. If not provided, Typst defaults to 144";
-	private const string END_DATE_NOT_IMPLEMENTED = "\n:warning: Provided `end_date` parameter was ignored, as the Typst script does not support that yet.";
 
 	/// All the file types Typst supports
 	/// https://typst.app/docs/reference/visualize/image/#parameters-format
@@ -87,12 +86,11 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			"--input", $"{inputKey}={input}",
 			"--input", $"current-week={weekNumber}",
 		];
-		if (startDate != null) args.AddRange(["--input", $"current-date={startDate}"]);
+		if (startDate != null) args.AddRange(["--input", $"announcement-start-date={startDate}"]);
+		if (endDate != null) args.AddRange(["--input", $"announcement-end-date={endDate}"]);
 
 		List<AttachmentProperties> attachments = [];
 		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, outputFormat, args, ppi, attachments);
-
-		if (endDate != null) content += END_DATE_NOT_IMPLEMENTED;
 
 		await ModifyResponseAsync(msg =>
 		{
@@ -215,12 +213,11 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			"--input", $"current-week={weekNumber}",
 			"--input", $"image-dir={Path.GetRelativePath(scriptDir, imagesDir)}",
 		];
-		if (startDate != null) args.AddRange(["--input", $"showcase-date={startDate}"]);
+		if (startDate != null) args.AddRange(["--input", $"showcase-start-date={startDate}"]);
+		if (endDate != null) args.AddRange(["--input", $"showcase-end-date={endDate}"]);
 
 		List<AttachmentProperties> attachments = [];
 		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, outputFormat, args, ppi, attachments);
-
-		if (endDate != null) content += END_DATE_NOT_IMPLEMENTED;
 
 		await ModifyResponseAsync(msg =>
 		{
