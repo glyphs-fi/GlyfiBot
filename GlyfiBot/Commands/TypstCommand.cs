@@ -34,6 +34,8 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 	private static readonly HttpClient _client = new();
 
+	/// To prevent multiple commands from running at the same time, each command has a blocker from this.
+	/// This is necessary because file operations (like downloading the Typst Compiler and our Script) in the same folder at the same time could lead to issues.
 	private static readonly ProgressTracker _progressTracker = new();
 	public static void EndAfterError() => _progressTracker.End();
 
@@ -219,6 +221,11 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 #region Setup Script
 
+	/// <summary>
+	/// Installs the latest version of our Typst Script in the bot's data directory.
+	/// </summary>
+	/// <returns>The path to our Typst Script's main.typ (the file itself, not the containing directory)</returns>
+	/// <exception cref="FileNotFoundException">If the download did not contain the main.typ file</exception>
 	private async Task<string> SetupScript()
 	{
 		string latestCommitHash = await GetLatestCommitHash();
@@ -269,6 +276,11 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 #region Setup Typst
 
+	/// <summary>
+	/// Installs the Typst Compiler in the bot's data directory.
+	/// </summary>
+	/// <returns>The path to the Typst Compiler executable (the file itself, not the containing directory)</returns>
+	/// <exception cref="FileNotFoundException">If the download did not contain a Typst executable</exception>
 	private async Task<string> SetupTypst()
 	{
 		string typstDownloadURL = GetTypstDownloadURLForPlatform();
