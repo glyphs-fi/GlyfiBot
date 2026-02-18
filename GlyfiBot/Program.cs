@@ -57,7 +57,7 @@ static internal class Program
 			if (result is IFailResult failResult)
 			{
 				await slashCommandInteraction.SendEphemeralFollowupMessageAsync(failResult.Message);
-				if (slashCommandInteraction.Data.Name == "typst") //TODO: Can I somehow check based on class instead?
+				if (slashCommandInteraction.Data.Name == TypstCommand.COMMAND_NAME)
 				{
 					TypstCommand.EndAfterError();
 				}

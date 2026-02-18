@@ -22,11 +22,12 @@ public enum OutputFormat
 	PNG,
 	Both,
 }
-[SlashCommand("typst",
+[SlashCommand(COMMAND_NAME,
 	"Generates an image/PDF using our Typst script",
 	DefaultGuildPermissions = Permissions.Administrator)]
 public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 {
+	public const string COMMAND_NAME = "typst";
 	private const string TYPST_VERSION = "v0.14.2";
 	private const string SCRIPTS_REPO_NAME = "weekly-challenges-typst";
 	private const string PPI_DESC = "Only used when the output_format is PNG or Both. If not provided, Typst defaults to 144";
