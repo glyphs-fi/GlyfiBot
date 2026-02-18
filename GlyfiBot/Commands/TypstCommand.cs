@@ -97,6 +97,76 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		_progressTracker.End();
 	}
 
+
+	[SubSlashCommand("showcase",
+		"Generates a showcase")]
+	[UsedImplicitly]
+	public async Task Showcase(
+		ChallengeType challengeType,
+		string input,
+		int weekNumber,
+		string start,
+		[SlashCommandParameter(Description = "If not provided, will select till the end")]
+		string? end = null,
+		string? startDate = null,
+		string? endDate = null,
+		OutputFormat outputFormat = OutputFormat.Both,
+		[SlashCommandParameter(Description = PPI_DESC)]
+		int? ppi = null
+	)
+	{
+		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
+		await _progressTracker.Start(Context);
+
+		string typstExe = await SetupTypst();
+		string scriptPath = await SetupScript();
+
+		string toGenerate, inputKey;
+		switch(challengeType)
+		{
+			case ChallengeType.Glyph:
+				toGenerate = "glyph-showcase";
+				inputKey = "showcase-glyph";
+				break;
+			case ChallengeType.Ambigram:
+				toGenerate = "ambigram-showcase";
+				inputKey = "showcase-ambi";
+				break;
+			default:
+				throw new ArgumentOutOfRangeException(nameof(challengeType), challengeType, null);
+		}
+
+		string outputDir = Path.Join(Program.SHOWCASES_DIR, challengeType.ToString(), $"{Context.Interaction.Id}");
+		string imagesDir = Path.Join(outputDir, "images");
+		Directory.CreateDirectory(imagesDir);
+
+		//TODO: Download all the images
+
+		string scriptDir = Path.GetDirectoryName(scriptPath) ?? throw new InvalidOperationException($"Could not find script directory of path `{scriptPath}`");
+		List<string> args =
+		[
+			"--input", $"to-generate={toGenerate}",
+			"--input", $"{inputKey}={input}",
+			"--input", $"current-week={weekNumber}",
+			"--input", $"image-dir={Path.GetRelativePath(scriptDir, imagesDir)}",
+		];
+		if (startDate != null) args.AddRange(["--input", $"showcase-date={startDate}"]);
+
+		List<AttachmentProperties> attachments = [];
+		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, outputFormat, args, ppi, attachments);
+
+		if (endDate != null) content += END_DATE_NOT_IMPLEMENTED;
+
+		await ModifyResponseAsync(msg =>
+		{
+			msg.Flags = MessageFlags.Ephemeral | MessageFlags.SuppressEmbeds;
+			msg.Content = content;
+			msg.Attachments = attachments;
+		});
+
+		_progressTracker.End();
+	}
+
 #region Run Script with Typst
 
 	private async Task<string> GenerateAttachments(string typstExe, string scriptPath, string outputDir, OutputFormat outputFormat, List<string> args, int? ppi, List<AttachmentProperties> attachments)
@@ -125,7 +195,9 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		string fileName = $"{Context.Interaction.Id}.{fileType.ToLower()}";
 		string outputFile = Path.Join(outputDir, fileName);
 
-		ProcessStartInfo startInfo = new(typstExe, ["compile", scriptPath, ..args, outputFile]) {RedirectStandardOutput = true, RedirectStandardError = true};
+		string rootDir = Directory.GetCurrentDirectory();
+
+		ProcessStartInfo startInfo = new(typstExe, ["compile", scriptPath, "--root", rootDir, ..args, outputFile]) {RedirectStandardOutput = true, RedirectStandardError = true};
 		Process typstCmd = new() {StartInfo = startInfo};
 		typstCmd.Start();
 		await typstCmd.WaitForExitAsync();
