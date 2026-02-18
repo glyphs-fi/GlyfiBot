@@ -15,16 +15,17 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	private const string TYPST_VERSION = "v0.14.2";
 	private const string SCRIPTS_REPO_NAME = "weekly-challenges-typst";
 
+	private static readonly HttpClient _client = new();
+
 	[SlashCommand("typst",
 		"Does a Typst thing!")]
 	[UsedImplicitly]
 	public async Task ExecuteAsync()
 	{
 		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
-		using HttpClient client = new();
 
-		string typstExe = await SetupTypst(client);
-		string scriptPath = await SetupScript(client);
+		string typstExe = await SetupTypst();
+		string scriptPath = await SetupScript();
 
 		Process typstCmd = new() {StartInfo = new ProcessStartInfo(typstExe, ["compile", scriptPath]) {RedirectStandardOutput = true, RedirectStandardError = true}};
 		typstCmd.Start();
@@ -40,9 +41,9 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 #region Setup Script
 
-	private async Task<string> SetupScript(HttpClient client)
+	private async Task<string> SetupScript()
 	{
-		string latestCommitHash = await GetLatestCommitHash(client);
+		string latestCommitHash = await GetLatestCommitHash();
 
 		string scriptDir = Path.Join(Program.TYPST_SCRIPT_DIR, $"{SCRIPTS_REPO_NAME}-{latestCommitHash}");
 		if (!Directory.Exists(scriptDir))
@@ -52,7 +53,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			Directory.CreateDirectory(scriptDir);
 			string zipPath = Path.Join(Program.TYPST_SCRIPT_DIR, $"{latestCommitHash}.zip");
 			{
-				await using Stream networkStream = await client.GetStreamAsync($"https://github.com/glyphs-fi/{SCRIPTS_REPO_NAME}/archive/{latestCommitHash}.zip");
+				await using Stream networkStream = await _client.GetStreamAsync($"https://github.com/glyphs-fi/{SCRIPTS_REPO_NAME}/archive/{latestCommitHash}.zip");
 				await using FileStream fileStream = new(zipPath, FileMode.CreateNew);
 				await networkStream.CopyToAsync(fileStream);
 			}
@@ -68,9 +69,9 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	[GeneratedRegex("""<meta\s+property=(["'])og:url\1\s+content=(["']).+/commit/(.+?)/?\2\s*/>""")]
 	private static partial Regex HashRegex();
 
-	private static async Task<string> GetLatestCommitHash(HttpClient client)
+	private static async Task<string> GetLatestCommitHash()
 	{
-		await using Stream networkStream = await client.GetStreamAsync($"https://github.com/glyphs-fi/{SCRIPTS_REPO_NAME}/commit/main");
+		await using Stream networkStream = await _client.GetStreamAsync($"https://github.com/glyphs-fi/{SCRIPTS_REPO_NAME}/commit/main");
 		using StreamReader streamReader = new(networkStream);
 
 		Regex pattern = HashRegex();
@@ -90,7 +91,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 #region Setup Typst
 
-	private async Task<string> SetupTypst(HttpClient client)
+	private async Task<string> SetupTypst()
 	{
 		string typstDownloadURL = GetTypstDownloadURLForPlatform();
 
@@ -102,7 +103,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			Directory.CreateDirectory(typstExeVersionDir);
 			string archivePath = Path.Join(typstExeVersionDir, Path.GetFileName(typstDownloadURL));
 			{
-				await using Stream networkStream = await client.GetStreamAsync(typstDownloadURL);
+				await using Stream networkStream = await _client.GetStreamAsync(typstDownloadURL);
 				await using FileStream fileStream = new(archivePath, FileMode.CreateNew);
 				await networkStream.CopyToAsync(fileStream);
 			}
