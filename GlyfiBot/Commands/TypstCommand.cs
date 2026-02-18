@@ -154,34 +154,34 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			return;
 		}
 
-		if (!ulong.TryParse(start, null, out ulong startId))
+		if (!ulong.TryParse(start, null, out ulong idStart))
 		{
-			await Context.SendEphemeralResponseAsync("Start needs to be a number");
+			await Context.SendEphemeralResponseAsync("`start` needs to be a number: the Message ID");
 			return;
 		}
 
-		RestMessage? messageStart = await GetMessageAsync(Context, startId);
+		RestMessage? messageStart = await GetMessageAsync(Context, idStart);
 		if (messageStart is null) return;
 
-		ulong? endId = null;
+		ulong? idEnd = null;
 		if (end is not null)
 		{
-			if (!ulong.TryParse(end, null, out ulong endIdLocal))
+			if (!ulong.TryParse(end, null, out ulong idEndLocal))
 			{
-				await Context.SendEphemeralResponseAsync("End needs to be a number");
+				await Context.SendEphemeralResponseAsync("`end` needs to be a number: the Message ID");
 				return;
 			}
 
 			// If the order is wrong, swap them into the correct order
-			if (startId > endIdLocal) (startId, endIdLocal) = (endIdLocal, startId);
+			if (idStart > idEndLocal) (idStart, idEndLocal) = (idEndLocal, idStart);
 
-			RestMessage? messageEnd = await GetMessageAsync(Context, endIdLocal);
+			RestMessage? messageEnd = await GetMessageAsync(Context, idEndLocal);
 			if (messageEnd is null) return;
 
-			endId = endIdLocal;
+			idEnd = idEndLocal;
 		}
 
-		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, startId, endId);
+		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, idStart, idEnd);
 
 		// Filter submissions from the messages
 		(Dictionary<User, List<Attachment>> submissions, uint _) = await SelectRangeCommand.FilterSubmissionsFromMessagesAsync(messages, emoji);
