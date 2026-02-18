@@ -110,8 +110,9 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		ChallengeType challengeType,
 		string input,
 		int weekNumber,
+		[SlashCommandParameter(Description = "Message ID")]
 		string start,
-		[SlashCommandParameter(Description = "If not provided, will select till the end")]
+		[SlashCommandParameter(Description = "Message ID. If not provided, will select until the end")]
 		string? end = null,
 		string? startDate = null,
 		string? endDate = null,
