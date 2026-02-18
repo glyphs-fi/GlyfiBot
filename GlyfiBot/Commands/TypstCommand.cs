@@ -5,25 +5,51 @@ using NetCord.Services.ApplicationCommands;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using static GlyfiBot.Utils;
 
 namespace GlyfiBot.Commands;
 
+public enum ChallengeType
+{
+	Glyph,
+	Ambigram,
+}
+public enum OutputFormat
+{
+	PDF,
+	PNG,
+	Both,
+}
+[SlashCommand("typst",
+	"Generates an image/PDF using our Typst script",
+	DefaultGuildPermissions = Permissions.Administrator)]
 public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	private const string TYPST_VERSION = "v0.14.2";
 	private const string SCRIPTS_REPO_NAME = "weekly-challenges-typst";
+	private const string PPI_DESC = "Only used when the output_format is PNG or Both. If not provided, Typst defaults to 144";
+	private const string END_DATE_NOT_IMPLEMENTED = "\n:warning: Provided `end_date` parameter was ignored, as the Typst script does not support that yet.";
 
 	private static readonly HttpClient _client = new();
 
 	private static readonly ProgressTracker _progressTracker = new();
 	public static void EndAfterError() => _progressTracker.End();
 
-	[SlashCommand("typst",
-		"Does a Typst thing!")]
+	[SubSlashCommand("announcement",
+		"Generates an announcement")]
 	[UsedImplicitly]
-	public async Task ExecuteAsync()
+	public async Task Announcement(
+		ChallengeType challengeType,
+		string input,
+		int weekNumber,
+		string? startDate = null,
+		string? endDate = null,
+		OutputFormat outputFormat = OutputFormat.Both,
+		[SlashCommandParameter(Description = PPI_DESC)]
+		int? ppi = null
+	)
 	{
 		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
 		await _progressTracker.Start(Context);
@@ -31,19 +57,93 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		string typstExe = await SetupTypst();
 		string scriptPath = await SetupScript();
 
-		Process typstCmd = new() {StartInfo = new ProcessStartInfo(typstExe, ["compile", scriptPath]) {RedirectStandardOutput = true, RedirectStandardError = true}};
-		typstCmd.Start();
-		await typstCmd.WaitForExitAsync();
+		string toGenerate, inputKey;
+		switch(challengeType)
+		{
+			case ChallengeType.Glyph:
+				toGenerate = "glyph-announcement";
+				inputKey = "announcement-glyph";
+				break;
+			case ChallengeType.Ambigram:
+				toGenerate = "ambigram-announcement";
+				inputKey = "announcement-ambi";
+				break;
+			default:
+				throw new ArgumentOutOfRangeException(nameof(challengeType), challengeType, null);
+		}
 
-		await Context.ModifyEphemeralResponseAsync($"""
-		                                            ```
-		                                            {await typstCmd.StandardOutput.ReadToEndAsync()}
-		                                            {await typstCmd.StandardError.ReadToEndAsync()}
-		                                            ```
-		                                            """);
+		string outputDir = Path.Join(Program.ANNOUNCEMENTS_DIR, challengeType.ToString());
+
+		List<string> args =
+		[
+			"--input", $"to-generate={toGenerate}",
+			"--input", $"{inputKey}={input}",
+			"--input", $"current-week={weekNumber}",
+		];
+		if (startDate != null) args.AddRange(["--input", $"current-date={startDate}"]);
+
+		List<AttachmentProperties> attachments = [];
+		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, outputFormat, args, ppi, attachments);
+
+		if (endDate != null) content += END_DATE_NOT_IMPLEMENTED;
+
+		await ModifyResponseAsync(msg =>
+		{
+			msg.Flags = MessageFlags.Ephemeral | MessageFlags.SuppressEmbeds;
+			msg.Content = content;
+			msg.Attachments = attachments;
+		});
 
 		_progressTracker.End();
 	}
+
+#region Run Script with Typst
+
+	private async Task<string> GenerateAttachments(string typstExe, string scriptPath, string outputDir, OutputFormat outputFormat, List<string> args, int? ppi, List<AttachmentProperties> attachments)
+	{
+		Directory.CreateDirectory(outputDir);
+		string content = "";
+
+		if (outputFormat is OutputFormat.PDF or OutputFormat.Both)
+		{
+			content += await GenerateAttachmentForFormat(typstExe, scriptPath, outputDir, OutputFormat.PDF, args, attachments);
+		}
+
+		if (outputFormat is OutputFormat.PNG or OutputFormat.Both)
+		{
+			content += await GenerateAttachmentForFormat(typstExe, scriptPath, outputDir, OutputFormat.PNG, ppi == null ? args : [..args, "--ppi", $"{ppi}"], attachments);
+		}
+
+		return content;
+	}
+
+	private async Task<string> GenerateAttachmentForFormat(string typstExe, string scriptPath, string outputDir, OutputFormat outputFormat, IEnumerable<string> args, List<AttachmentProperties> attachments)
+	{
+		if (outputFormat == OutputFormat.Both) throw new ArgumentOutOfRangeException(nameof(outputFormat), outputFormat, null);
+
+		string fileType = outputFormat.ToString().ToUpper();
+		string fileName = $"{Context.Interaction.Id}.{fileType.ToLower()}";
+		string outputFile = Path.Join(outputDir, fileName);
+
+		ProcessStartInfo startInfo = new(typstExe, ["compile", scriptPath, ..args, outputFile]) {RedirectStandardOutput = true, RedirectStandardError = true};
+		Process typstCmd = new() {StartInfo = startInfo};
+		typstCmd.Start();
+		await typstCmd.WaitForExitAsync();
+
+		int exitCode = typstCmd.ExitCode;
+		string stdout = await typstCmd.StandardOutput.ReadToEndAsync();
+		string stderr = await typstCmd.StandardError.ReadToEndAsync();
+
+		string content = "";
+		if (exitCode != 0) content += $" ({fileType} exited with: {exitCode})";
+		if (!stdout.IsWhiteSpace()) attachments.Add(new AttachmentProperties($"{fileType}_StdOut.txt", new MemoryStream(Encoding.UTF8.GetBytes(stdout))));
+		if (!stderr.IsWhiteSpace()) attachments.Add(new AttachmentProperties($"{fileType}_StdErr.txt", new MemoryStream(Encoding.UTF8.GetBytes(stderr))));
+		if (File.Exists(outputFile)) attachments.Add(new AttachmentProperties(fileName, new FileStream(outputFile, FileMode.Open)));
+
+		return content;
+	}
+
+#endregion
 
 #region Setup Script
 
