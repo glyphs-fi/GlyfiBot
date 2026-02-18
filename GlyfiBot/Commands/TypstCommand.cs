@@ -17,12 +17,16 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 	private static readonly HttpClient _client = new();
 
+	private static readonly ProgressTracker _progressTracker = new();
+	public static void EndAfterError() => _progressTracker.End();
+
 	[SlashCommand("typst",
 		"Does a Typst thing!")]
 	[UsedImplicitly]
 	public async Task ExecuteAsync()
 	{
 		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
+		await _progressTracker.Start(Context);
 
 		string typstExe = await SetupTypst();
 		string scriptPath = await SetupScript();
@@ -37,6 +41,8 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		                                            {await typstCmd.StandardError.ReadToEndAsync()}
 		                                            ```
 		                                            """);
+
+		_progressTracker.End();
 	}
 
 #region Setup Script
