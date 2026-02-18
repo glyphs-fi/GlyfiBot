@@ -12,6 +12,7 @@ using System.Text;
 namespace GlyfiBot;
 
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
+[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public static class Utils
 {
 	/// <summary>
@@ -79,29 +80,29 @@ public static class Utils
 		}));
 	}
 
-	/// <summary>
-	/// Sends a message as an ephemeral message as a response to a command, through its context.
-	/// </summary>
-	///
-	/// <param name="context">The <see cref="CommandContext"/></param>
-	/// <param name="content">The contents of the message</param>
-	public static async Task SendEphemeralResponseAsync(this SlashCommandContext context, string content)
+	extension(SlashCommandContext context)
 	{
-		await context.Interaction.SendEphemeralResponseAsync(content);
-	}
-
-	/// <summary>
-	/// Modifies the response to the provided content, while setting/keeping the response ephemeral.
-	/// </summary>
-	/// <param name="context">The <see cref="CommandContext"/></param>
-	/// <param name="content">The contents of the message</param>
-	public static async Task ModifyEphemeralResponseAsync(this SlashCommandContext context, string content)
-	{
-		await context.Interaction.ModifyResponseAsync(msg =>
+		/// <summary>
+		/// Sends a message as an ephemeral message as a response to a command, through its context.
+		/// </summary>
+		/// <param name="content">The contents of the message</param>
+		public async Task SendEphemeralResponseAsync(string content)
 		{
-			msg.Flags = MessageFlags.Ephemeral;
-			msg.Content = content;
-		});
+			await context.Interaction.SendEphemeralResponseAsync(content);
+		}
+
+		/// <summary>
+		/// Modifies the response to the provided content, while setting/keeping the response ephemeral.
+		/// </summary>
+		/// <param name="content">The contents of the message</param>
+		public async Task ModifyEphemeralResponseAsync(string content)
+		{
+			await context.Interaction.ModifyResponseAsync(msg =>
+			{
+				msg.Flags = MessageFlags.Ephemeral;
+				msg.Content = content;
+			});
+		}
 	}
 
 	/// <summary>
@@ -149,25 +150,28 @@ public static class Utils
 		return false;
 	}
 
-	public static async Task<List<T>> ToListAsync<T>(this IAsyncEnumerable<T> enumerable)
+	extension<T>(IAsyncEnumerable<T> enumerable)
 	{
-		List<T> list = [];
-
-		await foreach(T item in enumerable)
+		public async Task<List<T>> ToListAsync()
 		{
-			list.Add(item);
+			List<T> list = [];
+
+			await foreach(T item in enumerable)
+			{
+				list.Add(item);
+			}
+
+			return list;
 		}
 
-		return list;
-	}
-
-	public static async IAsyncEnumerable<T> WhereAsync<T>(this IAsyncEnumerable<T> enumerable, Predicate<T> condition)
-	{
-		await foreach(T item in enumerable)
+		public async IAsyncEnumerable<T> WhereAsync(Predicate<T> condition)
 		{
-			if (condition(item))
+			await foreach(T item in enumerable)
 			{
-				yield return item;
+				if (condition(item))
+				{
+					yield return item;
+				}
 			}
 		}
 	}
@@ -205,17 +209,20 @@ public static class Utils
 		return avatarUrl ?? user.DefaultAvatarUrl;
 	}
 
-	/// <remarks>
-	/// Includes the <c>.</c> of the extension.
-	/// </remarks>
-	public static string GetExtension(this ImageUrl imageUrl)
+	extension(ImageUrl imageUrl)
 	{
-		return Path.GetExtension(imageUrl.ToString());
-	}
+		/// <remarks>
+		/// Includes the <c>.</c> of the extension.
+		/// </remarks>
+		public string GetExtension()
+		{
+			return Path.GetExtension(imageUrl.ToString());
+		}
 
-	public static bool IsAnimated(this ImageUrl imageUrl)
-	{
-		return imageUrl.GetExtension() == ".gif";
+		public bool IsAnimated()
+		{
+			return imageUrl.GetExtension() == ".gif";
+		}
 	}
 
 
