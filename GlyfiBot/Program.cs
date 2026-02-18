@@ -56,7 +56,18 @@ static internal class Program
 
 			if (result is IFailResult failResult)
 			{
-				await slashCommandInteraction.SendEphemeralFollowupMessageAsync(failResult.Message);
+				if (failResult is IExceptionResult exceptionResult)
+				{
+					Console.Error.WriteLine(exceptionResult.Exception);
+					await slashCommandInteraction.SendEphemeralFollowupMessageAsync($"{exceptionResult.Message}\n```\n{exceptionResult.Exception}```");
+				}
+				else
+				{
+					// ReSharper disable once MethodHasAsyncOverload
+					Console.Error.WriteLine(failResult.Message);
+					await slashCommandInteraction.SendEphemeralFollowupMessageAsync(failResult.Message);
+				}
+
 				if (slashCommandInteraction.Data.Name == TypstCommand.COMMAND_NAME)
 				{
 					TypstCommand.EndAfterError();
