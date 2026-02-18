@@ -90,7 +90,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		if (endDate is not null) args.AddRange(["--input", $"announcement-end-date={endDate}"]);
 
 		List<AttachmentProperties> attachments = [];
-		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, outputFormat, args, ppi, attachments);
+		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, $"{toGenerate}_{Context.Interaction.Id}", outputFormat, args, ppi, attachments);
 
 		await ModifyResponseAsync(msg =>
 		{
@@ -217,7 +217,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		if (endDate is not null) args.AddRange(["--input", $"showcase-end-date={endDate}"]);
 
 		List<AttachmentProperties> attachments = [];
-		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, outputFormat, args, ppi, attachments);
+		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, $"{toGenerate}_{Context.Interaction.Id}", outputFormat, args, ppi, attachments);
 
 		await ModifyResponseAsync(msg =>
 		{
@@ -231,30 +231,30 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 #region Run Script with Typst
 
-	private async Task<string> GenerateAttachments(string typstExe, string scriptPath, string outputDir, OutputFormat outputFormat, List<string> args, int? ppi, List<AttachmentProperties> attachments)
+	private static async Task<string> GenerateAttachments(string typstExe, string scriptPath, string outputDir, string outputFilename, OutputFormat outputFormat, List<string> args, int? ppi, List<AttachmentProperties> attachments)
 	{
 		Directory.CreateDirectory(outputDir);
 		string content = "";
 
 		if (outputFormat is OutputFormat.PDF or OutputFormat.Both)
 		{
-			content += await GenerateAttachmentForFormat(typstExe, scriptPath, outputDir, OutputFormat.PDF, args, attachments);
+			content += await GenerateAttachmentForFormat(typstExe, scriptPath, outputDir, outputFilename, OutputFormat.PDF, args, attachments);
 		}
 
 		if (outputFormat is OutputFormat.PNG or OutputFormat.Both)
 		{
-			content += await GenerateAttachmentForFormat(typstExe, scriptPath, outputDir, OutputFormat.PNG, ppi is null ? args : [..args, "--ppi", $"{ppi}"], attachments);
+			content += await GenerateAttachmentForFormat(typstExe, scriptPath, outputDir, outputFilename, OutputFormat.PNG, ppi is null ? args : [..args, "--ppi", $"{ppi}"], attachments);
 		}
 
 		return content;
 	}
 
-	private async Task<string> GenerateAttachmentForFormat(string typstExe, string scriptPath, string outputDir, OutputFormat outputFormat, IEnumerable<string> args, List<AttachmentProperties> attachments)
+	private static async Task<string> GenerateAttachmentForFormat(string typstExe, string scriptPath, string outputDir, string outputFilename, OutputFormat outputFormat, IEnumerable<string> args, List<AttachmentProperties> attachments)
 	{
 		if (outputFormat == OutputFormat.Both) throw new ArgumentOutOfRangeException(nameof(outputFormat), outputFormat, null);
 
 		string fileType = outputFormat.ToString().ToUpper();
-		string fileName = $"{Context.Interaction.Id}.{fileType.ToLower()}";
+		string fileName = $"{outputFilename}.{fileType.ToLower()}";
 		string outputFile = Path.Join(outputDir, fileName);
 
 		string rootDir = Directory.GetCurrentDirectory();
