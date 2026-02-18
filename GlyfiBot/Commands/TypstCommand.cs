@@ -92,7 +92,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 		await ModifyResponseAsync(msg =>
 		{
-			msg.Flags = MessageFlags.Ephemeral | MessageFlags.SuppressEmbeds;
+			msg.Flags = MessageFlags.Ephemeral;
 			msg.Content = content;
 			msg.Attachments = attachments;
 		});
@@ -220,7 +220,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 		await ModifyResponseAsync(msg =>
 		{
-			msg.Flags = MessageFlags.Ephemeral | MessageFlags.SuppressEmbeds;
+			msg.Flags = MessageFlags.Ephemeral;
 			msg.Content = content;
 			msg.Attachments = attachments;
 		});
