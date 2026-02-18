@@ -42,7 +42,6 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 #region Setup Script
 
-	// ReSharper disable once InconsistentNaming
 	private async Task<string?> SetupScript(HttpClient client)
 	{
 		string? latestCommitHash = await GetLatestCommitHash(client);
@@ -82,7 +81,6 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	[GeneratedRegex("""<meta\s+property=(["'])og:url\1\s+content=(["']).+/commit/(.+?)/?\2\s*/>""")]
 	private static partial Regex HashRegex();
 
-	// ReSharper disable once InconsistentNaming
 	private static async Task<string?> GetLatestCommitHash(HttpClient client)
 	{
 		await using Stream networkStream = await client.GetStreamAsync($"https://github.com/glyphs-fi/{SCRIPTS_REPO_NAME}/commit/main");
@@ -105,7 +103,6 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 #region Setup Typst
 
-	// ReSharper disable once InconsistentNaming
 	private async Task<string?> SetupTypst(HttpClient client)
 	{
 		string? typstDownloadURL = GetTypstDownloadURLForPlatform();

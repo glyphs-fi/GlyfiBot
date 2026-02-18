@@ -224,7 +224,6 @@ public static class Utils
 	/// </summary>
 	/// <param name="archivePath"></param>
 	/// <exception cref="DirectoryNotFoundException"></exception>
-	// ReSharper disable once InconsistentNaming
 	public static async Task ExtractArchive(string archivePath)
 	{
 		DirectoryInfo? directoryInfo = Directory.GetParent(archivePath);
