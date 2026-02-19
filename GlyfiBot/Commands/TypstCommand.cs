@@ -16,11 +16,62 @@ public enum ChallengeType
 	Glyph,
 	Ambigram,
 }
+public static class ChallengeTypeExtensions
+{
+	extension(ChallengeType challengeType)
+	{
+		/// <returns>lowercase</returns>
+		private string GetLongName() => challengeType switch
+		{
+			ChallengeType.Glyph => "glyph",
+			ChallengeType.Ambigram => "ambigram",
+			_ => throw new ArgumentOutOfRangeException(nameof(challengeType), challengeType, null),
+		};
+
+		/// <returns>lowercase</returns>
+		private string GetShortName() => challengeType switch
+		{
+			ChallengeType.Glyph => "glyph",
+			ChallengeType.Ambigram => "ambi",
+			_ => throw new ArgumentOutOfRangeException(nameof(challengeType), challengeType, null),
+		};
+
+		public string GetNameForDir() => challengeType.GetLongName().UpperFirst();
+
+		public string GetNameForSubmission() => challengeType.GetShortName().UpperFirst();
+
+		private (string, string) ForChallenge(string challengeName) => ($"{challengeType.GetLongName()}-{challengeName}", $"{challengeName}-{challengeType.GetShortName()}");
+
+		public (string toGenerate, string inputKey) ForAnnouncement() => challengeType.ForChallenge("announcement");
+
+		public (string toGenerate, string inputKey) ForShowcase() => challengeType.ForChallenge("showcase");
+	}
+}
 public enum OutputFormat
 {
 	PDF,
 	PNG,
 	Both,
+}
+[SuppressMessage("ReSharper", "SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault")]
+public static class OutputFormatExtensions
+{
+	extension(OutputFormat outputFormat)
+	{
+		public string GetLower() => outputFormat switch
+		{
+			OutputFormat.PDF => "pdf",
+			OutputFormat.PNG => "png",
+			_ => throw new ArgumentOutOfRangeException(nameof(outputFormat), outputFormat, null),
+		};
+
+		public string GetUpper() => outputFormat switch
+		{
+			OutputFormat.PDF => "PDF",
+			OutputFormat.PNG => "PNG",
+			_ => throw new ArgumentOutOfRangeException(nameof(outputFormat), outputFormat, null),
+		};
+	}
 }
 [SlashCommand(COMMAND_NAME,
 	"Generates an image/PDF using our Typst script",
@@ -63,22 +114,9 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		string typstExe = await SetupTypst();
 		string scriptPath = await SetupScript();
 
-		string toGenerate, inputKey;
-		switch(challengeType)
-		{
-			case ChallengeType.Glyph:
-				toGenerate = "glyph-announcement";
-				inputKey = "announcement-glyph";
-				break;
-			case ChallengeType.Ambigram:
-				toGenerate = "ambigram-announcement";
-				inputKey = "announcement-ambi";
-				break;
-			default:
-				throw new ArgumentOutOfRangeException(nameof(challengeType), challengeType, null);
-		}
+		(string toGenerate, string inputKey) = challengeType.ForAnnouncement();
 
-		string outputDir = Path.Join(Program.ANNOUNCEMENTS_DIR, challengeType.ToString());
+		string outputDir = Path.Join(Program.ANNOUNCEMENTS_DIR, challengeType.GetNameForDir());
 
 		List<string> args =
 		[
@@ -127,22 +165,9 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		string typstExe = await SetupTypst();
 		string scriptPath = await SetupScript();
 
-		string toGenerate, inputKey;
-		switch(challengeType)
-		{
-			case ChallengeType.Glyph:
-				toGenerate = "glyph-showcase";
-				inputKey = "showcase-glyph";
-				break;
-			case ChallengeType.Ambigram:
-				toGenerate = "ambigram-showcase";
-				inputKey = "showcase-ambi";
-				break;
-			default:
-				throw new ArgumentOutOfRangeException(nameof(challengeType), challengeType, null);
-		}
+		(string toGenerate, string inputKey) = challengeType.ForShowcase();
 
-		string outputDir = Path.Join(Program.SHOWCASES_DIR, challengeType.ToString(), $"{Context.Interaction.Id}");
+		string outputDir = Path.Join(Program.SHOWCASES_DIR, challengeType.GetNameForDir(), $"{Context.Interaction.Id}");
 		string imagesDir = Path.Join(outputDir, "images");
 		Directory.CreateDirectory(imagesDir);
 
@@ -194,12 +219,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		for(int i = 0; i < allSubmissions.Count; i++)
 		{
 			Attachment submission = allSubmissions[i];
-			string path = Path.Join(imagesDir, challengeType switch
-				{
-					ChallengeType.Glyph => "Glyph",
-					ChallengeType.Ambigram => "Ambi",
-					_ => throw new ArgumentOutOfRangeException(nameof(challengeType), challengeType, null),
-				} + $"_{i + 1}");
+			string path = Path.Join(imagesDir, $"{challengeType.GetNameForSubmission()}_{i + 1}");
 
 			await using Stream networkStream = await _client.GetStreamAsync(submission.Url);
 			await using FileStream fileStream = new(path, FileMode.CreateNew);
@@ -254,8 +274,8 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	{
 		if (outputFormat == OutputFormat.Both) throw new ArgumentOutOfRangeException(nameof(outputFormat), outputFormat, null);
 
-		string fileType = outputFormat.ToString().ToUpper();
-		string fileName = $"{outputFilename}.{fileType.ToLower()}";
+		string fileType = outputFormat.GetUpper();
+		string fileName = $"{outputFilename}.{outputFormat.GetLower()}";
 		string outputFile = Path.Join(outputDir, fileName);
 
 		string rootDir = Directory.GetCurrentDirectory();

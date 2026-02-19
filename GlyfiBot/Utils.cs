@@ -266,4 +266,10 @@ public static class Utils
 		});
 		return files.FirstOrDefault(file => file.EndsWith(".exe") || Path.GetFileName(file) == exeName);
 	}
+
+	extension(string str)
+	{
+		public string UpperFirst() => $"{str[..1].ToUpperInvariant()}{str[1..]}";
+		public string LowerFirst() => $"{str[..1].ToLowerInvariant()}{str[1..]}";
+	}
 }
