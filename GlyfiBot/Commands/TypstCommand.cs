@@ -46,7 +46,7 @@ public static class ChallengeTypeExtensions
 
 		public (string toGenerate, string inputKey) ForShowcase() => challengeType.ForChallenge("showcase");
 
-		public (string toGenerate, string inputKey) ForWinners(string level) => ($"{challengeType.GetLongName()}-{level}", $"{challengeType.GetShortName()}-winner-{level}");
+		public (string toGenerate, string userNameKey, string nickNameKey) ForWinners(string level) => ($"{challengeType.GetLongName()}-{level}", $"{challengeType.GetShortName()}-winner-{level}-username", $"{challengeType.GetShortName()}-winner-{level}-nickname");
 	}
 }
 public enum OutputFormat
@@ -315,7 +315,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			RestMessage message = await VerifyThatMessageIsInChannel(Context, messageId);
 
 			// Download author's profile picture
-			ProfilePicturesCommand.DownloadFile avatarDownloadFile = ProfilePicturesCommand.GetAvatar(message.Author, DownloadFormat.PNG, false, AnimatedDownloadFormat.Original, FilenameType.NickName);
+			ProfilePicturesCommand.DownloadFile avatarDownloadFile = await ProfilePicturesCommand.GetAvatar(message.Author, DownloadFormat.PNG, false, AnimatedDownloadFormat.Original, FilenameType.UserName);
 			{
 				string path = Path.Join(pfpDir, avatarDownloadFile.Filename);
 				if (!File.Exists(path))
@@ -336,13 +336,15 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 				await networkStream.CopyToAsync(fileStream);
 			}
 
-			(string toGenerate, string inputKey) = challengeType.ForWinners(level);
-			string username = Path.GetFileNameWithoutExtension(avatarDownloadFile.Filename);
+			(string toGenerate, string userNameKey, string nickNameKey) = challengeType.ForWinners(level);
+			string profilePictureFileName = Path.GetFileNameWithoutExtension(avatarDownloadFile.Filename);
+			string displayName = await message.Author.GetNickNameAsync(Context.Guild);
 			List<string> localArgs =
 			[
 				..args,
 				"--input", $"to-generate={toGenerate}",
-				"--input", $"{inputKey}={username}",
+				"--input", $"{userNameKey}={profilePictureFileName}",
+				"--input", $"{nickNameKey}={displayName}",
 			];
 			content += await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{weekNumber}_{challengeType.GetNameForDir()}_{nameof(Winners)}_{level.UpperFirst()}", outputFormat, localArgs, ppi, attachments);
 		}

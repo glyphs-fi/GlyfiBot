@@ -139,7 +139,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 		foreach(User user in users)
 		{
 			sb.AppendLine($"- {user.ToString()}");
-			DownloadFile downloadFile = GetAvatar(user, downloadFormat, downloadAnimated, animatedDownloadFormat, filenameType);
+			DownloadFile downloadFile = await GetAvatar(user, downloadFormat, downloadAnimated, animatedDownloadFormat, filenameType);
 			string path = Path.Join(pfpsPath, downloadFile.Filename);
 			await using Stream networkStream = await client.GetStreamAsync(downloadFile.DownloadUrl);
 			await using FileStream fileStream = new(path, FileMode.CreateNew);
@@ -151,13 +151,13 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 
 	public record DownloadFile(string Filename, string DownloadUrl);
 
-	public static DownloadFile GetAvatar(User user, DownloadFormat downloadFormat, bool downloadAnimated, AnimatedDownloadFormat animatedDownloadFormat, FilenameType filenameType)
+	public static async Task<DownloadFile> GetAvatar(User user, DownloadFormat downloadFormat, bool downloadAnimated, AnimatedDownloadFormat animatedDownloadFormat, FilenameType filenameType)
 	{
 		string username = filenameType switch
 		{
 			FilenameType.UserName => user.Username,
 			FilenameType.DisplayName => user.GlobalName ?? user.Username,
-			FilenameType.NickName => (user is GuildUser guildUser ? guildUser.Nickname : null) ?? user.GlobalName ?? user.Username,
+			FilenameType.NickName => await user.GetNickNameAsync(null),
 			_ => throw new ArgumentOutOfRangeException(nameof(filenameType), filenameType, null),
 		};
 		if (downloadAnimated)

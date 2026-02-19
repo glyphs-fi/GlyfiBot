@@ -213,10 +213,29 @@ public static class Utils
 		return errorGroup is RestErrorDetailGroup group && group.Errors.Any(restErrorDetail => restErrorDetail.Code == errorKey);
 	}
 
-	public static ImageUrl AlwaysGetAvatarUrl(this User user, ImageFormat? format = null)
+	extension(User user)
 	{
-		ImageUrl? avatarUrl = user.GetAvatarUrl(format);
-		return avatarUrl ?? user.DefaultAvatarUrl;
+		public ImageUrl AlwaysGetAvatarUrl(ImageFormat? format = null)
+		{
+			ImageUrl? avatarUrl = user.GetAvatarUrl(format);
+			return avatarUrl ?? user.DefaultAvatarUrl;
+		}
+
+		/// <summary>
+		/// Gets the user's nickname if possible.
+		/// May fall back to globalname or username if not available.
+		/// </summary>
+		/// <param name="guild">Pass in if you have it, so the nickname can be retrieved from the guild</param>
+		/// <returns>The nickname, or the globalname, or the username</returns>
+		public async Task<string> GetNickNameAsync(Guild? guild)
+		{
+			if (user is GuildUser guildUser) return guildUser.Nickname ?? guildUser.GlobalName ?? guildUser.Username;
+
+			if (guild is null) return user.GlobalName ?? user.Username;
+
+			GuildUser guildUserGet = await guild.GetUserAsync(user.Id);
+			return await guildUserGet.GetNickNameAsync(guild);
+		}
 	}
 
 	extension(ImageUrl imageUrl)
