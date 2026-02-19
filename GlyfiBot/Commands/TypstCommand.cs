@@ -45,6 +45,8 @@ public static class ChallengeTypeExtensions
 		public (string toGenerate, string inputKey) ForAnnouncement() => challengeType.ForChallenge("announcement");
 
 		public (string toGenerate, string inputKey) ForShowcase() => challengeType.ForChallenge("showcase");
+
+		public (string toGenerate, string inputKey) ForWinners(string level) => ($"{challengeType.GetLongName()}-{level}", $"{challengeType.GetShortName()}-winner-{level}");
 	}
 }
 public enum OutputFormat
@@ -243,6 +245,107 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		});
 
 		_progressTracker.End();
+	}
+
+	[SubSlashCommand("winners",
+		"Generates a winners")]
+	[UsedImplicitly]
+	public async Task Winners(
+		ChallengeType challengeType,
+		int weekNumber,
+		[SlashCommandParameter(Description = "Message ID")]
+		string firstPlace,
+		[SlashCommandParameter(Description = "Message ID")]
+		string? secondPlace = null,
+		[SlashCommandParameter(Description = "Message ID")]
+		string? thirdPlace = null,
+		OutputFormat outputFormat = OutputFormat.Both,
+		[SlashCommandParameter(Description = PPI_DESC)]
+		int? ppi = null
+	)
+	{
+		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
+		await _progressTracker.Start(Context);
+
+		string typstExe = await SetupTypst();
+		string scriptPath = await SetupScript();
+
+		string outputDir = Path.Join(Program.WINNERS_DIR, challengeType.ToString(), $"{Context.Interaction.Id}");
+		string imagesDir = Path.Join(outputDir, "images");
+		Directory.CreateDirectory(imagesDir);
+		string pfpDir = Path.Join(imagesDir, "pfp");
+		Directory.CreateDirectory(pfpDir);
+
+		string scriptDir = Path.GetDirectoryName(scriptPath) ?? throw new InvalidOperationException($"Could not find script directory of path `{scriptPath}`");
+		List<string> args =
+		[
+			"--input", $"current-week={weekNumber}",
+			"--input", $"image-dir={Path.GetRelativePath(scriptDir, imagesDir)}",
+		];
+
+		string content = "Done!";
+		List<AttachmentProperties> attachments = [];
+		await FillAttachmentsForWinnerLevel("first", firstPlace);
+		if (secondPlace is not null)
+			await FillAttachmentsForWinnerLevel("second", secondPlace);
+		if (thirdPlace is not null)
+			await FillAttachmentsForWinnerLevel("third", thirdPlace);
+
+		await ModifyResponseAsync(msg =>
+		{
+			msg.Flags = MessageFlags.Ephemeral;
+			msg.Content = content;
+			msg.Attachments = attachments;
+		});
+
+		_progressTracker.End();
+
+		return;
+
+		// Returns true if success, false if fail
+		async Task FillAttachmentsForWinnerLevel(string level, string stringId)
+		{
+			// Validate stringId
+			if (!ulong.TryParse(stringId, null, out ulong messageId))
+			{
+				throw new SimpleCommandFailException($"`{level}_place` needs to be a number: the Message ID");
+			}
+
+			// Retrieve Message from ID
+			RestMessage message = await VerifyThatMessageIsInChannel(Context, messageId);
+
+			// Download author's profile picture
+			ProfilePicturesCommand.DownloadFile avatarDownloadFile = ProfilePicturesCommand.GetAvatar(message.Author, DownloadFormat.PNG, false, AnimatedDownloadFormat.Original, FilenameType.NickName);
+			{
+				string path = Path.Join(pfpDir, avatarDownloadFile.Filename);
+				if (!File.Exists(path))
+				{
+					await using Stream networkStream = await _client.GetStreamAsync(avatarDownloadFile.DownloadUrl);
+					await using FileStream fileStream = new(path, FileMode.CreateNew);
+					await networkStream.CopyToAsync(fileStream);
+				}
+			}
+
+			// Download the submission
+			{
+				Attachment submissionAttachment = message.Attachments.First(attachment => _supportedExtensions.Contains(Path.GetExtension(attachment.FileName)));
+				string path = Path.Join(imagesDir, $"{challengeType.GetNameForSubmission()}Winner{level.UpperFirst()}");
+
+				await using Stream networkStream = await _client.GetStreamAsync(submissionAttachment.Url);
+				await using FileStream fileStream = new(path, FileMode.CreateNew);
+				await networkStream.CopyToAsync(fileStream);
+			}
+
+			(string toGenerate, string inputKey) = challengeType.ForWinners(level);
+			string username = Path.GetFileNameWithoutExtension(avatarDownloadFile.Filename);
+			List<string> localArgs =
+			[
+				..args,
+				"--input", $"to-generate={toGenerate}",
+				"--input", $"{inputKey}={username}",
+			];
+			content += await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{weekNumber}_{challengeType.GetNameForDir()}_{nameof(Winners)}_{level.UpperFirst()}", outputFormat, localArgs, ppi, attachments);
+		}
 	}
 
 #region Run Script with Typst

@@ -21,6 +21,7 @@ static internal class Program
 	public const string TYPST_SCRIPT_DIR = $"{DATA_DIR}/typst-script";
 	public const string ANNOUNCEMENTS_DIR = $"{DATA_DIR}/announcements";
 	public const string SHOWCASES_DIR = $"{DATA_DIR}/showcases";
+	public const string WINNERS_DIR = $"{DATA_DIR}/winners";
 
 	private static async Task Main()
 	{

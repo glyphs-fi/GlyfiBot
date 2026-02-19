@@ -149,9 +149,9 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 		return pfpsPath;
 	}
 
-	private record DownloadFile(string Filename, string DownloadUrl);
+	public record DownloadFile(string Filename, string DownloadUrl);
 
-	private static DownloadFile GetAvatar(User user, DownloadFormat downloadFormat, bool downloadAnimated, AnimatedDownloadFormat animatedDownloadFormat, FilenameType filenameType)
+	public static DownloadFile GetAvatar(User user, DownloadFormat downloadFormat, bool downloadAnimated, AnimatedDownloadFormat animatedDownloadFormat, FilenameType filenameType)
 	{
 		string username = filenameType switch
 		{
