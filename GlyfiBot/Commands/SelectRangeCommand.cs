@@ -24,14 +24,12 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		ReactionEmojiProperties? emoji = SetTheEmojiCommand.TheEmoji;
 		if (emoji is null)
 		{
-			await Context.SendEphemeralResponseAsync("Emoji has not been set! Use `/set-emoji` to set the emoji first");
-			return;
+			throw new SimpleCommandFailException("Emoji has not been set! Use `/set-emoji` to set the emoji first");
 		}
 
 		if (!ulong.TryParse(start, null, out ulong idStart))
 		{
-			await Context.SendEphemeralResponseAsync("`start` needs to be a number: the Message ID");
-			return;
+			throw new SimpleCommandFailException("`start` needs to be a number: the Message ID");
 		}
 
 		RestMessage? messageStart = await GetMessageAsync(Context, idStart);
@@ -42,8 +40,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		{
 			if (!ulong.TryParse(end, null, out ulong idEndLocal))
 			{
-				await Context.SendEphemeralResponseAsync("`end` needs to be a number: the Message ID");
-				return;
+				throw new SimpleCommandFailException("`end` needs to be a number: the Message ID");
 			}
 
 			// If the order is wrong, swap them into the correct order

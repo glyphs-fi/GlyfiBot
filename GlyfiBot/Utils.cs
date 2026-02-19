@@ -65,19 +65,47 @@ public static class Utils
 		}
 	}
 
-	/// <summary>
-	/// Sends a message as an ephemeral message as a response to a command, through its interaction.
-	/// </summary>
-	///
-	/// <param name="interaction">The <see cref="Interaction"/></param>
-	/// <param name="content">The contents of the message</param>
-	public static async Task SendEphemeralResponseAsync(this Interaction interaction, string content)
+	extension(Interaction interaction)
 	{
-		await interaction.SendResponseAsync(InteractionCallback.Message(new InteractionMessageProperties
+		/// <summary>
+		/// Sends a message as an ephemeral message as a response to a command, through its interaction.
+		/// </summary>
+		/// <param name="content">The contents of the message</param>
+		public async Task SendEphemeralResponseAsync(string content)
 		{
-			Content = content,
-			Flags = MessageFlags.Ephemeral,
-		}));
+			await interaction.SendResponseAsync(InteractionCallback.Message(new InteractionMessageProperties
+			{
+				Flags = MessageFlags.Ephemeral,
+				Content = content,
+			}));
+		}
+
+
+		/// <summary>
+		/// Modifies a message as an ephemeral message as a response to a command, through its interaction.
+		/// </summary>
+		/// <param name="content">The contents of the message</param>
+		public async Task ModifyEphemeralResponseAsync(string content)
+		{
+			await interaction.ModifyResponseAsync(msg =>
+			{
+				msg.Flags = MessageFlags.Ephemeral;
+				msg.Content = content;
+			});
+		}
+
+		/// <summary>
+		/// Sends a followup message as an ephemeral message as a response to a command, through its interaction.
+		/// </summary>
+		/// <param name="content">The contents of the message</param>
+		public async Task SendEphemeralFollowupMessageAsync(string content)
+		{
+			await interaction.SendFollowupMessageAsync(new InteractionMessageProperties
+			{
+				Flags = MessageFlags.Ephemeral,
+				Content = content,
+			});
+		}
 	}
 
 	extension(SlashCommandContext context)
@@ -97,26 +125,8 @@ public static class Utils
 		/// <param name="content">The contents of the message</param>
 		public async Task ModifyEphemeralResponseAsync(string content)
 		{
-			await context.Interaction.ModifyResponseAsync(msg =>
-			{
-				msg.Flags = MessageFlags.Ephemeral;
-				msg.Content = content;
-			});
+			await context.Interaction.ModifyEphemeralResponseAsync(content);
 		}
-	}
-
-	/// <summary>
-	/// Sends a followup message as an ephemeral message as a response to a command, through its interaction.
-	/// </summary>
-	/// <param name="interaction">The <see cref="Interaction"/></param>
-	/// <param name="content">The contents of the message</param>
-	public static async Task SendEphemeralFollowupMessageAsync(this Interaction interaction, string content)
-	{
-		await interaction.SendFollowupMessageAsync(new InteractionMessageProperties
-		{
-			Content = content,
-			Flags = MessageFlags.Ephemeral,
-		});
 	}
 
 	/// <summary>
@@ -273,3 +283,4 @@ public static class Utils
 		public string LowerFirst() => $"{str[..1].ToLowerInvariant()}{str[1..]}";
 	}
 }
+public class SimpleCommandFailException(string message) : Exception(message);

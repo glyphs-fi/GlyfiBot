@@ -3,6 +3,7 @@ using GlyfiBot.Services;
 using NetCord;
 using NetCord.Gateway;
 using NetCord.Logging;
+using NetCord.Rest;
 using NetCord.Services;
 using NetCord.Services.ApplicationCommands;
 using System.Reflection;
@@ -59,18 +60,37 @@ static internal class Program
 				if (failResult is IExceptionResult exceptionResult)
 				{
 					Console.Error.WriteLine(exceptionResult.Exception);
-					await slashCommandInteraction.SendEphemeralFollowupMessageAsync($"{exceptionResult.Message}\n```\n{exceptionResult.Exception}```");
+					if (exceptionResult.Exception is SimpleCommandFailException)
+					{
+						await Respond(exceptionResult.Message);
+					}
+					else
+					{
+						await Respond($"{exceptionResult.Message}\n```\n{exceptionResult.Exception}```");
+					}
 				}
 				else
 				{
 					// ReSharper disable once MethodHasAsyncOverload
 					Console.Error.WriteLine(failResult.Message);
-					await slashCommandInteraction.SendEphemeralFollowupMessageAsync(failResult.Message);
+					await Respond(failResult.Message);
 				}
 
 				if (slashCommandInteraction.Data.Name == TypstCommand.COMMAND_NAME)
 				{
 					TypstCommand.EndAfterError();
+				}
+
+				async Task Respond(string message)
+				{
+					try
+					{
+						await slashCommandInteraction.SendEphemeralResponseAsync(message);
+					}
+					catch(RestException restException) when(restException.StatusCode == System.Net.HttpStatusCode.BadRequest)
+					{
+						await slashCommandInteraction.SendEphemeralFollowupMessageAsync(message);
+					}
 				}
 			}
 		};

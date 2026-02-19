@@ -50,8 +50,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 			}
 			else
 			{
-				await Context.SendEphemeralResponseAsync($"Input `{user}` could not be parsed");
-				return;
+				throw new SimpleCommandFailException($"Input `{user}` could not be parsed");
 			}
 		}
 
