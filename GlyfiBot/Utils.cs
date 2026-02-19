@@ -57,7 +57,7 @@ public static class Utils
 		}
 		catch(RestException)
 		{
-			throw new SimpleCommandFailException($"Message with ID `{messageId}` is not in this channel!");
+			throw new SimpleCommandFailException($"Message with ID `{messageId}` is not in this channel, <#{context.Channel.Id}>!");
 		}
 	}
 
