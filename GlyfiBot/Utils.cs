@@ -27,7 +27,7 @@ public static class Utils
 	///
 	/// <remarks>
 	/// Before using this function, you should verify that both <c><see cref="start"/></c> and <c><see cref="end"/></c>
-	/// are in the same channel with <see cref="GetMessageAsync"/> and that they are in the correct order.
+	/// are in the same channel with <see cref="VerifyThatMessageIsInChannel"/> and that they are in the correct order.
 	/// </remarks>
 	public static async Task<List<RestMessage>> GetMessagesBetweenAsync(SlashCommandContext context, ulong start, ulong? end)
 	{
@@ -44,24 +44,20 @@ public static class Utils
 	}
 
 	/// <summary>
-	/// Tries to get a message from the context.
-	/// Sends an error response with <see cref="SendEphemeralResponseAsync(SlashCommandContext, string)"/> if the message cannot be got.
+	/// Ensures that the message with this ID is in this channel (will throw a <see cref="SimpleCommandFailException"/> if not)
 	/// </summary>
 	///
 	/// <param name="context">The <see cref="CommandContext"/></param>
 	/// <param name="messageId">The message ID</param>
-	///
-	/// <returns>The <see cref="RestMessage"/> if it can be got, otherwise <c>null</c></returns>
-	public static async ValueTask<RestMessage?> GetMessageAsync(SlashCommandContext context, ulong messageId)
+	public static async Task VerifyThatMessageIsInChannel(SlashCommandContext context, ulong messageId)
 	{
 		try
 		{
-			return await context.Client.Rest.GetMessageAsync(context.Channel.Id, messageId);
+			await context.Client.Rest.GetMessageAsync(context.Channel.Id, messageId);
 		}
-		catch(RestException e)
+		catch(RestException)
 		{
-			await context.SendEphemeralResponseAsync($"Error on message `{messageId}`: {e.Error?.Message}");
-			return null;
+			throw new SimpleCommandFailException($"Message with ID `{messageId}` is not in this channel!");
 		}
 	}
 

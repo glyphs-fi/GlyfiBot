@@ -32,8 +32,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			throw new SimpleCommandFailException("`start` needs to be a number: the Message ID");
 		}
 
-		RestMessage? messageStart = await GetMessageAsync(Context, idStart);
-		if (messageStart is null) return;
+		await VerifyThatMessageIsInChannel(Context, idStart);
 
 		ulong? idEnd = null;
 		if (end is not null)
@@ -46,8 +45,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			// If the order is wrong, swap them into the correct order
 			if (idStart > idEndLocal) (idStart, idEndLocal) = (idEndLocal, idStart);
 
-			RestMessage? messageEnd = await GetMessageAsync(Context, idEndLocal);
-			if (messageEnd is null) return;
+			await VerifyThatMessageIsInChannel(Context, idEndLocal);
 
 			idEnd = idEndLocal;
 		}
