@@ -249,27 +249,42 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 	private static async Task<string> GenerateAttachments(string typstExe, string scriptPath, string outputDir, string outputFilename, OutputFormat outputFormat, List<string> args, int? ppi, List<AttachmentProperties> attachments)
 	{
+		const string header = "--------------------------------------- {0} Export ---------------------------------------\n";
 		Directory.CreateDirectory(outputDir);
 		string content = "";
 
+		StringBuilder combinedStdout = new();
+		StringBuilder combinedStderr = new();
 		if (outputFormat is OutputFormat.PDF or OutputFormat.Both)
 		{
-			content += await GenerateAttachmentForFormat(typstExe, scriptPath, outputDir, outputFilename, OutputFormat.PDF, args, attachments);
+			content += await RunForOutputFormat(OutputFormat.PDF, args);
 		}
 
 		if (outputFormat is OutputFormat.PNG or OutputFormat.Both)
 		{
-			content += await GenerateAttachmentForFormat(typstExe, scriptPath, outputDir, outputFilename, OutputFormat.PNG, ppi is null ? args : [..args, "--ppi", $"{ppi}"], attachments);
+			content += await RunForOutputFormat(OutputFormat.PNG, ppi is null ? args : [..args, "--ppi", $"{ppi}"]);
 		}
 
+		if (combinedStdout.Length > 0) attachments.Add(new AttachmentProperties($"{outputFilename}_StdOut.txt", new MemoryStream(Encoding.UTF8.GetBytes(combinedStdout.ToString()))));
+		if (combinedStderr.Length > 0) attachments.Add(new AttachmentProperties($"{outputFilename}_StdErr.txt", new MemoryStream(Encoding.UTF8.GetBytes(combinedStderr.ToString()))));
+
 		return content;
+
+		async Task<string> RunForOutputFormat(OutputFormat thisOutputFormat, IEnumerable<string> thisArgs)
+		{
+			(int exitCode, string stdout, string stderr) = await GenerateAttachmentForFormat(typstExe, scriptPath, outputDir, outputFilename, thisOutputFormat, thisArgs, attachments);
+			string filename = $"{Path.GetFileNameWithoutExtension(outputFilename)}.{thisOutputFormat.GetLower()}";
+			string headerLocal = string.Format(header, filename);
+			if (!stdout.IsWhiteSpace()) combinedStdout.AppendLine(headerLocal + stdout);
+			if (!stderr.IsWhiteSpace()) combinedStderr.AppendLine(headerLocal + stderr);
+			return exitCode != 0 ? $" ({filename} exited with: {exitCode})" : "";
+		}
 	}
 
-	private static async Task<string> GenerateAttachmentForFormat(string typstExe, string scriptPath, string outputDir, string outputFilename, OutputFormat outputFormat, IEnumerable<string> args, List<AttachmentProperties> attachments)
+	private static async Task<(int exitCode, string stdout, string stderr)> GenerateAttachmentForFormat(string typstExe, string scriptPath, string outputDir, string outputFilename, OutputFormat outputFormat, IEnumerable<string> args, List<AttachmentProperties> attachments)
 	{
 		if (outputFormat == OutputFormat.Both) throw new ArgumentOutOfRangeException(nameof(outputFormat), outputFormat, null);
 
-		string fileType = outputFormat.GetUpper();
 		string fileName = $"{outputFilename}.{outputFormat.GetLower()}";
 		string outputFile = Path.Join(outputDir, fileName);
 
@@ -280,17 +295,13 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		typstCmd.Start();
 		await typstCmd.WaitForExitAsync();
 
-		int exitCode = typstCmd.ExitCode;
-		string stdout = await typstCmd.StandardOutput.ReadToEndAsync();
-		string stderr = await typstCmd.StandardError.ReadToEndAsync();
-
-		string content = "";
-		if (exitCode != 0) content += $" ({fileType} exited with: {exitCode})";
-		if (!stdout.IsWhiteSpace()) attachments.Add(new AttachmentProperties($"{fileType}_StdOut.txt", new MemoryStream(Encoding.UTF8.GetBytes(stdout))));
-		if (!stderr.IsWhiteSpace()) attachments.Add(new AttachmentProperties($"{fileType}_StdErr.txt", new MemoryStream(Encoding.UTF8.GetBytes(stderr))));
 		if (File.Exists(outputFile)) attachments.Add(new AttachmentProperties(fileName, new FileStream(outputFile, FileMode.Open)));
 
-		return content;
+		return (
+			typstCmd.ExitCode,
+			await typstCmd.StandardOutput.ReadToEndAsync(),
+			await typstCmd.StandardError.ReadToEndAsync()
+			);
 	}
 
 #endregion
