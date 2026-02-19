@@ -7,6 +7,7 @@ using NetCord.Rest;
 using NetCord.Services;
 using NetCord.Services.ApplicationCommands;
 using System.Reflection;
+using System.Text;
 
 namespace GlyfiBot;
 
@@ -66,7 +67,15 @@ static internal class Program
 					}
 					else
 					{
-						await Respond($"{exceptionResult.Message}\n```\n{exceptionResult.Exception}```");
+						string exceptionText = exceptionResult.Exception.ToString();
+						if (exceptionText.Length > 1900)
+						{
+							await Respond(exceptionResult.Message, exceptionText);
+						}
+						else
+						{
+							await Respond($"{exceptionResult.Message}\n```\n{exceptionText}```");
+						}
 					}
 				}
 				else
@@ -81,15 +90,17 @@ static internal class Program
 					TypstCommand.EndAfterError();
 				}
 
-				async Task Respond(string message)
+				async Task Respond(string message, string? textToSendAsAttachment = null)
 				{
 					try
 					{
-						await slashCommandInteraction.SendEphemeralResponseAsync(message);
+						await slashCommandInteraction.SendEphemeralResponseAsync(message,
+							textToSendAsAttachment == null ? null : [new AttachmentProperties("exception.txt", new MemoryStream(Encoding.UTF8.GetBytes(textToSendAsAttachment)))]);
 					}
 					catch(RestException restException) when(restException.StatusCode == System.Net.HttpStatusCode.BadRequest)
 					{
-						await slashCommandInteraction.SendEphemeralFollowupMessageAsync(message);
+						await slashCommandInteraction.SendEphemeralFollowupMessageAsync(message,
+							textToSendAsAttachment == null ? null : [new AttachmentProperties("exception.txt", new MemoryStream(Encoding.UTF8.GetBytes(textToSendAsAttachment)))]);
 					}
 				}
 			}

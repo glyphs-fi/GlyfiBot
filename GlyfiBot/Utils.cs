@@ -49,11 +49,11 @@ public static class Utils
 	///
 	/// <param name="context">The <see cref="CommandContext"/></param>
 	/// <param name="messageId">The message ID</param>
-	public static async Task VerifyThatMessageIsInChannel(SlashCommandContext context, ulong messageId)
+	public static async Task<RestMessage> VerifyThatMessageIsInChannel(SlashCommandContext context, ulong messageId)
 	{
 		try
 		{
-			await context.Client.Rest.GetMessageAsync(context.Channel.Id, messageId);
+			return await context.Client.Rest.GetMessageAsync(context.Channel.Id, messageId);
 		}
 		catch(RestException)
 		{
@@ -67,12 +67,14 @@ public static class Utils
 		/// Sends a message as an ephemeral message as a response to a command, through its interaction.
 		/// </summary>
 		/// <param name="content">The contents of the message</param>
-		public async Task SendEphemeralResponseAsync(string content)
+		/// <param name="attachments">Any potential attachments</param>
+		public async Task SendEphemeralResponseAsync(string content, IReadOnlyCollection<AttachmentProperties>? attachments = null)
 		{
 			await interaction.SendResponseAsync(InteractionCallback.Message(new InteractionMessageProperties
 			{
 				Flags = MessageFlags.Ephemeral,
 				Content = content,
+				Attachments = attachments,
 			}));
 		}
 
@@ -94,12 +96,14 @@ public static class Utils
 		/// Sends a followup message as an ephemeral message as a response to a command, through its interaction.
 		/// </summary>
 		/// <param name="content">The contents of the message</param>
-		public async Task SendEphemeralFollowupMessageAsync(string content)
+		/// <param name="attachments">Any potential attachments</param>
+		public async Task SendEphemeralFollowupMessageAsync(string content, IReadOnlyCollection<AttachmentProperties>? attachments = null)
 		{
 			await interaction.SendFollowupMessageAsync(new InteractionMessageProperties
 			{
 				Flags = MessageFlags.Ephemeral,
 				Content = content,
+				Attachments = attachments,
 			});
 		}
 	}
