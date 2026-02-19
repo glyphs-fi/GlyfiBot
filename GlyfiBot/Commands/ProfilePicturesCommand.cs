@@ -19,6 +19,12 @@ public enum AnimatedDownloadFormat
 	Original,
 	WebP,
 }
+public enum FilenameType
+{
+	UserName,
+	DisplayName,
+	NickName,
+}
 public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	[SlashCommand("pfps",
@@ -36,7 +42,10 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 		bool downloadAnimated = false,
 		//
 		[SlashCommandParameter(Description = "The image format for animated profile pictures")]
-		AnimatedDownloadFormat animatedDownloadFormat = AnimatedDownloadFormat.WebP
+		AnimatedDownloadFormat animatedDownloadFormat = AnimatedDownloadFormat.WebP,
+		//
+		[SlashCommandParameter(Description = "The format of the filenames in the resulting zip")]
+		FilenameType filenameType = FilenameType.NickName
 	)
 	{
 		string[] splitUsers = userPings.Split(Array.Empty<char>(), StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -56,7 +65,10 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 
 		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
 
-		User[] users = await Task.WhenAll(userIds.Select(userId => Context.Client.Rest.GetUserAsync(userId)));
+		ulong? guildId = Context.Guild?.Id;
+		User[] users = guildId is null
+			? await Task.WhenAll(userIds.Select(userId => Context.Client.Rest.GetUserAsync(userId)))
+			: await Task.WhenAll(userIds.Select(userId => Context.Client.Rest.GetGuildUserAsync(guildId.Value, userId)));
 
 		StringBuilder sbStats = new();
 		sbStats.AppendLine($"Selected users: {users.Length}");
@@ -65,7 +77,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 		StringBuilder sbList = new();
 		if (users.Length > 0)
 		{
-			string directoryToArchive = await DownloadPfpsAsync(Context.Interaction, users, sbList, downloadFormat, downloadAnimated, animatedDownloadFormat);
+			string directoryToArchive = await DownloadPfpsAsync(Context.Interaction, users, sbList, downloadFormat, downloadAnimated, animatedDownloadFormat, filenameType);
 			pfpsArchivePath = Path.Join(Path.GetDirectoryName(directoryToArchive), $"{Path.GetFileName(directoryToArchive)}.zip");
 			await ZipFile.CreateFromDirectoryAsync(directoryToArchive, pfpsArchivePath, CompressionLevel.SmallestSize, includeBaseDirectory: false);
 		}
@@ -118,7 +130,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 		}
 	}
 
-	private static async Task<string> DownloadPfpsAsync(SlashCommandInteraction interaction, User[] users, StringBuilder sb, DownloadFormat downloadFormat, bool downloadAnimated, AnimatedDownloadFormat animatedDownloadFormat)
+	private static async Task<string> DownloadPfpsAsync(SlashCommandInteraction interaction, User[] users, StringBuilder sb, DownloadFormat downloadFormat, bool downloadAnimated, AnimatedDownloadFormat animatedDownloadFormat, FilenameType filenameType)
 	{
 		string pfpsPath = Path.Join(Program.PFPS_DIR, interaction.Id.ToString());
 		Directory.CreateDirectory(pfpsPath);
@@ -127,7 +139,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 		foreach(User user in users)
 		{
 			sb.AppendLine($"- {user.ToString()}");
-			DownloadFile downloadFile = GetAvatar(user, downloadFormat, downloadAnimated, animatedDownloadFormat);
+			DownloadFile downloadFile = GetAvatar(user, downloadFormat, downloadAnimated, animatedDownloadFormat, filenameType);
 			string path = Path.Join(pfpsPath, downloadFile.Filename);
 			await using Stream networkStream = await client.GetStreamAsync(downloadFile.DownloadUrl);
 			await using FileStream fileStream = new(path, FileMode.CreateNew);
@@ -139,8 +151,15 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 
 	private record DownloadFile(string Filename, string DownloadUrl);
 
-	private static DownloadFile GetAvatar(User user, DownloadFormat downloadFormat, bool downloadAnimated, AnimatedDownloadFormat animatedDownloadFormat)
+	private static DownloadFile GetAvatar(User user, DownloadFormat downloadFormat, bool downloadAnimated, AnimatedDownloadFormat animatedDownloadFormat, FilenameType filenameType)
 	{
+		string username = filenameType switch
+		{
+			FilenameType.UserName => user.Username,
+			FilenameType.DisplayName => user.GlobalName ?? user.Username,
+			FilenameType.NickName => (user is GuildUser guildUser ? guildUser.Nickname : null) ?? user.GlobalName ?? user.Username,
+			_ => throw new ArgumentOutOfRangeException(nameof(filenameType), filenameType, null),
+		};
 		if (downloadAnimated)
 		{
 			ImageUrl url = user.AlwaysGetAvatarUrl();
@@ -153,7 +172,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 					AnimatedDownloadFormat.WebP => user.AlwaysGetAvatarUrl(ImageFormat.WebP),
 					_ => throw new ArgumentOutOfRangeException(nameof(animatedDownloadFormat), animatedDownloadFormat, null),
 				};
-				return new DownloadFile($"{user.Username}{url.GetExtension()}", $"{url.ToString(4096)}&animated=true");
+				return new DownloadFile($"{username}{url.GetExtension()}", $"{url.ToString(4096)}&animated=true");
 			}
 			else
 			{
@@ -165,7 +184,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 					DownloadFormat.WebP => user.AlwaysGetAvatarUrl(ImageFormat.WebP),
 					_ => throw new ArgumentOutOfRangeException(nameof(downloadFormat), downloadFormat, null),
 				};
-				return new DownloadFile($"{user.Username}{url.GetExtension()}", url.ToString(4096));
+				return new DownloadFile($"{username}{url.GetExtension()}", url.ToString(4096));
 			}
 		}
 		else
@@ -184,7 +203,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 			{
 				url = user.AlwaysGetAvatarUrl(ImageFormat.Png);
 			}
-			return new DownloadFile($"{user.Username}{url.GetExtension()}", url.ToString(4096));
+			return new DownloadFile($"{username}{url.GetExtension()}", url.ToString(4096));
 		}
 	}
 }
