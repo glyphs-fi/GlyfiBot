@@ -116,7 +116,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 		(string toGenerate, string inputKey) = challengeType.ForAnnouncement();
 
-		string outputDir = Path.Join(Program.ANNOUNCEMENTS_DIR, challengeType.GetNameForDir());
+		string outputDir = Path.Join(Program.ANNOUNCEMENTS_DIR, challengeType.GetNameForDir(), $"{Context.Interaction.Id}");
 
 		List<string> args =
 		[
@@ -128,7 +128,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		if (endDate is not null) args.AddRange(["--input", $"announcement-end-date={endDate}"]);
 
 		List<AttachmentProperties> attachments = [];
-		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, $"{toGenerate}_{Context.Interaction.Id}", outputFormat, args, ppi, attachments);
+		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{weekNumber}_{challengeType.GetNameForDir()}_{nameof(Announcement)}", outputFormat, args, ppi, attachments);
 
 		await ModifyResponseAsync(msg =>
 		{
@@ -238,7 +238,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		if (endDate is not null) args.AddRange(["--input", $"showcase-end-date={endDate}"]);
 
 		List<AttachmentProperties> attachments = [];
-		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, $"{toGenerate}_{Context.Interaction.Id}", outputFormat, args, ppi, attachments);
+		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{weekNumber}_{challengeType.GetNameForDir()}_{nameof(Showcase)}", outputFormat, args, ppi, attachments);
 
 		await ModifyResponseAsync(msg =>
 		{
