@@ -253,13 +253,24 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	public async Task Winners(
 		ChallengeType challengeType,
 		int weekNumber,
+		//
 		[SlashCommandParameter(Description = "Message ID")]
 		string firstPlace,
+		[SlashCommandParameter(Description = "Optional display name override for first place")]
+		string? firstPlaceNameOverride = null,
+		//
 		[SlashCommandParameter(Description = "Message ID")]
 		string? secondPlace = null,
+		[SlashCommandParameter(Description = "Optional display name override for second place")]
+		string? secondPlaceNameOverride = null,
+		//
 		[SlashCommandParameter(Description = "Message ID")]
 		string? thirdPlace = null,
+		[SlashCommandParameter(Description = "Optional display name override for third place")]
+		string? thirdPlaceNameOverride = null,
+		//
 		OutputFormat outputFormat = OutputFormat.Both,
+		//
 		[SlashCommandParameter(Description = PPI_DESC)]
 		int? ppi = null
 	)
@@ -285,11 +296,11 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 		string content = "Done!";
 		List<AttachmentProperties> attachments = [];
-		await FillAttachmentsForWinnerLevel("first", firstPlace);
+		await FillAttachmentsForWinnerLevel("first", firstPlace, firstPlaceNameOverride);
 		if (secondPlace is not null)
-			await FillAttachmentsForWinnerLevel("second", secondPlace);
+			await FillAttachmentsForWinnerLevel("second", secondPlace, secondPlaceNameOverride);
 		if (thirdPlace is not null)
-			await FillAttachmentsForWinnerLevel("third", thirdPlace);
+			await FillAttachmentsForWinnerLevel("third", thirdPlace, thirdPlaceNameOverride);
 
 		await ModifyResponseAsync(msg =>
 		{
@@ -303,7 +314,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		return;
 
 		// Returns true if success, false if fail
-		async Task FillAttachmentsForWinnerLevel(string level, string stringId)
+		async Task FillAttachmentsForWinnerLevel(string level, string stringId, string? displayNameOverride)
 		{
 			// Validate stringId
 			if (!ulong.TryParse(stringId, null, out ulong messageId))
@@ -338,7 +349,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 			(string toGenerate, string userNameKey, string nickNameKey) = challengeType.ForWinners(level);
 			string profilePictureFileName = Path.GetFileNameWithoutExtension(avatarDownloadFile.Filename);
-			string displayName = await message.Author.GetNickNameAsync(Context.Guild);
+			string displayName = displayNameOverride ?? await message.Author.GetNickNameAsync(Context.Guild);
 			List<string> localArgs =
 			[
 				..args,
