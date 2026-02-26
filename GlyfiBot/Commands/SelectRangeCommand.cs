@@ -13,7 +13,6 @@ public enum DownloadType
 	Raw,
 	Flat,
 }
-
 public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	[SlashCommand("select",
@@ -25,40 +24,35 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		ReactionEmojiProperties? emoji = SetTheEmojiCommand.TheEmoji;
 		if (emoji is null)
 		{
-			await Context.SendEphemeralResponseAsync("Emoji has not been set! Use `/set-emoji` to set the emoji first");
-			return;
+			throw new SimpleCommandFailException("Emoji has not been set! Use `/set-emoji` to set the emoji first");
 		}
 
-		if (!ulong.TryParse(start, null, out ulong startId))
+		if (!ulong.TryParse(start, null, out ulong idStart))
 		{
-			await Context.SendEphemeralResponseAsync("Start needs to be a number");
-			return;
+			throw new SimpleCommandFailException("`start` needs to be a number: the Message ID");
 		}
 
-		RestMessage? messageStart = await GetMessageAsync(Context, startId);
-		if (messageStart is null) return;
+		await VerifyThatMessageIsInChannel(Context, idStart);
 
-		ulong? endId = null;
+		ulong? idEnd = null;
 		if (end is not null)
 		{
-			if (!ulong.TryParse(end, null, out ulong endIdLocal))
+			if (!ulong.TryParse(end, null, out ulong idEndLocal))
 			{
-				await Context.SendEphemeralResponseAsync("End needs to be a number");
-				return;
+				throw new SimpleCommandFailException("`end` needs to be a number: the Message ID");
 			}
 
 			// If the order is wrong, swap them into the correct order
-			if (startId > endIdLocal) (startId, endIdLocal) = (endIdLocal, startId);
+			if (idStart > idEndLocal) (idStart, idEndLocal) = (idEndLocal, idStart);
 
-			RestMessage? messageEnd = await GetMessageAsync(Context, endIdLocal);
-			if (messageEnd is null) return;
+			await VerifyThatMessageIsInChannel(Context, idEndLocal);
 
-			endId = endIdLocal;
+			idEnd = idEndLocal;
 		}
 
 		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
 
-		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, startId, endId);
+		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, idStart, idEnd);
 
 		(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(messages, emoji);
 
@@ -116,12 +110,11 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		{
 			if (e.HasInternalError("BASE_TYPE_MAX_LENGTH"))
 			{
-				await ModifyResponseAsync(msg => msg.Content =
-					"Message was too long to fit. Please file a bug report and paste the _exact_ command you used into it: <https://github.com/glyphs-fi/GlyfiBot/issues/new>");
+				await Context.ModifyEphemeralResponseAsync("Message was too long to fit. Please file a bug report and paste the _exact_ command you used into it: <https://github.com/glyphs-fi/GlyfiBot/issues/new>");
 			}
 			else if (e.Error is {Code: 40005}) //Request entity too large
 			{
-				await ModifyResponseAsync(msg => msg.Content =
+				await Context.ModifyEphemeralResponseAsync(
 					stats + "\n" +
 					"Archive ended up being too big for Discord...\n" +
 					"I'm afraid you'll have to collect the submissions manually until [#2](<https://github.com/glyphs-fi/GlyfiBot/issues/2>) and [#3](<https://github.com/glyphs-fi/GlyfiBot/issues/3>) are implemented...");
@@ -195,7 +188,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		};
 	}
 
-	private static async Task<(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(List<RestMessage> messages, ReactionEmojiProperties emoji)
+	public static async Task<(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(List<RestMessage> messages, ReactionEmojiProperties emoji)
 	{
 		Dictionary<User, List<Attachment>> submissions = [];
 		uint submissionMessageCount = 0;

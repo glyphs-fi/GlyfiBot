@@ -57,8 +57,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 		if (emoji is null)
 		{
 			TheEmoji = null;
-			await Context.SendEphemeralResponseAsync("Cleared emoji. Remember to `/set-emoji` it to something again before using `/select`!");
-			return;
+			throw new SimpleCommandFailException("Cleared emoji. Remember to `/set-emoji` it to something again before using `/select`!");
 		}
 
 		if (emoji.Contains(':'))
@@ -73,8 +72,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 			}
 			catch(SystemException e) when(e is IndexOutOfRangeException or FormatException)
 			{
-				await Context.SendEphemeralResponseAsync($"Invalid emoji: `{emoji}`");
-				return;
+				throw new SimpleCommandFailException($"Invalid emoji: `{emoji}`");
 			}
 		}
 		else
@@ -89,8 +87,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 				string? firstEmoji = Utils.FirstEmoji(emoji);
 				if (firstEmoji is null)
 				{
-					await Context.SendEphemeralResponseAsync($"Invalid emoji: `{emoji}`");
-					return;
+					throw new SimpleCommandFailException($"Invalid emoji: `{emoji}`");
 				}
 
 				TheEmoji = new ReactionEmojiProperties(firstEmoji);

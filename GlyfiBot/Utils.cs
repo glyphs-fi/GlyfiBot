@@ -3,13 +3,16 @@ using NetCord.Gateway;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
 using NetCord.Services.Commands;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO.Compression;
 using System.Text;
 
 namespace GlyfiBot;
 
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
+[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public static class Utils
 {
 	/// <summary>
@@ -24,7 +27,7 @@ public static class Utils
 	///
 	/// <remarks>
 	/// Before using this function, you should verify that both <c><see cref="start"/></c> and <c><see cref="end"/></c>
-	/// are in the same channel with <see cref="GetMessageAsync"/> and that they are in the correct order.
+	/// are in the same channel with <see cref="VerifyThatMessageIsInChannel"/> and that they are in the correct order.
 	/// </remarks>
 	public static async Task<List<RestMessage>> GetMessagesBetweenAsync(SlashCommandContext context, ulong start, ulong? end)
 	{
@@ -41,65 +44,89 @@ public static class Utils
 	}
 
 	/// <summary>
-	/// Tries to get a message from the context.
-	/// Sends an error response with <see cref="SendEphemeralResponseAsync(SlashCommandContext, string)"/> if the message cannot be got.
+	/// Ensures that the message with this ID is in this channel (will throw a <see cref="SimpleCommandFailException"/> if not)
 	/// </summary>
 	///
 	/// <param name="context">The <see cref="CommandContext"/></param>
 	/// <param name="messageId">The message ID</param>
-	///
-	/// <returns>The <see cref="RestMessage"/> if it can be got, otherwise <c>null</c></returns>
-	public static async ValueTask<RestMessage?> GetMessageAsync(SlashCommandContext context, ulong messageId)
+	public static async Task<RestMessage> VerifyThatMessageIsInChannel(SlashCommandContext context, ulong messageId)
 	{
 		try
 		{
 			return await context.Client.Rest.GetMessageAsync(context.Channel.Id, messageId);
 		}
-		catch(RestException e)
+		catch(RestException)
 		{
-			await context.SendEphemeralResponseAsync($"Error on message `{messageId}`: {e.Error?.Message}");
-			return null;
+			throw new SimpleCommandFailException($"Message with ID `{messageId}` is not in this channel, <#{context.Channel.Id}>!");
 		}
 	}
 
-	/// <summary>
-	/// Sends a message as an ephemeral message as a response to a command, through its interaction.
-	/// </summary>
-	///
-	/// <param name="interaction">The <see cref="Interaction"/></param>
-	/// <param name="content">The contents of the message</param>
-	public static async Task SendEphemeralResponseAsync(this Interaction interaction, string content)
+	extension(Interaction interaction)
 	{
-		await interaction.SendResponseAsync(InteractionCallback.Message(new InteractionMessageProperties
+		/// <summary>
+		/// Sends a message as an ephemeral message as a response to a command, through its interaction.
+		/// </summary>
+		/// <param name="content">The contents of the message</param>
+		/// <param name="attachments">Any potential attachments</param>
+		public async Task SendEphemeralResponseAsync(string content, IReadOnlyCollection<AttachmentProperties>? attachments = null)
 		{
-			Content = content,
-			Flags = MessageFlags.Ephemeral,
-		}));
+			await interaction.SendResponseAsync(InteractionCallback.Message(new InteractionMessageProperties
+			{
+				Flags = MessageFlags.Ephemeral,
+				Content = content,
+				Attachments = attachments,
+			}));
+		}
+
+
+		/// <summary>
+		/// Modifies a message as an ephemeral message as a response to a command, through its interaction.
+		/// </summary>
+		/// <param name="content">The contents of the message</param>
+		public async Task ModifyEphemeralResponseAsync(string content)
+		{
+			await interaction.ModifyResponseAsync(msg =>
+			{
+				msg.Flags = MessageFlags.Ephemeral;
+				msg.Content = content;
+			});
+		}
+
+		/// <summary>
+		/// Sends a followup message as an ephemeral message as a response to a command, through its interaction.
+		/// </summary>
+		/// <param name="content">The contents of the message</param>
+		/// <param name="attachments">Any potential attachments</param>
+		public async Task SendEphemeralFollowupMessageAsync(string content, IReadOnlyCollection<AttachmentProperties>? attachments = null)
+		{
+			await interaction.SendFollowupMessageAsync(new InteractionMessageProperties
+			{
+				Flags = MessageFlags.Ephemeral,
+				Content = content,
+				Attachments = attachments,
+			});
+		}
 	}
 
-	/// <summary>
-	/// Sends a message as an ephemeral message as a response to a command, through its context.
-	/// </summary>
-	///
-	/// <param name="context">The <see cref="CommandContext"/></param>
-	/// <param name="content">The contents of the message</param>
-	public static async Task SendEphemeralResponseAsync(this SlashCommandContext context, string content)
+	extension(SlashCommandContext context)
 	{
-		await context.Interaction.SendEphemeralResponseAsync(content);
-	}
-
-	/// <summary>
-	/// Sends a followup message as an ephemeral message as a response to a command, through its interaction.
-	/// </summary>
-	/// <param name="interaction">The <see cref="Interaction"/></param>
-	/// <param name="content">The contents of the message</param>
-	public static async Task SendEphemeralFollowupMessageAsync(this Interaction interaction, string content)
-	{
-		await interaction.SendFollowupMessageAsync(new InteractionMessageProperties
+		/// <summary>
+		/// Sends a message as an ephemeral message as a response to a command, through its context.
+		/// </summary>
+		/// <param name="content">The contents of the message</param>
+		public async Task SendEphemeralResponseAsync(string content)
 		{
-			Content = content,
-			Flags = MessageFlags.Ephemeral,
-		});
+			await context.Interaction.SendEphemeralResponseAsync(content);
+		}
+
+		/// <summary>
+		/// Modifies the response to the provided content, while setting/keeping the response ephemeral.
+		/// </summary>
+		/// <param name="content">The contents of the message</param>
+		public async Task ModifyEphemeralResponseAsync(string content)
+		{
+			await context.Interaction.ModifyEphemeralResponseAsync(content);
+		}
 	}
 
 	/// <summary>
@@ -133,25 +160,28 @@ public static class Utils
 		return false;
 	}
 
-	public static async Task<List<T>> ToListAsync<T>(this IAsyncEnumerable<T> enumerable)
+	extension<T>(IAsyncEnumerable<T> enumerable)
 	{
-		List<T> list = [];
-
-		await foreach(T item in enumerable)
+		public async Task<List<T>> ToListAsync()
 		{
-			list.Add(item);
+			List<T> list = [];
+
+			await foreach(T item in enumerable)
+			{
+				list.Add(item);
+			}
+
+			return list;
 		}
 
-		return list;
-	}
-
-	public static async IAsyncEnumerable<T> WhereAsync<T>(this IAsyncEnumerable<T> enumerable, Predicate<T> condition)
-	{
-		await foreach(T item in enumerable)
+		public async IAsyncEnumerable<T> WhereAsync(Predicate<T> condition)
 		{
-			if (condition(item))
+			await foreach(T item in enumerable)
 			{
-				yield return item;
+				if (condition(item))
+				{
+					yield return item;
+				}
 			}
 		}
 	}
@@ -183,22 +213,93 @@ public static class Utils
 		return errorGroup is RestErrorDetailGroup group && group.Errors.Any(restErrorDetail => restErrorDetail.Code == errorKey);
 	}
 
-	public static ImageUrl AlwaysGetAvatarUrl(this User user, ImageFormat? format = null)
+	extension(User user)
 	{
-		ImageUrl? avatarUrl = user.GetAvatarUrl(format);
-		return avatarUrl ?? user.DefaultAvatarUrl;
+		public ImageUrl AlwaysGetAvatarUrl(ImageFormat? format = null)
+		{
+			ImageUrl? avatarUrl = user.GetAvatarUrl(format);
+			return avatarUrl ?? user.DefaultAvatarUrl;
+		}
+
+		/// <summary>
+		/// Gets the user's nickname if possible.
+		/// May fall back to globalname or username if not available.
+		/// </summary>
+		/// <param name="guild">Pass in if you have it, so the nickname can be retrieved from the guild</param>
+		/// <returns>The nickname, or the globalname, or the username</returns>
+		public async Task<string> GetNickNameAsync(Guild? guild)
+		{
+			if (user is GuildUser guildUser) return guildUser.Nickname ?? guildUser.GlobalName ?? guildUser.Username;
+
+			if (guild is null) return user.GlobalName ?? user.Username;
+
+			GuildUser guildUserGet = await guild.GetUserAsync(user.Id);
+			return await guildUserGet.GetNickNameAsync(guild);
+		}
 	}
 
-	/// <remarks>
-	/// Includes the <c>.</c> of the extension.
-	/// </remarks>
-	public static string GetExtension(this ImageUrl imageUrl)
+	extension(ImageUrl imageUrl)
 	{
-		return Path.GetExtension(imageUrl.ToString());
+		/// <remarks>
+		/// Includes the <c>.</c> of the extension.
+		/// </remarks>
+		public string GetExtension()
+		{
+			return Path.GetExtension(imageUrl.ToString());
+		}
+
+		public bool IsAnimated()
+		{
+			return imageUrl.GetExtension() == ".gif";
+		}
 	}
 
-	public static bool IsAnimated(this ImageUrl imageUrl)
+
+	/// <summary>
+	/// Extracts the archive at the provided path into its parent directory.
+	/// </summary>
+	/// <param name="archivePath"></param>
+	/// <exception cref="DirectoryNotFoundException"></exception>
+	public static async Task ExtractArchive(string archivePath)
 	{
-		return imageUrl.GetExtension() == ".gif";
+		DirectoryInfo? directoryInfo = Directory.GetParent(archivePath);
+		if (directoryInfo is null) throw new DirectoryNotFoundException($"Parent not found: {archivePath}");
+
+		string targetDir = directoryInfo.FullName;
+		if (archivePath.EndsWith(".zip"))
+		{
+			await ZipFile.ExtractToDirectoryAsync(archivePath, targetDir);
+		}
+		else if (archivePath.EndsWith(".tar.xz"))
+		{
+			Process unpacker = new() {StartInfo = new ProcessStartInfo("tar", ["xf", archivePath, "-C", targetDir])};
+			unpacker.Start();
+			await unpacker.WaitForExitAsync();
+		}
+	}
+
+	/// <summary>
+	/// Finds an exe in the provided directory, or a subdirectory of it.
+	/// </summary>
+	/// <param name="searchPath">The directory in which to look (and its subdirectories)</param>
+	/// <param name="exeName">The name of the executable to look for. Do not include ".exe" as that will automatically be added if necessary!</param>
+	/// <returns></returns>
+	public static string? FindExe(string searchPath, string exeName)
+	{
+		string[] files = Directory.GetFiles(searchPath, $"{exeName}*", new EnumerationOptions
+		{
+			RecurseSubdirectories = true,
+			MaxRecursionDepth = 1,
+			MatchCasing = MatchCasing.CaseInsensitive,
+			MatchType = MatchType.Simple,
+		});
+		return files.FirstOrDefault(file => file.EndsWith(".exe") || Path.GetFileName(file) == exeName);
+	}
+
+	extension(string str)
+	{
+		public string UpperFirst() => $"{str[..1].ToUpperInvariant()}{str[1..]}";
+		public string LowerFirst() => $"{str[..1].ToLowerInvariant()}{str[1..]}";
 	}
 }
+public class SimpleCommandFailException(string message) : Exception(message);

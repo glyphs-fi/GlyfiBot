@@ -3,9 +3,11 @@ using GlyfiBot.Services;
 using NetCord;
 using NetCord.Gateway;
 using NetCord.Logging;
+using NetCord.Rest;
 using NetCord.Services;
 using NetCord.Services.ApplicationCommands;
 using System.Reflection;
+using System.Text;
 
 namespace GlyfiBot;
 
@@ -15,6 +17,11 @@ static internal class Program
 	public const string SELECTIONS_DIR = $"{DATA_DIR}/selections";
 	public const string PFPS_DIR = $"{DATA_DIR}/pfps";
 	public const string SETTINGS_DIR = $"{DATA_DIR}/settings";
+	public const string TYPST_EXE_DIR = $"{DATA_DIR}/typst-exe";
+	public const string TYPST_SCRIPT_DIR = $"{DATA_DIR}/typst-script";
+	public const string ANNOUNCEMENTS_DIR = $"{DATA_DIR}/announcements";
+	public const string SHOWCASES_DIR = $"{DATA_DIR}/showcases";
+	public const string WINNERS_DIR = $"{DATA_DIR}/winners";
 
 	private static async Task Main()
 	{
@@ -52,7 +59,51 @@ static internal class Program
 
 			if (result is IFailResult failResult)
 			{
-				await slashCommandInteraction.SendEphemeralFollowupMessageAsync(failResult.Message);
+				if (failResult is IExceptionResult exceptionResult)
+				{
+					Console.Error.WriteLine(exceptionResult.Exception);
+					if (exceptionResult.Exception is SimpleCommandFailException)
+					{
+						await Respond(exceptionResult.Message);
+					}
+					else
+					{
+						string exceptionText = exceptionResult.Exception.ToString();
+						if (exceptionText.Length > 1900)
+						{
+							await Respond(exceptionResult.Message, exceptionText);
+						}
+						else
+						{
+							await Respond($"{exceptionResult.Message}\n```\n{exceptionText}```");
+						}
+					}
+				}
+				else
+				{
+					// ReSharper disable once MethodHasAsyncOverload
+					Console.Error.WriteLine(failResult.Message);
+					await Respond(failResult.Message);
+				}
+
+				if (slashCommandInteraction.Data.Name == TypstCommand.COMMAND_NAME)
+				{
+					TypstCommand.EndAfterError();
+				}
+
+				async Task Respond(string message, string? textToSendAsAttachment = null)
+				{
+					try
+					{
+						await slashCommandInteraction.SendEphemeralResponseAsync(message,
+							textToSendAsAttachment == null ? null : [new AttachmentProperties("exception.txt", new MemoryStream(Encoding.UTF8.GetBytes(textToSendAsAttachment)))]);
+					}
+					catch(RestException restException) when(restException.StatusCode == System.Net.HttpStatusCode.BadRequest)
+					{
+						await slashCommandInteraction.SendEphemeralFollowupMessageAsync(message,
+							textToSendAsAttachment == null ? null : [new AttachmentProperties("exception.txt", new MemoryStream(Encoding.UTF8.GetBytes(textToSendAsAttachment)))]);
+					}
+				}
 			}
 		};
 
@@ -60,6 +111,7 @@ static internal class Program
 		applicationCommandService.AddModule<SetTheEmojiCommand>();
 		applicationCommandService.AddModule<GetTheEmojiCommand>();
 		applicationCommandService.AddModule<ProfilePicturesCommand>();
+		applicationCommandService.AddModule<TypstCommand>();
 
 		await applicationCommandService.RegisterCommandsAsync(client.Rest, client.Id);
 
