@@ -25,17 +25,40 @@ static internal class Program
 
 	private static async Task Main()
 	{
+		Directory.CreateDirectory(DATA_DIR);
+		Directory.CreateDirectory(SETTINGS_DIR);
+
+		// Token retrieval
+		//  Attempt 1: Environment Variable
 		string? token = Environment.GetEnvironmentVariable("GLYFI_TOKEN");
+
+		string tokenFile = Path.Join(SETTINGS_DIR, "token.txt");
+		bool shouldSaveToken = false;
 		if (string.IsNullOrWhiteSpace(token))
 		{
-			Console.WriteLine("Error: No discord token found. Please provide a token via the GLYFI_TOKEN environment variable.");
-			Environment.Exit(1);
+			Console.WriteLine($"No Discord Bot Token found in the GLYFI_TOKEN environment variable. Proceeding to look in {tokenFile}...");
+			//  Attempt 2: Token file
+			if (File.Exists(tokenFile))
+			{
+				token = (await File.ReadAllTextAsync(tokenFile)).Trim();
+				Console.WriteLine($"Loaded Discord Bot Token from {tokenFile}");
+			}
+			else
+			{
+				//  Attempt 3: StdIn
+				Console.WriteLine($"No Discord Bot Token found in {tokenFile}. Please paste in the Discord Bot Token here:");
+				token = Console.ReadLine();
+				if (string.IsNullOrWhiteSpace(token))
+				{
+					Console.WriteLine("Invalid Discord Bot Token. Stopping the bot.");
+					Environment.Exit(1);
+				}
+				shouldSaveToken = true;
+			}
 		}
 
-		Directory.CreateDirectory(DATA_DIR);
 		Directory.CreateDirectory(SELECTIONS_DIR);
 		Directory.CreateDirectory(PFPS_DIR);
-		Directory.CreateDirectory(SETTINGS_DIR);
 
 		SetTheEmojiCommand.Load();
 
@@ -47,6 +70,12 @@ static internal class Program
 				Logger = new ConsoleLogger(),
 			}
 		);
+
+		if (shouldSaveToken)
+		{
+			Console.WriteLine($"Saving Discord Bot Token to {tokenFile}");
+			await File.WriteAllTextAsync(tokenFile, token);
+		}
 
 		ApplicationCommandService<SlashCommandContext> applicationCommandService = new();
 
