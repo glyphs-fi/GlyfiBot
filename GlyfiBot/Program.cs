@@ -78,7 +78,7 @@ static internal class Program
 		if (shouldSaveToken)
 		{
 			Console.WriteLine($"Saving Token to {tokenFile}");
-			await File.WriteAllTextAsync(tokenFile, $"{token}\n");
+			await File.WriteAllTextAsync(tokenFile, token);
 		}
 
 		SetTheEmojiCommand.Load();
