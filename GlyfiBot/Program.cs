@@ -7,6 +7,7 @@ using NetCord.Rest;
 using NetCord.Services;
 using NetCord.Services.ApplicationCommands;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace GlyfiBot;
@@ -41,41 +42,46 @@ static internal class Program
 			if (File.Exists(tokenFile))
 			{
 				token = (await File.ReadAllTextAsync(tokenFile)).Trim();
-				Console.WriteLine($"Loaded Discord Bot Token from {tokenFile}");
+				Console.WriteLine($"Loaded Token from {tokenFile}");
 			}
 			else
 			{
 				//  Attempt 3: StdIn
-				Console.WriteLine($"No Discord Bot Token found in {tokenFile}. Please paste in the Discord Bot Token here:");
+				Console.WriteLine($"No Token found in {tokenFile}. Please paste the Token here:");
 				token = Console.ReadLine();
-				if (string.IsNullOrWhiteSpace(token))
-				{
-					Console.WriteLine("Invalid Discord Bot Token. Stopping the bot.");
-					Environment.Exit(1);
-				}
 				shouldSaveToken = true;
 			}
 		}
 
-		Directory.CreateDirectory(SELECTIONS_DIR);
-		Directory.CreateDirectory(PFPS_DIR);
-
-		SetTheEmojiCommand.Load();
-
-		GatewayClient client = new(
-			new BotToken(token),
-			new GatewayClientConfiguration
-			{
-				Intents = GatewayIntents.AllNonPrivileged | GatewayIntents.MessageContent,
-				Logger = new ConsoleLogger(),
-			}
-		);
+		GatewayClient client;
+		try
+		{
+			client = new GatewayClient(
+				new BotToken(token ?? ""),
+				new GatewayClientConfiguration
+				{
+					Intents = GatewayIntents.AllNonPrivileged | GatewayIntents.MessageContent,
+					Logger = new ConsoleLogger(),
+				}
+			);
+		}
+		catch(ArgumentException e) when(e.Message.Contains("token", StringComparison.InvariantCultureIgnoreCase))
+		{
+			Console.WriteLine("Invalid Token. Stopping the bot.");
+			// Give a bit more time to read before the console window closes again
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+				await Task.Delay(TimeSpan.FromSeconds(4));
+			Environment.Exit(1);
+			return;
+		}
 
 		if (shouldSaveToken)
 		{
-			Console.WriteLine($"Saving Discord Bot Token to {tokenFile}");
-			await File.WriteAllTextAsync(tokenFile, token);
+			Console.WriteLine($"Saving Token to {tokenFile}");
+			await File.WriteAllTextAsync(tokenFile, $"{token}\n");
 		}
+
+		SetTheEmojiCommand.Load();
 
 		ApplicationCommandService<SlashCommandContext> applicationCommandService = new();
 
