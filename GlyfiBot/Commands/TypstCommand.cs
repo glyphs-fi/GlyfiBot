@@ -405,8 +405,17 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		string outputFile = Path.Join(outputDir, fileName);
 
 		string rootDir = Directory.GetCurrentDirectory();
+		string scriptDir = Path.GetDirectoryName(scriptPath) ?? throw new InvalidOperationException($"Could not find script directory of path `{scriptPath}`");
+		string fontsDir = Path.Join(scriptDir, "fonts");
 
-		ProcessStartInfo startInfo = new(typstExe, ["compile", scriptPath, "--root", rootDir, ..args, outputFile]) {RedirectStandardOutput = true, RedirectStandardError = true};
+		ProcessStartInfo startInfo = new(typstExe, [
+			"compile", scriptPath,
+			"--root", rootDir,
+			"--ignore-system-fonts",
+			"--font-path", fontsDir,
+			..args,
+			outputFile,
+		]) {RedirectStandardOutput = true, RedirectStandardError = true};
 		Process typstCmd = new() {StartInfo = startInfo};
 		typstCmd.Start();
 		await typstCmd.WaitForExitAsync();
