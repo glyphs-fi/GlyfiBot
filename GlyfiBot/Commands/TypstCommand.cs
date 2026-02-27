@@ -102,7 +102,8 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	public async Task Announcement(
 		ChallengeType challengeType,
 		string input,
-		int weekNumber,
+		[SlashCommandParameter(Description = "The number of the current week")]
+		int currentWeek,
 		string? startDate = null,
 		string? endDate = null,
 		OutputFormat outputFormat = OutputFormat.Both,
@@ -124,13 +125,13 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		[
 			"--input", $"to-generate={toGenerate}",
 			"--input", $"{inputKey}={input}",
-			"--input", $"current-week={weekNumber}",
+			"--input", $"current-week={currentWeek}",
 		];
 		if (startDate is not null) args.AddRange(["--input", $"announcement-start-date={startDate}"]);
 		if (endDate is not null) args.AddRange(["--input", $"announcement-end-date={endDate}"]);
 
 		List<AttachmentProperties> attachments = [];
-		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{weekNumber}_{challengeType.GetNameForDir()}_{nameof(Announcement)}", outputFormat, args, ppi, attachments);
+		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{currentWeek}_{challengeType.GetNameForDir()}_{nameof(Announcement)}", outputFormat, args, ppi, attachments);
 
 		await ModifyResponseAsync(msg =>
 		{
@@ -149,7 +150,8 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	public async Task Showcase(
 		ChallengeType challengeType,
 		string input,
-		int weekNumber,
+		[SlashCommandParameter(Description = "The number of the current week")]
+		int currentWeek,
 		[SlashCommandParameter(Description = "Message ID")]
 		string start,
 		[SlashCommandParameter(Description = "Message ID. If not provided, will select until the end")]
@@ -228,14 +230,14 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		[
 			"--input", $"to-generate={toGenerate}",
 			"--input", $"{inputKey}={input}",
-			"--input", $"current-week={weekNumber}",
+			"--input", $"current-week={currentWeek}",
 			"--input", $"image-dir={Path.GetRelativePath(scriptDir, imagesDir)}",
 		];
 		if (startDate is not null) args.AddRange(["--input", $"showcase-start-date={startDate}"]);
 		if (endDate is not null) args.AddRange(["--input", $"showcase-end-date={endDate}"]);
 
 		List<AttachmentProperties> attachments = [];
-		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{weekNumber}_{challengeType.GetNameForDir()}_{nameof(Showcase)}", outputFormat, args, ppi, attachments);
+		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{currentWeek}_{challengeType.GetNameForDir()}_{nameof(Showcase)}", outputFormat, args, ppi, attachments);
 
 		await ModifyResponseAsync(msg =>
 		{
@@ -252,7 +254,8 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	[UsedImplicitly]
 	public async Task Winners(
 		ChallengeType challengeType,
-		int weekNumber,
+		[SlashCommandParameter(Description = "The number of the current week")]
+		int currentWeek,
 		//
 		[SlashCommandParameter(Description = "Message ID")]
 		string firstPlace,
@@ -290,7 +293,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		string scriptDir = Path.GetDirectoryName(scriptPath) ?? throw new InvalidOperationException($"Could not find script directory of path `{scriptPath}`");
 		List<string> args =
 		[
-			"--input", $"current-week={weekNumber}",
+			"--input", $"current-week={currentWeek}",
 			"--input", $"image-dir={Path.GetRelativePath(scriptDir, imagesDir)}",
 		];
 
@@ -357,7 +360,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 				"--input", $"{userNameKey}={profilePictureFileName}",
 				"--input", $"{nickNameKey}={displayName}",
 			];
-			content += await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{weekNumber}_{challengeType.GetNameForDir()}_{nameof(Winners)}_{level.UpperFirst()}", outputFormat, localArgs, ppi, attachments);
+			content += await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{currentWeek}_{challengeType.GetNameForDir()}_{nameof(Winners)}_{level.UpperFirst()}", outputFormat, localArgs, ppi, attachments);
 		}
 	}
 
