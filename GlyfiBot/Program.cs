@@ -23,6 +23,7 @@ static internal class Program
 	public const string ANNOUNCEMENTS_DIR = $"{DATA_DIR}/announcements";
 	public const string SHOWCASES_DIR = $"{DATA_DIR}/showcases";
 	public const string WINNERS_DIR = $"{DATA_DIR}/winners";
+	public const string STICKY_DIR = $"{DATA_DIR}/stickies";
 
 	private static async Task Main()
 	{
@@ -82,6 +83,7 @@ static internal class Program
 		}
 
 		SetTheEmojiCommand.Load();
+		await StickyMessageCommand.Load(client);
 
 		ApplicationCommandService<SlashCommandContext> applicationCommandService = new();
 
@@ -147,6 +149,7 @@ static internal class Program
 		applicationCommandService.AddModule<GetTheEmojiCommand>();
 		applicationCommandService.AddModule<ProfilePicturesCommand>();
 		applicationCommandService.AddModule<TypstCommand>();
+		applicationCommandService.AddModule<StickyMessageCommand>();
 
 		await applicationCommandService.RegisterCommandsAsync(client.Rest, client.Id);
 
