@@ -84,7 +84,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 
 	private static async Task AddStickyRegistration(Channel channel, string message)
 	{
-		_stickyMessages.Add(channel.Id, message);
+		_stickyMessages[channel.Id] = message;
 		await SendMessage(channel, message);
 		SaveStickyMessages();
 	}
