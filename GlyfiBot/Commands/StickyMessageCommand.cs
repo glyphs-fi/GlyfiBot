@@ -2,6 +2,8 @@ using JetBrains.Annotations;
 using NetCord;
 using NetCord.Gateway;
 using NetCord.Services.ApplicationCommands;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace GlyfiBot.Commands;
 
@@ -23,8 +25,8 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 		Directory.CreateDirectory(Program.STICKY_DIR);
 		if (File.Exists(MESSAGES_FILE))
 		{
-			//TODO: Load from the STICKY_FILE instead of setting to empty dict
-			_stickyMessages = new Dictionary<ulong, string>();
+			string json = await File.ReadAllTextAsync(MESSAGES_FILE);
+			_stickyMessages = JsonSerializer.Deserialize(json, ToJson.Default.DictionaryUInt64String)!;
 		}
 		else
 		{
@@ -33,8 +35,8 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 
 		if (File.Exists(PREVIOUS_FILE))
 		{
-			//TODO: Load from the PREVIOUS_FILE instead of setting to empty dict
-			_previousMessages = new Dictionary<ulong, ulong>();
+			string json = await File.ReadAllTextAsync(PREVIOUS_FILE);
+			_previousMessages = JsonSerializer.Deserialize(json, ToJson.Default.DictionaryUInt64UInt64)!;
 		}
 		else
 		{
@@ -98,7 +100,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 		SavePreviousMessages();
 	}
 
-	// TODO: Consider debouncing this (maybe 5 seconds or so)
+	// TODO: Do not run for every single message that comes in (maybe at most once every five seconds or so)
 	/// Delete previous message, send new message, and store for later deletion
 	private static async Task SendMessage(Channel channel, string message)
 	{
@@ -117,11 +119,18 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 
 	private static void SaveStickyMessages()
 	{
-		//TODO: Save _stickyMessages to json
+		string json = JsonSerializer.Serialize(_stickyMessages, ToJson.Default.DictionaryUInt64String);
+		File.WriteAllText(MESSAGES_FILE, json);
 	}
 
 	private static void SavePreviousMessages()
 	{
-		//TODO: Save _previousMessages to json (save on a debounce timer, to prevent overload of IO spam (maybe 5 minutes or so)
+		//TODO: Save on a timer, to prevent overload of IO spam (maybe 5 minutes or so)
+		string json = JsonSerializer.Serialize(_previousMessages, ToJson.Default.DictionaryUInt64UInt64);
+		File.WriteAllText(PREVIOUS_FILE, json);
 	}
 }
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(Dictionary<ulong, string>))]
+[JsonSerializable(typeof(Dictionary<ulong, ulong>))]
+public partial class ToJson : JsonSerializerContext;
