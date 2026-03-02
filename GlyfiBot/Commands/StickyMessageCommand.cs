@@ -1,6 +1,7 @@
 using JetBrains.Annotations;
 using NetCord;
 using NetCord.Gateway;
+using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -104,15 +105,26 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 	/// Delete previous message, send new message, and store for later deletion
 	private static async Task SendMessage(Channel channel, string message)
 	{
-		await DeletePreviousMessage(channel);
-		_previousMessages[channel.Id] = (await _client.Rest.SendMessageAsync(channel.Id, message)).Id;
+		await Task.WhenAll(
+			DeletePreviousMessage(channel),
+			SendAndOverwriteDict()
+		);
 		SavePreviousMessages();
+		return;
+
+		async Task SendAndOverwriteDict()
+		{
+			await Task.Yield();
+			RestMessage sentMessage = await _client.Rest.SendMessageAsync(channel.Id, message);
+			_previousMessages[channel.Id] = sentMessage.Id;
+		}
 	}
 
 	private static async Task DeletePreviousMessage(Channel channel)
 	{
 		if (_previousMessages.TryGetValue(channel.Id, out ulong previousMessage))
 		{
+			await Task.Yield();
 			await _client.Rest.DeleteMessageAsync(channel.Id, previousMessage);
 		}
 	}
