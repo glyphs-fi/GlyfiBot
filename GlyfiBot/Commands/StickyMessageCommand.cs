@@ -92,8 +92,10 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 	private static async Task RemoveStickyRegistration(Channel channel)
 	{
 		_stickyMessages.Remove(channel.Id);
+		_previousMessages.Remove(channel.Id);
 		await DeletePreviousMessage(channel);
 		SaveStickyMessages();
+		SavePreviousMessages();
 	}
 
 	// TODO: Consider debouncing this (maybe 5 seconds or so)
