@@ -408,7 +408,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		string outputFile = Path.Join(outputDir, fileName);
 
 		string rootDir = Path.GetDirectoryName(Environment.ProcessPath) ?? throw new InvalidOperationException("Could not find process directory");
-		string scriptDir = Path.GetDirectoryName(scriptPath) ?? throw new InvalidOperationException($"Could not find script directory of path `{scriptPath}`");
+		string scriptDir = GetScriptDir(scriptPath);
 		string fontsDir = Path.Join(scriptDir, "fonts");
 
 		ProcessStartInfo startInfo = new(typstExe, [
@@ -430,6 +430,18 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			await typstCmd.StandardOutput.ReadToEndAsync(),
 			await typstCmd.StandardError.ReadToEndAsync()
 			);
+	}
+
+	/// Gets the root script dir from the scriptPath, because scriptPath may not necessarily be directly in the root
+	private static string GetScriptDir(string scriptPath)
+	{
+		string scriptDir = scriptPath;
+		while(!scriptDir.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Last().StartsWith(SCRIPTS_REPO_NAME))
+		{
+			scriptDir = Path.GetDirectoryName(scriptDir) ?? throw new InvalidOperationException($"Could not find script directory of path `{scriptPath}`; currently at `{scriptDir}`");
+			// ↑ This null-check+throw protects against arriving at the root or if the while loop would go on forever
+		}
+		return scriptDir;
 	}
 
 #endregion
