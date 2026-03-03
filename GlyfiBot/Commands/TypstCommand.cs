@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using static GlyfiBot.Utils;
 
@@ -214,6 +216,24 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			.Where(attachment => _supportedExtensions.Contains(Path.GetExtension(attachment.FileName))) //
 			.ToList();
 
+		// Check if we have any submissions at all
+		if (allSubmissions.Count < 1)
+		{
+			throw new SimpleCommandFailException("There are no submissions in the selected range!");
+		}
+
+		// Get maximum number of supported submissions from the Typst Script
+		string scriptDir = GetScriptDir(scriptPath);
+		{
+			string globalConfigScript = Path.Join(scriptDir, "global-config.typ");
+			string labelsJson = await QueryTypstScript(typstExe, globalConfigScript, ["--one", "--field", "value", "<LABEL-SEQUENCE>"]);
+			List<string> labels = JsonSerializer.Deserialize(labelsJson, ToJson.Default.ListString)!;
+			if (allSubmissions.Count > labels.Count)
+			{
+				throw new SimpleCommandFailException($"There are more submissions ({allSubmissions.Count}) than the Typst Script can display ({labels.Count})!");
+			}
+		}
+
 		// Download submission message attachments
 		for(int i = 0; i < allSubmissions.Count; i++)
 		{
@@ -225,7 +245,6 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			await networkStream.CopyToAsync(fileStream);
 		}
 
-		string scriptDir = Path.GetDirectoryName(scriptPath) ?? throw new InvalidOperationException($"Could not find script directory of path `{scriptPath}`");
 		List<string> args =
 		[
 			"--input", $"to-generate={toGenerate}",
@@ -432,6 +451,26 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 			);
 	}
 
+	private static async Task<string> QueryTypstScript(string typstExe, string typstFile, IEnumerable<string> args)
+	{
+		string rootDir = Directory.GetCurrentDirectory();
+		string scriptDir = GetScriptDir(typstFile);
+		string fontsDir = Path.Join(scriptDir, "fonts");
+
+		ProcessStartInfo startInfo = new(typstExe, [
+			"query", typstFile,
+			"--root", rootDir,
+			"--ignore-system-fonts",
+			"--font-path", fontsDir,
+			..args,
+		]) {RedirectStandardOutput = true, RedirectStandardError = true};
+		Process typstCmd = new() {StartInfo = startInfo};
+		typstCmd.Start();
+		await typstCmd.WaitForExitAsync();
+
+		return await typstCmd.StandardOutput.ReadToEndAsync();
+	}
+
 	/// Gets the root script dir from the scriptPath, because scriptPath may not necessarily be directly in the root
 	private static string GetScriptDir(string scriptPath)
 	{
@@ -566,3 +605,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 #endregion
 
 }
+
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(List<string>))]
+public partial class ToJson : JsonSerializerContext;
