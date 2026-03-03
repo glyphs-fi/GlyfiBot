@@ -26,6 +26,18 @@ static internal class Program
 
 	private static async Task Main()
 	{
+		// Ensure that the executable is run from the correct directory
+		{
+			string curDir = Directory.GetCurrentDirectory();
+			string? exeDir = Path.GetDirectoryName(Environment.ProcessPath);
+			if (curDir != exeDir)
+			{
+				Console.WriteLine($"Bot executable should be started from its own directory.\nCurrent Working Directory: {curDir}\nExecutable Directory: {exeDir}");
+				await StopTheBot();
+				return;
+			}
+		}
+
 		Directory.CreateDirectory(DATA_DIR);
 		Directory.CreateDirectory(SETTINGS_DIR);
 
@@ -68,10 +80,7 @@ static internal class Program
 		catch(ArgumentException e) when(e.Message.Contains("token", StringComparison.InvariantCultureIgnoreCase))
 		{
 			Console.WriteLine("Invalid Token. Stopping the bot.");
-			// Give a bit more time to read before the console window closes again
-			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-				await Task.Delay(TimeSpan.FromSeconds(4));
-			Environment.Exit(1);
+			await StopTheBot();
 			return;
 		}
 
@@ -176,5 +185,13 @@ static internal class Program
 			ForeverService.RunAsync(),
 			StatusChangerService.RunAsync(client)
 		);
+	}
+
+	private static async Task StopTheBot()
+	{
+		// Give a bit more time to read before the console window closes again
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			await Task.Delay(TimeSpan.FromSeconds(4));
+		Environment.Exit(1);
 	}
 }
