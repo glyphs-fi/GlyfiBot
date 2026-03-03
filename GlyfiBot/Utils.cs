@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace GlyfiBot;
 
@@ -303,3 +304,9 @@ public static class Utils
 	}
 }
 public class SimpleCommandFailException(string message) : Exception(message);
+
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(List<string>))]
+[JsonSerializable(typeof(Dictionary<ulong, string>))]
+[JsonSerializable(typeof(Dictionary<ulong, ulong>))]
+public partial class ToJson : JsonSerializerContext;

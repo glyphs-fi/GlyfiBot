@@ -4,7 +4,6 @@ using NetCord.Gateway;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace GlyfiBot.Commands;
 
@@ -142,7 +141,3 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 		File.WriteAllText(PREVIOUS_FILE, json);
 	}
 }
-[JsonSourceGenerationOptions(WriteIndented = true)]
-[JsonSerializable(typeof(Dictionary<ulong, string>))]
-[JsonSerializable(typeof(Dictionary<ulong, ulong>))]
-public partial class ToJson : JsonSerializerContext;
