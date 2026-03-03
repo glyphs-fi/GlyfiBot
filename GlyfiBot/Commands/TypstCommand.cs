@@ -407,7 +407,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 		string fileName = $"{outputFilename}.{outputFormat.GetLower()}";
 		string outputFile = Path.Join(outputDir, fileName);
 
-		string rootDir = Path.GetDirectoryName(Environment.ProcessPath) ?? throw new InvalidOperationException("Could not find process directory");
+		string rootDir = Directory.GetCurrentDirectory();
 		string scriptDir = GetScriptDir(scriptPath);
 		string fontsDir = Path.Join(scriptDir, "fonts");
 
