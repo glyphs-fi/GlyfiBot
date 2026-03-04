@@ -47,7 +47,7 @@ static internal class Program
 
 		string tokenFile = Path.Join(SETTINGS_DIR, "token.txt");
 		bool shouldSaveToken = false;
-		if (string.IsNullOrWhiteSpace(token))
+		if (token.IsNullOrWhiteSpace())
 		{
 			Console.WriteLine($"No Discord Bot Token found in the GLYFI_TOKEN environment variable. Proceeding to look in {tokenFile}...");
 			//  Attempt 2: Token file

@@ -302,6 +302,11 @@ public static class Utils
 		public string UpperFirst() => $"{str[..1].ToUpperInvariant()}{str[1..]}";
 		public string LowerFirst() => $"{str[..1].ToLowerInvariant()}{str[1..]}";
 	}
+
+	public static bool IsNullOrWhiteSpace([NotNullWhen(false)] this string? message)
+	{
+		return string.IsNullOrWhiteSpace(message);
+	}
 }
 public class SimpleCommandFailException(string message) : Exception(message);
 [JsonSourceGenerationOptions(WriteIndented = true)]
