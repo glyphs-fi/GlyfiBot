@@ -194,7 +194,7 @@ public static class Utils
 
 	public static string String(this ReactionEmojiProperties emoji)
 	{
-		return $"`{emoji.Name}:{emoji.Id}`";
+		return $"<:{emoji.Name}:{emoji.Id}> (`{emoji.Name}:{emoji.Id}`)";
 	}
 
 	public static string? FirstEmoji(string s)
@@ -301,6 +301,11 @@ public static class Utils
 	{
 		public string UpperFirst() => $"{str[..1].ToUpperInvariant()}{str[1..]}";
 		public string LowerFirst() => $"{str[..1].ToLowerInvariant()}{str[1..]}";
+	}
+
+	public static bool IsNullOrWhiteSpace([NotNullWhen(false)] this string? message)
+	{
+		return string.IsNullOrWhiteSpace(message);
 	}
 }
 public class SimpleCommandFailException(string message) : Exception(message);
