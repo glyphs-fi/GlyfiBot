@@ -70,9 +70,10 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 		}
 		else
 		{
-			await Context.SendEphemeralResponseAsync("Sticky Message enabled for this channel.");
 			await AddStickyRegistration(channel, message);
+			await Context.SendEphemeralResponseAsync("Sticky Message enabled for this channel.");
 		}
+		SaveStickyMessages();
 	}
 
 	private static async Task AddStickyRegistration(Channel channel, string message)
@@ -87,7 +88,6 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 			_stickyMessages.Add(channel.Id, watchedChannel);
 		}
 		await watchedChannel.SendMessageInstantly();
-		SaveStickyMessages();
 	}
 
 	private static async Task RemoveStickyRegistration(Channel channel)
@@ -97,7 +97,6 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 			await watchedChannel.DeletePreviousMessage();
 			_stickyMessages.Remove(channel.Id);
 		}
-		SaveStickyMessages();
 	}
 
 	private class WatchedChannel(ulong channelId, string message)
