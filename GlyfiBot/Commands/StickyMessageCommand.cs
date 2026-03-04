@@ -9,7 +9,7 @@ namespace GlyfiBot.Commands;
 
 public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext>
 {
-	private const string MESSAGES_FILE = Program.STICKY_DIR + "/messages.json";
+	private const string MESSAGES_FILE = $"{Program.SETTINGS_DIR}/stickies.json";
 
 	private static Dictionary<ulong, WatchedChannel> _stickyMessages = null!;
 
@@ -24,8 +24,6 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 	{
 		_client = client;
 		_botUserId = (await _client.Rest.GetCurrentUserAsync()).Id;
-
-		Directory.CreateDirectory(Program.STICKY_DIR);
 
 		if (File.Exists(MESSAGES_FILE))
 		{

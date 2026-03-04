@@ -15,15 +15,14 @@ namespace GlyfiBot;
 static internal class Program
 {
 	private const string DATA_DIR = "data";
+	public const string SETTINGS_DIR = $"{DATA_DIR}/settings";
 	public const string SELECTIONS_DIR = $"{DATA_DIR}/selections";
 	public const string PFPS_DIR = $"{DATA_DIR}/pfps";
-	public const string SETTINGS_DIR = $"{DATA_DIR}/settings";
 	public const string TYPST_EXE_DIR = $"{DATA_DIR}/typst-exe";
 	public const string TYPST_SCRIPT_DIR = $"{DATA_DIR}/typst-script";
 	public const string ANNOUNCEMENTS_DIR = $"{DATA_DIR}/announcements";
 	public const string SHOWCASES_DIR = $"{DATA_DIR}/showcases";
 	public const string WINNERS_DIR = $"{DATA_DIR}/winners";
-	public const string STICKY_DIR = $"{DATA_DIR}/stickies";
 
 	private static async Task Main()
 	{
