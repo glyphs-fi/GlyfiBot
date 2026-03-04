@@ -7,7 +7,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using static GlyfiBot.Utils;
 
@@ -605,7 +604,3 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 #endregion
 
 }
-
-[JsonSourceGenerationOptions(WriteIndented = true)]
-[JsonSerializable(typeof(List<string>))]
-public partial class ToJson : JsonSerializerContext;
