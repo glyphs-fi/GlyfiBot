@@ -92,7 +92,6 @@ static internal class Program
 		}
 
 		SetTheEmojiCommand.Load();
-		await StickyMessageCommand.Load(client);
 
 		ApplicationCommandService<SlashCommandContext> applicationCommandService = new();
 
@@ -169,6 +168,8 @@ static internal class Program
 			Console.WriteLine("Error: The bot is in multiple Discord Servers. This is not supported.");
 			Environment.Exit(1);
 		}
+
+		await StickyMessageCommand.Load(client);
 
 		await client.Rest.ModifyCurrentApplicationAsync(options =>
 		{

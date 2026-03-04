@@ -10,41 +10,30 @@ namespace GlyfiBot.Commands;
 public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	private const string MESSAGES_FILE = Program.STICKY_DIR + "/messages.json";
-	private const string PREVIOUS_FILE = Program.STICKY_DIR + "/previous.json";
 
-	/// Channel ID, Sticky Message Content
-	private static Dictionary<ulong, string> _stickyMessages = null!;
-	/// Channel ID, Previous Message ID
-	private static Dictionary<ulong, ulong> _previousMessages = null!;
+	private static Dictionary<ulong, WatchedChannel> _stickyMessages = null!;
 
 	private static GatewayClient _client = null!;
 	private static ulong _botUserId;
 
 	public static async Task Load(GatewayClient client)
 	{
+		_client = client;
+		_botUserId = (await _client.Rest.GetCurrentUserAsync()).Id;
+
 		Directory.CreateDirectory(Program.STICKY_DIR);
+
 		if (File.Exists(MESSAGES_FILE))
 		{
 			string json = await File.ReadAllTextAsync(MESSAGES_FILE);
-			_stickyMessages = JsonSerializer.Deserialize(json, ToJson.Default.DictionaryUInt64String)!;
+			Dictionary<ulong, string> dict = JsonSerializer.Deserialize(json, ToJson.Default.DictionaryUInt64String)!;
+			_stickyMessages = dict.Select(WatchedChannel.FromJson).ToDictionary();
+			await Task.WhenAll(_stickyMessages.Values.Select(channel => channel.GetPreviousMessageId()));
 		}
 		else
 		{
-			_stickyMessages = new Dictionary<ulong, string>();
+			_stickyMessages = new Dictionary<ulong, WatchedChannel>();
 		}
-
-		if (File.Exists(PREVIOUS_FILE))
-		{
-			string json = await File.ReadAllTextAsync(PREVIOUS_FILE);
-			_previousMessages = JsonSerializer.Deserialize(json, ToJson.Default.DictionaryUInt64UInt64)!;
-		}
-		else
-		{
-			_previousMessages = new Dictionary<ulong, ulong>();
-		}
-
-		_client = client;
-		_botUserId = (await _client.Rest.GetCurrentUserAsync()).Id;
 
 		_client.MessageCreate += async message => await ProcessMessage(message);
 	}
@@ -56,9 +45,9 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 		Channel? channel = message.Channel;
 		if (channel is null) return;
 
-		if (_stickyMessages.TryGetValue(channel.Id, out string? stickyMessage))
+		if (_stickyMessages.TryGetValue(channel.Id, out WatchedChannel? watchedChannel))
 		{
-			await SendMessage(channel, stickyMessage);
+			await watchedChannel.SendMessage();
 		}
 	}
 
@@ -86,58 +75,104 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 
 	private static async Task AddStickyRegistration(Channel channel, string message)
 	{
-		_stickyMessages[channel.Id] = message;
-		await SendMessage(channel, message);
+		if (_stickyMessages.TryGetValue(channel.Id, out WatchedChannel? watchedChannel))
+		{
+			watchedChannel.ChangeMessage(message);
+		}
+		else
+		{
+			watchedChannel = new WatchedChannel(channel.Id, message);
+			_stickyMessages.Add(channel.Id, watchedChannel);
+		}
+		await watchedChannel.SendMessage();
 		SaveStickyMessages();
 	}
 
 	private static async Task RemoveStickyRegistration(Channel channel)
 	{
-		_stickyMessages.Remove(channel.Id);
-		_previousMessages.Remove(channel.Id);
-		await DeletePreviousMessage(channel);
-		SaveStickyMessages();
-		SavePreviousMessages();
-	}
-
-	// TODO: Do not run for every single message that comes in (maybe at most once every five seconds or so)
-	/// Delete previous message, send new message, and store for later deletion
-	private static async Task SendMessage(Channel channel, string message)
-	{
-		await Task.WhenAll(
-			DeletePreviousMessage(channel),
-			SendAndOverwriteDict()
-		);
-		SavePreviousMessages();
-		return;
-
-		async Task SendAndOverwriteDict()
+		if (_stickyMessages.TryGetValue(channel.Id, out WatchedChannel? watchedChannel))
 		{
-			await Task.Yield();
-			RestMessage sentMessage = await _client.Rest.SendMessageAsync(channel.Id, message);
-			_previousMessages[channel.Id] = sentMessage.Id;
+			await watchedChannel.DeletePreviousMessage();
+			_stickyMessages.Remove(channel.Id);
 		}
+		SaveStickyMessages();
 	}
 
-	private static async Task DeletePreviousMessage(Channel channel)
+	private class WatchedChannel(ulong channelId, string message)
 	{
-		if (_previousMessages.TryGetValue(channel.Id, out ulong previousMessage))
+		private string _message = message;
+		private ulong? _previousMessageId;
+
+		public async Task GetPreviousMessageId()
 		{
-			await Task.Yield();
-			await _client.Rest.DeleteMessageAsync(channel.Id, previousMessage);
+			// Loop through most recent messages to find the previously sent message
+			bool isCaughtUp = true;
+			IAsyncEnumerable<RestMessage> asyncEnumerable = _client.Rest.GetMessagesAsync(channelId);
+			await foreach(RestMessage message in asyncEnumerable)
+			{
+				if (message.Author.Id == _botUserId && message.Content == _message)
+				{
+					_previousMessageId = message.Id;
+					break;
+				}
+				isCaughtUp = false;
+			}
+
+			// If the previously sent message is not the most recent message in the channel, ensure that it now is
+			if (!isCaughtUp)
+			{
+				await SendMessage();
+			}
+		}
+
+		public void ChangeMessage(string newMessage)
+		{
+			_message = newMessage;
+			SaveStickyMessages();
+		}
+
+		// TODO: Do not run for every single message that comes in (maybe at most once every five seconds or so)
+		/// Delete previous message, send new message, and store for later deletion
+		public async Task SendMessage()
+		{
+			await Task.WhenAll(
+				DeletePreviousMessage(),
+				SendAndOverwriteDict()
+			);
+			return;
+
+			async Task SendAndOverwriteDict()
+			{
+				await Task.Yield();
+				RestMessage sentMessage = await _client.Rest.SendMessageAsync(channelId, _message);
+				_previousMessageId = sentMessage.Id;
+			}
+		}
+
+		public async Task DeletePreviousMessage()
+		{
+			if (_previousMessageId.HasValue)
+			{
+				await Task.Yield();
+				await _client.Rest.DeleteMessageAsync(channelId, _previousMessageId.Value);
+			}
+		}
+
+		public static KeyValuePair<ulong, WatchedChannel> FromJson(KeyValuePair<ulong, string> pair)
+		{
+			return new KeyValuePair<ulong, WatchedChannel>(pair.Key, new WatchedChannel(pair.Key, pair.Value));
+		}
+
+		public KeyValuePair<ulong, string> ToJson()
+		{
+			return new KeyValuePair<ulong, string>(channelId, _message);
 		}
 	}
 
 	private static void SaveStickyMessages()
 	{
-		string json = JsonSerializer.Serialize(_stickyMessages, ToJson.Default.DictionaryUInt64String);
+		Dictionary<ulong, string> dict = _stickyMessages.Select(pair => pair.Value.ToJson()).ToDictionary();
+		string json = JsonSerializer.Serialize(dict, ToJson.Default.DictionaryUInt64String);
 		File.WriteAllText(MESSAGES_FILE, json);
-	}
-
-	private static void SavePreviousMessages()
-	{
-		//TODO: Save on a timer, to prevent overload of IO spam (maybe 5 minutes or so)
-		string json = JsonSerializer.Serialize(_previousMessages, ToJson.Default.DictionaryUInt64UInt64);
-		File.WriteAllText(PREVIOUS_FILE, json);
 	}
 }
