@@ -304,7 +304,6 @@ public static class Utils
 	}
 }
 public class SimpleCommandFailException(string message) : Exception(message);
-
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(Dictionary<ulong, string>))]
