@@ -131,7 +131,6 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 		public void ChangeMessage(string newMessage)
 		{
 			_message = newMessage;
-			SaveStickyMessages();
 		}
 
 		/// Do not run for every single message that comes in, but only every <see cref="_delay"/>
