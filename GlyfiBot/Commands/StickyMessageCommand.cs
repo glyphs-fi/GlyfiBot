@@ -63,7 +63,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 	)
 	{
 		Channel channel = Context.Channel;
-		if (message is null || message.IsWhiteSpace())
+		if (message.IsNullOrWhiteSpace())
 		{
 			await RemoveStickyRegistration(channel);
 			await Context.SendEphemeralResponseAsync("Sticky Message disabled for this channel.");
