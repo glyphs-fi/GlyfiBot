@@ -16,6 +16,10 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 	private static GatewayClient _client = null!;
 	private static ulong _botUserId;
 
+	/// The delay for between sending the sticky message.<br/>
+	/// Used in <see cref="WatchedChannel.SendMessageDelayed"/>
+	private static readonly TimeSpan _delay = TimeSpan.FromSeconds(1);
+
 	public static async Task Load(GatewayClient client)
 	{
 		_client = client;
@@ -47,7 +51,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 
 		if (_stickyMessages.TryGetValue(channel.Id, out WatchedChannel? watchedChannel))
 		{
-			await watchedChannel.SendMessage();
+			await watchedChannel.SendMessageDelayed();
 		}
 	}
 
@@ -84,7 +88,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 			watchedChannel = new WatchedChannel(channel.Id, message);
 			_stickyMessages.Add(channel.Id, watchedChannel);
 		}
-		await watchedChannel.SendMessage();
+		await watchedChannel.SendMessageInstantly();
 		SaveStickyMessages();
 	}
 
@@ -102,6 +106,8 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 	{
 		private string _message = message;
 		private ulong? _previousMessageId;
+
+		private bool _busySending = false;
 
 		public async Task GetPreviousMessageId()
 		{
@@ -121,7 +127,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 			// If the previously sent message is not the most recent message in the channel, ensure that it now is
 			if (!isCaughtUp)
 			{
-				await SendMessage();
+				await SendMessageInstantly();
 			}
 		}
 
@@ -131,9 +137,24 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 			SaveStickyMessages();
 		}
 
-		// TODO: Do not run for every single message that comes in (maybe at most once every five seconds or so)
+		/// Do not run for every single message that comes in, but only every <see cref="_delay"/>
+		public async Task SendMessageDelayed()
+		{
+			// If another thread/task is already busy sending, don't send for this one
+			if (Interlocked.Exchange(ref _busySending, true)) return;
+			try
+			{
+				await Task.Delay(_delay);
+				await SendMessageInstantly();
+			}
+			finally
+			{
+				Interlocked.Exchange(ref _busySending, false);
+			}
+		}
+
 		/// Delete previous message, send new message, and store for later deletion
-		public async Task SendMessage()
+		public async Task SendMessageInstantly()
 		{
 			await Task.WhenAll(
 				DeletePreviousMessage(),
