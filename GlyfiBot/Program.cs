@@ -184,10 +184,10 @@ static internal class Program
 			                       """;
 		});
 
-		await Task.WhenAll(
+		await Task.WhenAll([
 			ForeverService.RunAsync(),
-			StatusChangerService.RunAsync(client)
-		);
+			StatusChangerService.RunAsync(client),
+		]);
 	}
 
 	private static async Task StopTheBot()
