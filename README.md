@@ -85,6 +85,8 @@ In here, choose each the command you wish to assign a role to, and then click **
 
 
 ## Command Permissions Screenshots Walkthrough
+<details markdown="1">
+<summary>Click to open (many images)</summary>
 
 ![](.github/readme_assets/perms-01.png)
 
@@ -95,6 +97,8 @@ In here, choose each the command you wish to assign a role to, and then click **
 ![](.github/readme_assets/perms-04.png)
 
 ![](.github/readme_assets/perms-05.png)
+
+</details>
 
 
 ## Tech Stack
