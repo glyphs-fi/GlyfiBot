@@ -2,6 +2,7 @@ using JetBrains.Annotations;
 using NetCord;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
+using System.Collections.Concurrent;
 using System.Text.Json;
 
 namespace GlyfiBot.Commands;
@@ -10,7 +11,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	private const string EMOJI_FILE = $"{Program.SETTINGS_DIR}/emoji.json";
 
-	private static Dictionary<ulong, ReactionEmojiProperties> _emojis = null!;
+	private static ConcurrentDictionary<ulong, ReactionEmojiProperties> _emojis = null!;
 
 	public static ReactionEmojiProperties? GetEmoji(Channel channel)
 	{
@@ -23,7 +24,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 		{
 			await using FileStream fs = File.OpenRead(EMOJI_FILE);
 			Dictionary<ulong, string> dict = (await JsonSerializer.DeserializeAsync(fs, ToJson.Default.DictionaryUInt64String))!;
-			_emojis = dict.Select(pair =>
+			_emojis = new ConcurrentDictionary<ulong, ReactionEmojiProperties>(dict.Select(pair =>
 			{
 				string[] contents = pair.Value.Split(':', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 				ReactionEmojiProperties theEmoji = contents.Length switch
@@ -34,11 +35,11 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 				};
 
 				return new KeyValuePair<ulong, ReactionEmojiProperties>(pair.Key, theEmoji);
-			}).ToDictionary();
+			}));
 		}
 		else
 		{
-			_emojis = new Dictionary<ulong, ReactionEmojiProperties>();
+			_emojis = new ConcurrentDictionary<ulong, ReactionEmojiProperties>();
 		}
 	}
 
@@ -107,7 +108,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 
 	private void RemoveEmojiRegistration()
 	{
-		_emojis.Remove(Context.Channel.Id);
+		_emojis.TryRemove(Context.Channel.Id, out _);
 	}
 
 	private static async Task SaveEmoji()
