@@ -45,10 +45,8 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 	{
 		if (message.Author.Id == _botUserId) return; // Do not reply after own messages
 
-		Channel? channel = message.Channel;
-		if (channel is null) return;
-
-		if (_stickyMessages.TryGetValue(channel.Id, out WatchedChannel? watchedChannel))
+		ulong channelId = message.ChannelId;
+		if (_stickyMessages.TryGetValue(channelId, out WatchedChannel? watchedChannel))
 		{
 			await watchedChannel.SendMessageDelayed();
 		}
