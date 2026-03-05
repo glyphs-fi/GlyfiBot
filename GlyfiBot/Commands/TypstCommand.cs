@@ -98,7 +98,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	public static void EndAfterError() => _progressTracker.End();
 
 	[SubSlashCommand("announcement",
-		"Generates an announcement")]
+		"Generates an announcement image")]
 	[UsedImplicitly]
 	public async Task Announcement(
 		ChallengeType challengeType,
@@ -146,7 +146,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 
 	[SubSlashCommand("showcase",
-		"Generates a showcase")]
+		"Generates a showcase image")]
 	[UsedImplicitly]
 	public async Task Showcase(
 		ChallengeType challengeType,
@@ -268,7 +268,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	}
 
 	[SubSlashCommand("winners",
-		"Generates a winners")]
+		"Generates a winners image")]
 	[UsedImplicitly]
 	public async Task Winners(
 		ChallengeType challengeType,
