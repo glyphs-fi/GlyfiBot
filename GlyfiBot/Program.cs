@@ -6,9 +6,9 @@ using NetCord.Logging;
 using NetCord.Rest;
 using NetCord.Services;
 using NetCord.Services.ApplicationCommands;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using static GlyfiBot.Utils;
 
 namespace GlyfiBot;
 
@@ -172,9 +172,7 @@ static internal class Program
 
 		await client.Rest.ModifyCurrentApplicationAsync(options =>
 		{
-			Assembly? assembly = Assembly.GetEntryAssembly();
-			AssemblyInformationalVersionAttribute? info = assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-			string? gitHash = info?.InformationalVersion.Split('+').Last();
+			string? gitHash = ExecutableGitHash();
 			options.Description = $"""
 			                       Hi! I'm Glyfi, your local G&A bot :)
 
@@ -187,6 +185,7 @@ static internal class Program
 		await Task.WhenAll([
 			ForeverService.RunAsync(),
 			StatusChangerService.RunAsync(client),
+			UpdateCheckerService.RunAsync(client),
 		]);
 	}
 

@@ -7,14 +7,16 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO.Compression;
+using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace GlyfiBot;
 
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-public static class Utils
+public static partial class Utils
 {
 	/// <summary>
 	/// Gets all messages between two message IDs.
@@ -312,6 +314,36 @@ public static class Utils
 	public static bool IsNullOrWhiteSpace([NotNullWhen(false)] this string? message)
 	{
 		return string.IsNullOrWhiteSpace(message);
+	}
+
+	[GeneratedRegex("""<meta\s+property=(["'])og:url\1\s+content=(["']).+/commit/(.+?)/?\2\s*/>""")]
+	private static partial Regex HashRegex();
+
+	/// Gets latest commit hash of one of our GitHub repos (org: <c>glyphs-fi</c>)
+	public static async Task<string> GetLatestCommitHash(string repoName, HttpClient? client = null)
+	{
+		client ??= new HttpClient();
+		await using Stream networkStream = await client.GetStreamAsync($"https://github.com/glyphs-fi/{repoName}/commit/main");
+		using StreamReader streamReader = new(networkStream);
+
+		Regex pattern = HashRegex();
+		while(await streamReader.ReadLineAsync() is {} line)
+		{
+			Match match = pattern.Match(line);
+			if (match.Success)
+			{
+				return match.Groups[3].Value;
+			}
+		}
+
+		throw new Exception("Failed to retrieve the latest commit hash of the Typst script!");
+	}
+
+	public static string? ExecutableGitHash()
+	{
+		Assembly? assembly = Assembly.GetEntryAssembly();
+		AssemblyInformationalVersionAttribute? info = assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+		return info?.InformationalVersion.Split('+').Last();
 	}
 }
 public class SimpleCommandFailException(string message) : Exception(message);

@@ -7,7 +7,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using static GlyfiBot.Utils;
 
 namespace GlyfiBot.Commands;
@@ -79,7 +78,7 @@ public static class OutputFormatExtensions
 [SlashCommand(COMMAND_NAME,
 	"Generates an image/PDF using our Typst script",
 	DefaultGuildPermissions = Permissions.Administrator)]
-public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext>
+public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	public const string COMMAND_NAME = "typst";
 	private const string TYPST_VERSION = "v0.14.2";
@@ -493,7 +492,7 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 	/// <exception cref="FileNotFoundException">If the download did not contain the main.typ file</exception>
 	private async Task<string> SetupScript()
 	{
-		string latestCommitHash = await GetLatestCommitHash();
+		string latestCommitHash = await GetLatestCommitHash(SCRIPTS_REPO_NAME, _client);
 
 		string scriptDir = Path.Join(Program.TYPST_SCRIPT_DIR, $"{SCRIPTS_REPO_NAME}-{latestCommitHash}");
 		if (!Directory.Exists(scriptDir))
@@ -514,27 +513,6 @@ public partial class TypstCommand : ApplicationCommandModule<SlashCommandContext
 
 		string scriptPath = Path.Join(scriptDir, "main.typ");
 		return File.Exists(scriptPath) ? scriptPath : throw new FileNotFoundException("Could not find `main.typ` in the script folder!");
-	}
-
-	[GeneratedRegex("""<meta\s+property=(["'])og:url\1\s+content=(["']).+/commit/(.+?)/?\2\s*/>""")]
-	private static partial Regex HashRegex();
-
-	private static async Task<string> GetLatestCommitHash()
-	{
-		await using Stream networkStream = await _client.GetStreamAsync($"https://github.com/glyphs-fi/{SCRIPTS_REPO_NAME}/commit/main");
-		using StreamReader streamReader = new(networkStream);
-
-		Regex pattern = HashRegex();
-		while(await streamReader.ReadLineAsync() is {} line)
-		{
-			Match match = pattern.Match(line);
-			if (match.Success)
-			{
-				return match.Groups[3].Value;
-			}
-		}
-
-		throw new Exception("Failed to retrieve the latest commit hash of the Typst script!");
 	}
 
 #endregion
