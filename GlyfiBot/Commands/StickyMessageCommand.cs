@@ -3,6 +3,7 @@ using NetCord;
 using NetCord.Gateway;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
+using System.Collections.Concurrent;
 using System.Text.Json;
 
 namespace GlyfiBot.Commands;
@@ -11,7 +12,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 {
 	private const string MESSAGES_FILE = $"{Program.SETTINGS_DIR}/stickies.json";
 
-	private static Dictionary<ulong, WatchedChannel> _stickyMessages = null!;
+	private static ConcurrentDictionary<ulong, WatchedChannel> _stickyMessages = null!;
 
 	private static GatewayClient _client = null!;
 	private static ulong _botUserId;
@@ -29,12 +30,12 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 		{
 			await using FileStream fs = File.OpenRead(MESSAGES_FILE);
 			Dictionary<ulong, string> dict = (await JsonSerializer.DeserializeAsync(fs, ToJson.Default.DictionaryUInt64String))!;
-			_stickyMessages = dict.Select(WatchedChannel.FromJson).ToDictionary();
+			_stickyMessages = new ConcurrentDictionary<ulong, WatchedChannel>(dict.Select(WatchedChannel.FromJson));
 			await Task.WhenAll(_stickyMessages.Values.Select(channel => channel.GetPreviousMessageId()));
 		}
 		else
 		{
-			_stickyMessages = new Dictionary<ulong, WatchedChannel>();
+			_stickyMessages = new ConcurrentDictionary<ulong, WatchedChannel>();
 		}
 
 		_client.MessageCreate += async message => await ProcessMessage(message);
@@ -85,7 +86,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 		else
 		{
 			watchedChannel = new WatchedChannel(channel.Id, message);
-			_stickyMessages.Add(channel.Id, watchedChannel);
+			_stickyMessages.TryAdd(channel.Id, watchedChannel);
 		}
 		await watchedChannel.SendMessageInstantly();
 	}
@@ -95,7 +96,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 		if (_stickyMessages.TryGetValue(channel.Id, out WatchedChannel? watchedChannel))
 		{
 			await watchedChannel.DeletePreviousMessage();
-			_stickyMessages.Remove(channel.Id);
+			_stickyMessages.TryRemove(channel.Id, out _);
 		}
 	}
 
