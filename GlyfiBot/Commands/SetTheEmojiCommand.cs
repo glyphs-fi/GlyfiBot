@@ -113,7 +113,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 	private static async Task SaveEmoji()
 	{
 		Dictionary<ulong, string> dict = _emojis.Select(pair => new KeyValuePair<ulong, string>(pair.Key, pair.Value.Name + ":" + pair.Value.Id)).ToDictionary();
-		await using FileStream fs = File.OpenWrite(EMOJI_FILE);
+		await using FileStream fs = File.Open(EMOJI_FILE, FileMode.Create);
 		await JsonSerializer.SerializeAsync(fs, dict, ToJson.Default.DictionaryUInt64String);
 	}
 }
