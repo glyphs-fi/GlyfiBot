@@ -21,10 +21,10 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 	[UsedImplicitly]
 	public async Task ExecuteAsync(string start, string? end = null, DownloadType downloadType = DownloadType.Flat)
 	{
-		ReactionEmojiProperties? emoji = SetTheEmojiCommand.TheEmoji;
+		ReactionEmojiProperties? emoji = SetTheEmojiCommand.GetEmoji(Context.Channel);
 		if (emoji is null)
 		{
-			throw new SimpleCommandFailException("Emoji has not been set! Use `/set-emoji` to set the emoji first");
+			throw new SimpleCommandFailException("Emoji has not been set for this channel! Use `/set-emoji` to set the emoji first");
 		}
 
 		if (!ulong.TryParse(start, null, out ulong idStart))

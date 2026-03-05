@@ -192,9 +192,15 @@ public static class Utils
 		return guild?.Emojis.Values.FirstOrDefault(emoji => emoji.Name == emojiName);
 	}
 
-	public static string String(this ReactionEmojiProperties emoji)
+	extension(ReactionEmojiProperties emoji)
 	{
-		return $"<:{emoji.Name}:{emoji.Id}> (`{emoji.Name}:{emoji.Id}`)";
+		public string Visual() => emoji.Embed() + " " + (emoji.Id is null
+			? $"(`{emoji.Name}`)"
+			: $"(`{emoji.Name}:{emoji.Id}`)");
+
+		public string Embed() => emoji.Id is null
+			? $"{emoji.Name}"
+			: $"<:{emoji.Name}:{emoji.Id}>";
 	}
 
 	public static string? FirstEmoji(string s)
@@ -311,4 +317,5 @@ public static class Utils
 public class SimpleCommandFailException(string message) : Exception(message);
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(List<string>))]
+[JsonSerializable(typeof(Dictionary<ulong, string>))]
 public partial class ToJson : JsonSerializerContext;

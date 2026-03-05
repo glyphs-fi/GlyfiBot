@@ -90,7 +90,7 @@ static internal class Program
 			await File.WriteAllTextAsync(tokenFile, token);
 		}
 
-		SetTheEmojiCommand.Load();
+		await SetTheEmojiCommand.Load();
 
 		ApplicationCommandService<SlashCommandContext> applicationCommandService = new();
 
