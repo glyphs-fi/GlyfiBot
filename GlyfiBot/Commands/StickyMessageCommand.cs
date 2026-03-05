@@ -189,7 +189,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 	private static async Task SaveStickyMessages()
 	{
 		Dictionary<ulong, string> dict = _stickyMessages.Select(pair => pair.Value.ToJson()).ToDictionary();
-		await using FileStream fs = File.OpenWrite(MESSAGES_FILE);
+		await using FileStream fs = File.Open(MESSAGES_FILE, FileMode.Create);
 		await JsonSerializer.SerializeAsync(fs, dict, ToJson.Default.DictionaryUInt64String);
 	}
 }
