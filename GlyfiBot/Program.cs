@@ -15,9 +15,9 @@ namespace GlyfiBot;
 static internal class Program
 {
 	private const string DATA_DIR = "data";
+	public const string SETTINGS_DIR = $"{DATA_DIR}/settings";
 	public const string SELECTIONS_DIR = $"{DATA_DIR}/selections";
 	public const string PFPS_DIR = $"{DATA_DIR}/pfps";
-	public const string SETTINGS_DIR = $"{DATA_DIR}/settings";
 	public const string TYPST_EXE_DIR = $"{DATA_DIR}/typst-exe";
 	public const string TYPST_SCRIPT_DIR = $"{DATA_DIR}/typst-script";
 	public const string ANNOUNCEMENTS_DIR = $"{DATA_DIR}/announcements";
@@ -156,6 +156,7 @@ static internal class Program
 		applicationCommandService.AddModule<GetTheEmojiCommand>();
 		applicationCommandService.AddModule<ProfilePicturesCommand>();
 		applicationCommandService.AddModule<TypstCommand>();
+		applicationCommandService.AddModule<StickyMessageCommand>();
 
 		await applicationCommandService.RegisterCommandsAsync(client.Rest, client.Id);
 
@@ -166,6 +167,8 @@ static internal class Program
 			Console.WriteLine("Error: The bot is in multiple Discord Servers. This is not supported.");
 			Environment.Exit(1);
 		}
+
+		await StickyMessageCommand.Load(client);
 
 		await client.Rest.ModifyCurrentApplicationAsync(options =>
 		{
