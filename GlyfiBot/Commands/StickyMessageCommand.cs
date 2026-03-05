@@ -27,8 +27,8 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 
 		if (File.Exists(MESSAGES_FILE))
 		{
-			string json = await File.ReadAllTextAsync(MESSAGES_FILE);
-			Dictionary<ulong, string> dict = JsonSerializer.Deserialize(json, ToJson.Default.DictionaryUInt64String)!;
+			await using FileStream fs = File.OpenRead(MESSAGES_FILE);
+			Dictionary<ulong, string> dict = (await JsonSerializer.DeserializeAsync(fs, ToJson.Default.DictionaryUInt64String))!;
 			_stickyMessages = dict.Select(WatchedChannel.FromJson).ToDictionary();
 			await Task.WhenAll(_stickyMessages.Values.Select(channel => channel.GetPreviousMessageId()));
 		}
@@ -73,7 +73,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 			await AddStickyRegistration(channel, message);
 			await Context.SendEphemeralResponseAsync("Sticky Message enabled for this channel.");
 		}
-		SaveStickyMessages();
+		await SaveStickyMessages();
 	}
 
 	private static async Task AddStickyRegistration(Channel channel, string message)
@@ -186,10 +186,10 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 		}
 	}
 
-	private static void SaveStickyMessages()
+	private static async Task SaveStickyMessages()
 	{
 		Dictionary<ulong, string> dict = _stickyMessages.Select(pair => pair.Value.ToJson()).ToDictionary();
-		string json = JsonSerializer.Serialize(dict, ToJson.Default.DictionaryUInt64String);
-		File.WriteAllText(MESSAGES_FILE, json);
+		await using FileStream fs = File.OpenWrite(MESSAGES_FILE);
+		await JsonSerializer.SerializeAsync(fs, dict, ToJson.Default.DictionaryUInt64String);
 	}
 }
