@@ -96,7 +96,7 @@ public class VoteReactCommand : ApplicationCommandModule<SlashCommandContext>
 		for(int i = 0; i < amount; i++)
 		{
 			string label = labels[i];
-			string emojiName = $"vote_{Utils.HashDJB2(label)}";
+			string emojiName = $"vote_{Utils.HashDJB2(label) - 177637}"; // ← that's the hash of "A" minus one
 			// Check if we already have an emoji for this label
 			if (!emojiNames.TryGetValue(emojiName, out ApplicationEmoji? emoji))
 			{
