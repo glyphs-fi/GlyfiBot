@@ -345,6 +345,17 @@ public static partial class Utils
 		AssemblyInformationalVersionAttribute? info = assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
 		return info?.InformationalVersion.Split('+').Last();
 	}
+
+	public static uint HashDJB2(string s)
+	{
+		uint hash = 5381;
+		foreach(char c in s)
+		{
+			hash = (hash << 5) + hash + c;
+		}
+
+		return hash;
+	}
 }
 public class SimpleCommandFailException(string message) : Exception(message);
 [JsonSourceGenerationOptions(WriteIndented = true)]

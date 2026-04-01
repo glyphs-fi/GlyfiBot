@@ -157,6 +157,7 @@ static internal class Program
 		applicationCommandService.AddModule<ProfilePicturesCommand>();
 		applicationCommandService.AddModule<TypstCommand>();
 		applicationCommandService.AddModule<StickyMessageCommand>();
+		applicationCommandService.AddModule<VoteReactCommand>();
 
 		await applicationCommandService.RegisterCommandsAsync(client.Rest, client.Id);
 

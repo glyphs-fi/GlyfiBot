@@ -114,8 +114,8 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
 		await _progressTracker.Start(Context);
 
-		string typstExe = await SetupTypst();
-		string scriptPath = await SetupScript();
+		string typstExe = await SetupTypst(Context);
+		string scriptPath = await SetupScript(Context);
 
 		(string toGenerate, string inputKey) = challengeType.ForAnnouncement();
 
@@ -166,8 +166,8 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
 		await _progressTracker.Start(Context);
 
-		string typstExe = await SetupTypst();
-		string scriptPath = await SetupScript();
+		string typstExe = await SetupTypst(Context);
+		string scriptPath = await SetupScript(Context);
 
 		(string toGenerate, string inputKey) = challengeType.ForShowcase();
 
@@ -223,9 +223,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		// Get maximum number of supported submissions from the Typst Script
 		string scriptDir = GetScriptDir(scriptPath);
 		{
-			string globalConfigScript = Path.Join(scriptDir, "global-config.typ");
-			string labelsJson = await QueryTypstScript(typstExe, globalConfigScript, ["--one", "--field", "value", "<LABEL-SEQUENCE>"]);
-			List<string> labels = JsonSerializer.Deserialize(labelsJson, ToJson.Default.ListString)!;
+			List<string> labels = await GetLabels(typstExe, scriptDir);
 			if (allSubmissions.Count > labels.Count)
 			{
 				throw new SimpleCommandFailException($"There are more submissions ({allSubmissions.Count}) than the Typst Script can display ({labels.Count})!");
@@ -298,8 +296,8 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
 		await _progressTracker.Start(Context);
 
-		string typstExe = await SetupTypst();
-		string scriptPath = await SetupScript();
+		string typstExe = await SetupTypst(Context);
+		string scriptPath = await SetupScript(Context);
 
 		string outputDir = Path.Join(Program.WINNERS_DIR, challengeType.ToString(), $"{Context.Interaction.Id}");
 		string imagesDir = Path.Join(outputDir, "images");
@@ -449,6 +447,13 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			);
 	}
 
+	public static async Task<List<string>> GetLabels(string typstExe, string scriptDir)
+	{
+		string globalConfigScript = Path.Join(scriptDir, "global-config.typ");
+		string labelsJson = await QueryTypstScript(typstExe, globalConfigScript, ["--one", "--field", "value", "<LABEL-SEQUENCE>"]);
+		return JsonSerializer.Deserialize(labelsJson, ToJson.Default.ListString)!;
+	}
+
 	private static async Task<string> QueryTypstScript(string typstExe, string typstFile, IEnumerable<string> args)
 	{
 		string rootDir = Directory.GetCurrentDirectory();
@@ -470,7 +475,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	}
 
 	/// Gets the root script dir from the scriptPath, because scriptPath may not necessarily be directly in the root
-	private static string GetScriptDir(string scriptPath)
+	public static string GetScriptDir(string scriptPath)
 	{
 		string scriptDir = scriptPath;
 		while(!scriptDir.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Last().StartsWith(SCRIPTS_REPO_NAME))
@@ -490,14 +495,14 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	/// </summary>
 	/// <returns>The path to our Typst Script's main.typ (the file itself, not the containing directory)</returns>
 	/// <exception cref="FileNotFoundException">If the download did not contain the main.typ file</exception>
-	private async Task<string> SetupScript()
+	public static async Task<string> SetupScript(SlashCommandContext context)
 	{
 		string latestCommitHash = await GetLatestCommitHash(SCRIPTS_REPO_NAME, _client);
 
 		string scriptDir = Path.Join(Program.TYPST_SCRIPT_DIR, $"{SCRIPTS_REPO_NAME}-{latestCommitHash}");
 		if (!Directory.Exists(scriptDir))
 		{
-			await Context.ModifyEphemeralResponseAsync("Downloading script... (This will only happen once)");
+			await context.ModifyEphemeralResponseAsync("Downloading script... (This will only happen once)");
 
 			Directory.CreateDirectory(scriptDir);
 			string zipPath = Path.Join(Program.TYPST_SCRIPT_DIR, $"{latestCommitHash}.zip");
@@ -507,7 +512,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 				await networkStream.CopyToAsync(fileStream);
 			}
 
-			await Context.ModifyEphemeralResponseAsync("Extracting script zip... (This will only happen once)");
+			await context.ModifyEphemeralResponseAsync("Extracting script zip... (This will only happen once)");
 			await ExtractArchive(zipPath);
 		}
 
@@ -524,14 +529,14 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	/// </summary>
 	/// <returns>The path to the Typst Compiler executable (the file itself, not the containing directory)</returns>
 	/// <exception cref="FileNotFoundException">If the download did not contain a Typst executable</exception>
-	private async Task<string> SetupTypst()
+	public static async Task<string> SetupTypst(SlashCommandContext context)
 	{
 		string typstDownloadURL = GetTypstDownloadURLForPlatform();
 
 		string typstExeVersionDir = Path.Join(Program.TYPST_EXE_DIR, TYPST_VERSION);
 		if (!Directory.Exists(typstExeVersionDir))
 		{
-			await Context.ModifyEphemeralResponseAsync("Downloading Typst... (This will only happen once)");
+			await context.ModifyEphemeralResponseAsync("Downloading Typst... (This will only happen once)");
 
 			Directory.CreateDirectory(typstExeVersionDir);
 			string archivePath = Path.Join(typstExeVersionDir, Path.GetFileName(typstDownloadURL));
@@ -541,7 +546,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 				await networkStream.CopyToAsync(fileStream);
 			}
 
-			await Context.ModifyEphemeralResponseAsync("Extracting Typst... (This will only happen once)");
+			await context.ModifyEphemeralResponseAsync("Extracting Typst... (This will only happen once)");
 			await ExtractArchive(archivePath);
 		}
 

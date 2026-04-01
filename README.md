@@ -56,6 +56,11 @@ The goal of this project is to encourage very collaborative development on this 
   - By default, only Administrators can run this.
 
 
+- `vote-react`: Automatically adds voting reactions to a message.
+  - `messages`: The message(s) to add the reactions to. If multiple, separate with spaces.
+  - `amount`: The amount of voting reactions to add
+
+
 - `/sticky`: Sets a sticky message for this channel. This message will always be visible at the bottom of the channel.
   - Leave empty to remove the sticky message for this channel.
   - By default, only Administrators can run this.
