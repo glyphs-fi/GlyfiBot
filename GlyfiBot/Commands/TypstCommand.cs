@@ -466,7 +466,14 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			"--ignore-system-fonts",
 			"--font-path", fontsDir,
 			..args,
-		]) {RedirectStandardOutput = true, RedirectStandardError = true};
+		])
+		{
+			RedirectStandardOutput = true,
+			RedirectStandardError = true,
+			StandardInputEncoding = Encoding.UTF8,
+			StandardOutputEncoding = Encoding.UTF8,
+			StandardErrorEncoding = Encoding.UTF8,
+		};
 		Process typstCmd = new() {StartInfo = startInfo};
 		typstCmd.Start();
 		await typstCmd.WaitForExitAsync();
