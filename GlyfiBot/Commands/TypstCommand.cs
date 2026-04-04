@@ -470,7 +470,6 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		{
 			RedirectStandardOutput = true,
 			RedirectStandardError = true,
-			StandardInputEncoding = Encoding.UTF8,
 			StandardOutputEncoding = Encoding.UTF8,
 			StandardErrorEncoding = Encoding.UTF8,
 		};
