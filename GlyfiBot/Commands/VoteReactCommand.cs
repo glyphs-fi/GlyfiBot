@@ -87,8 +87,8 @@ public class VoteReactCommand : ApplicationCommandModule<SlashCommandContext>
 			VerticalAlignment = VerticalAlignment.Center,
 		};
 
-		Color background = Color.FromRgb(84, 153, 78);
-		Color foreground = Color.FromRgb(255, 243, 225);
+		Color background = Color.FromPixel(new Rgba32(84, 153, 78));
+		Color foreground = Color.FromPixel(new Rgba32(255, 243, 225));
 
 		// Start reacting!
 		await Context.ModifyEphemeralResponseAsync("Reacting...");
@@ -102,7 +102,11 @@ public class VoteReactCommand : ApplicationCommandModule<SlashCommandContext>
 			{
 				// We don't, so we generate a new one and upload it
 				using Image image = new Image<Rgba32>(imageSize, imageSize);
-				image.Mutate(x => x.Fill(background).DrawText(textOptions, label, foreground).ApplyRoundedCorners(cornerRadius));
+				image.Mutate(ctx => ctx.Paint(canvas =>
+				{
+					canvas.Fill(Brushes.Solid(background));
+					canvas.DrawText(textOptions, label, Brushes.Solid(foreground), pen: null);
+				}).ApplyRoundedCorners(cornerRadius));
 				using MemoryStream bytes = new();
 				await image.SaveAsPngAsync(bytes);
 				emoji = await Context.Client.Rest.CreateApplicationEmojiAsync(Context.Client.Id, new ApplicationEmojiProperties(emojiName, new ImageProperties(ImageFormat.Png, bytes.ToArray())));
@@ -138,10 +142,13 @@ static internal class ImgOps
 
 		// Mutating in here as we already have a cloned original
 		// use any colour (not Transparent), so the corners will be clipped
-		foreach(IPath path in corners)
+		context.Paint(canvas =>
 		{
-			context = context.Fill(Color.Red, path);
-		}
+			foreach(IPath path in corners)
+			{
+				canvas.Fill(Brushes.Solid(Color.Red), path);
+			}
+		});
 
 		return context;
 	}
@@ -149,7 +156,7 @@ static internal class ImgOps
 	private static PathCollection BuildCorners(int imageWidth, int imageHeight, float cornerRadius)
 	{
 		// First create a square
-		RectangularPolygon rect = new RectangularPolygon(-0.5f, -0.5f, cornerRadius, cornerRadius);
+		RectanglePolygon rect = new RectanglePolygon(-0.5f, -0.5f, cornerRadius, cornerRadius);
 
 		// Then cut out of the square a circle so we are left with a corner
 		IPath cornerTopLeft = rect.Clip(new EllipsePolygon(cornerRadius - 0.5f, cornerRadius - 0.5f, cornerRadius));
