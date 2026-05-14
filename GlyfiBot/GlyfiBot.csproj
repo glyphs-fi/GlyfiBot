@@ -21,4 +21,8 @@
 		<PackageReference Include="SixLabors.ImageSharp.Drawing" Version="3.0.0" />
 	</ItemGroup>
 
+	<PropertyGroup>
+		<SixLaborsLicenseFile>../licences/sixlabors.lic</SixLaborsLicenseFile>
+	</PropertyGroup>
+
 </Project>
