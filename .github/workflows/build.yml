@@ -36,7 +36,7 @@ jobs:
       uses: actions/checkout@v6
       with:
         submodules: recursive
-        token: ${{ env.LICENCES_REPO_FG_PAT }}
+        token: ${{ secrets.LICENCES_REPO_FG_PAT }}
 
     - name: Install .NET
       uses: actions/setup-dotnet@v5
