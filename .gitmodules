@@ -1,0 +1,3 @@
+[submodule "licences"]
+	path = licences
+	url = https://github.com/glyphs-fi/licences.git

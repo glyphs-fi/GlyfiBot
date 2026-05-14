@@ -68,7 +68,7 @@ The goal of this project is to encourage very collaborative development on this 
 
 - `/pfps`: Get the profile pictures of one or multiple users in bulk.
   - By default, only Administrators can run this.
- 
+
 
 - `/select`: Provide the IDs of two messages in the channel between where to look for submissions.  
   Submissions will be collected and provided in one message, for extra easy downloading!
@@ -113,3 +113,14 @@ For the Programming Language, I chose [C#](https://dotnet.microsoft.com/en-us/la
 relatively accessible for any programmer.
 
 For the Discord Library, I chose [Netcord](https://github.com/NetCordDev/NetCord), because it looked pretty good.
+
+## Building locally
+
+Due to using the `SixLabors.ImageSharp` library for generating some of the images,
+building is more difficult than normal.  
+We have received a licence file, but we cannot safely provide this publicly,
+so if you want to build it locally, you will have to acquire one for yourself.  
+Sorry for this inconvenicence.
+
+For members of the **glyphs-fi** organization, please clone this repository recursively,
+to get the licences repository with the licence file in it.
