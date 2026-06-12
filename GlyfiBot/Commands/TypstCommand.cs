@@ -101,12 +101,17 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	[UsedImplicitly]
 	public async Task Announcement(
 		ChallengeType challengeType,
+		//
 		string input,
+		//
 		[SlashCommandParameter(Description = "The number of the current week")]
 		int currentWeek,
+		//
 		string? startDate = null,
 		string? endDate = null,
+		//
 		OutputFormat outputFormat = OutputFormat.PNG,
+		//
 		[SlashCommandParameter(Description = PPI_DESC)]
 		int? ppi = null
 	)
@@ -149,16 +154,23 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	[UsedImplicitly]
 	public async Task Showcase(
 		ChallengeType challengeType,
+		//
 		string input,
+		//
 		[SlashCommandParameter(Description = "The number of the current week")]
 		int currentWeek,
+		//
 		[SlashCommandParameter(Description = "Message ID")]
 		string start,
+		//
 		[SlashCommandParameter(Description = "Message ID. If not provided, will select until the end")]
 		string? end = null,
+		//
 		string? startDate = null,
 		string? endDate = null,
+		//
 		OutputFormat outputFormat = OutputFormat.PNG,
+		//
 		[SlashCommandParameter(Description = PPI_DESC)]
 		int? ppi = null
 	)
@@ -269,6 +281,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	[UsedImplicitly]
 	public async Task Winners(
 		ChallengeType challengeType,
+		//
 		[SlashCommandParameter(Description = "The number of the current week")]
 		int currentWeek,
 		//
