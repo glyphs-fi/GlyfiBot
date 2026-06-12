@@ -21,9 +21,13 @@ The goal of this project is to encourage very collaborative development on this 
     and the ambigram for the Ambigram Challenge.
   - `current_week`: The week number to generate this image for. (Last week plus one)
   - `start_date`: (Optional) The start date of this challenge. (Format: `YYYY-MM-DD`)
+    - Default: Uses the Typst Script's default (Today)
   - `end_date`: (Optional) The end date of this challenge. (Format: `YYYY-MM-DD`)
-  - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates a PNG by default.
-  - `ppi`: (Optional) The PPI of the generated PNG. Uses Typst's own 144 by default.
+    - Default: Uses the Typst Script's default (Today + 7 days)
+  - `output_format`: (Optional) Whether the output as PNG, PDF, or both.
+    - Default: Generates only a PNG
+  - `ppi`: (Optional) The PPI of the generated PNG.
+    - Default: Uses Typst's own default (144).
   - Only Administrators can run this command, [by default](#command-permissions).
 
 - `/typst showcase`: Generates a showcase image with our Typst script.
@@ -34,12 +38,17 @@ The goal of this project is to encourage very collaborative development on this 
   - `start`: The Message ID of the message from where to start looking for submissions.  
     Only messages that have been reacted to with the emoji set with `/set-emoji` by their authors will be counted.
   - `end`: (Optional) The Message ID of the message from where to stop looking for submissions.
-    Will look until "now" by default.
-  - `columns`: (Optional) In how many columns to split the submission images. 3 by default.
+    - Default: "Now"; the command will look from `start` until the bottom.
+  - `columns`: (Optional) In how many columns to split the submission images.
+    - Default: Uses the Typst Script's default (3).
   - `start_date`: (Optional) The start date of this challenge. (Format: `YYYY-MM-DD`)
+    - Default: Uses the Typst Script's default (Today - 7 days)
   - `end_date`: (Optional) The end date of this challenge. (Format: `YYYY-MM-DD`)
-  - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates a PNG by default.
-  - `ppi`: (Optional) The PPI of the generated PNG. Uses Typst's own 144 by default.
+    - Default: Uses the Typst Script's default (Today)
+  - `output_format`: (Optional) Whether the output as PNG, PDF, or both.
+    - Default: Generates only a PNG
+  - `ppi`: (Optional) The PPI of the generated PNG.
+    - Default: Uses Typst's own default (144).
   - Only Administrators can run this command, [by default](#command-permissions).
 
 - `/typst winners`: Generates a winners image with our Typst script.
@@ -52,8 +61,10 @@ The goal of this project is to encourage very collaborative development on this 
     you can override it with this option.
   - `second_place_name_override`: (Optional) ↑ditto
   - `third_place_name_override`: (Optional) ↑ditto
-  - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates a PNG by default.
-  - `ppi`: (Optional) The PPI of the generated PNG. Uses Typst's own 144 by default.
+  - `output_format`: (Optional) Whether the output as PNG, PDF, or both.
+    - Default: Generates only a PNG
+  - `ppi`: (Optional) The PPI of the generated PNG.
+    - Default: Uses Typst's own default (144).
   - Only Administrators can run this command, [by default](#command-permissions).
 
 
