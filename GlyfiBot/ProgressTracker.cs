@@ -14,6 +14,7 @@ public class ProgressTracker
 			while(_inProgress) await Task.Delay(500);
 			_inProgress = true;
 			await Task.Delay(500); //wait a little extra, just to ensure everything has fully finished
+			await context.ModifyEphemeralResponseAsync("ꔷꔷꔷ   Glyfi is thinking..."); //go back to thinking, which is the default deferred state
 		}
 		else
 		{
