@@ -8,11 +8,11 @@ The goal of this project is to encourage very collaborative development on this 
 ## Current functionality:
 
 - `/emoji`: See which emoji marks something as a submission in this channel.
-  - By default, anyone can run this.
+  - Anyone can run this command, [by default](#command-permissions).
 
 - `/set-emoji`: Set the emoji for this channel that will mark something as a submission.
   - Leave empty to remove the emoji for this channel.
-  - By default, only Administrators can run this.
+  - Only Administrators can run this command, [by default](#command-permissions).
 
 
 - `/typst announcement`: Generates an announcement image with our Typst script.
@@ -24,7 +24,7 @@ The goal of this project is to encourage very collaborative development on this 
   - `end_date`: (Optional) The end date of this challenge. (Format: `YYYY-MM-DD`)
   - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates a PNG by default.
   - `ppi`: (Optional) The PPI of the generated PNG. Uses Typst's own 144 by default.
-  - By default, only Administrators can run this.
+  - Only Administrators can run this command, [by default](#command-permissions).
 
 - `/typst showcase`: Generates a showcase image with our Typst script.
   - `challenge_type`: Which challenge this image is for.
@@ -40,7 +40,7 @@ The goal of this project is to encourage very collaborative development on this 
   - `end_date`: (Optional) The end date of this challenge. (Format: `YYYY-MM-DD`)
   - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates a PNG by default.
   - `ppi`: (Optional) The PPI of the generated PNG. Uses Typst's own 144 by default.
-  - By default, only Administrators can run this.
+  - Only Administrators can run this command, [by default](#command-permissions).
 
 - `/typst winners`: Generates a winners image with our Typst script.
   - `challenge_type`: Which challenge this image is for.
@@ -54,27 +54,28 @@ The goal of this project is to encourage very collaborative development on this 
   - `third_place_name_override`: (Optional) ↑ditto
   - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates a PNG by default.
   - `ppi`: (Optional) The PPI of the generated PNG. Uses Typst's own 144 by default.
-  - By default, only Administrators can run this.
+  - Only Administrators can run this command, [by default](#command-permissions).
 
 
 - `/vote-react`: Automatically adds voting reactions to a message.
   - `messages`: The message(s) to add the reactions to. If multiple, separate with spaces.
   - `amount`: The amount of voting reactions to add
+  - Only Administrators can run this command, [by default](#command-permissions).
 
 
 - `/sticky`: Sets a sticky message for this channel. This message will always be visible at the bottom of the channel.
   - Leave empty to remove the sticky message for this channel.
-  - By default, only Administrators can run this.
+  - Only Administrators can run this command, [by default](#command-permissions).
 
 
 - `/pfps`: Get the profile pictures of one or multiple users in bulk.
-  - By default, only Administrators can run this.
+  - Only Administrators can run this command, [by default](#command-permissions).
 
 
 - `/select`: Provide the IDs of two messages in the channel between where to look for submissions.  
   Submissions will be collected and provided in one message, for extra easy downloading!
   - Only messages that have been reacted to with the emoji set with `/set-emoji` by their authors will be counted.
-  - By default, only Administrators can run this.
+  - Only Administrators can run this command, [by default](#command-permissions).
 
 
 ## Command Permissions
