@@ -145,7 +145,15 @@ static internal class Program
 					}
 					catch(RestException restException) when(restException.StatusCode == System.Net.HttpStatusCode.BadRequest)
 					{
-						await slashCommandInteraction.SendEphemeralFollowupMessageAsync(message, attachments);
+						RestMessage responseAsync = await slashCommandInteraction.GetResponseAsync();
+						if (responseAsync.Content is "" or ProgressTracker.GLYFI_IS_THINKING)
+						{
+							await slashCommandInteraction.ModifyEphemeralResponseAsync(message, attachments);
+						}
+						else
+						{
+							await slashCommandInteraction.SendEphemeralFollowupMessageAsync(message, attachments);
+						}
 					}
 				}
 			}

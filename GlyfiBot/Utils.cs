@@ -86,12 +86,14 @@ public static partial class Utils
 		/// Modifies a message as an ephemeral message as a response to a command, through its interaction.
 		/// </summary>
 		/// <param name="content">The contents of the message</param>
-		public async Task ModifyEphemeralResponseAsync(string content)
+		/// <param name="attachments">Any potential attachments</param>
+		public async Task ModifyEphemeralResponseAsync(string content, IReadOnlyCollection<AttachmentProperties>? attachments = null)
 		{
 			await interaction.ModifyResponseAsync(msg =>
 			{
 				msg.Flags = MessageFlags.Ephemeral;
 				msg.Content = content;
+				msg.Attachments = attachments;
 			});
 		}
 
