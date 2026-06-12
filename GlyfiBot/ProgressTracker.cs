@@ -4,26 +4,22 @@ namespace GlyfiBot;
 
 public class ProgressTracker
 {
-	private bool _inProgress = false;
+	private readonly SemaphoreSlim _inProgress = new(1, 1);
 
 	public async Task Start(SlashCommandContext context)
 	{
-		if (_inProgress)
-		{
-			await context.ModifyEphemeralResponseAsync("Waiting on another command run to complete first.");
-			while(_inProgress) await Task.Delay(500);
-			_inProgress = true;
-			await Task.Delay(500); //wait a little extra, just to ensure everything has fully finished
-			await context.ModifyEphemeralResponseAsync("ꔷꔷꔷ   Glyfi is thinking..."); //go back to thinking, which is the default deferred state
-		}
-		else
-		{
-			_inProgress = true;
-		}
+		// If nothing to wait for, we start immediately
+		if (await _inProgress.WaitAsync(0)) return;
+
+		// We are waiting
+		await context.ModifyEphemeralResponseAsync("Waiting on another command run to complete first.");
+		await _inProgress.WaitAsync();
+		await Task.Delay(500); //wait a little extra, just to ensure everything has fully finished
+		await context.ModifyEphemeralResponseAsync("ꔷꔷꔷ   Glyfi is thinking..."); //go back to thinking, which is the default deferred state
 	}
 
 	public void End()
 	{
-		_inProgress = false;
+		_inProgress.Release();
 	}
 }
