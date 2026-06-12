@@ -17,8 +17,8 @@ The goal of this project is to encourage very collaborative development on this 
 
 - `/typst announcement`: Generates an announcement image with our Typst script.
   - `challenge_type`: Which challenge this image is for.
-  - `input`: The "content" of the challenge; the glyph for the Glyph Challenge, and the ambigram for the Ambigram
-    Challenge.
+  - `input`: The "content" of the challenge; the glyph for the Glyph Challenge,
+    and the ambigram for the Ambigram Challenge.
   - `current_week`: The week number to generate this image for. (Last week plus one)
   - `start_date`: (Optional) The start date of this challenge. (Format: `YYYY-MM-DD`)
   - `end_date`: (Optional) The end date of this challenge. (Format: `YYYY-MM-DD`)
@@ -28,8 +28,8 @@ The goal of this project is to encourage very collaborative development on this 
 
 - `/typst showcase`: Generates a showcase image with our Typst script.
   - `challenge_type`: Which challenge this image is for.
-  - `input`: The "content" of the challenge; the glyph for the Glyph Challenge, and the ambigram for the Ambigram
-    Challenge.
+  - `input`: The "content" of the challenge; the glyph for the Glyph Challenge,
+    and the ambigram for the Ambigram Challenge.
   - `current_week`: The week number to generate this image for. (Last week plus one)
   - `start`: The Message ID of the message from where to start looking for submissions.  
     Only messages that have been reacted to with the emoji set with `/set-emoji` by their authors will be counted.
@@ -47,8 +47,8 @@ The goal of this project is to encourage very collaborative development on this 
   - `first_place`: The Message ID of the winning submission.
   - `second_place`: (Optional) The Message ID of the second place submission.
   - `third_place`: (Optional) The Message ID of the third place submission.
-  - `first_place_name_override`: (Optional) If the automatically collected username does not look good, you can override
-    it with this option.
+  - `first_place_name_override`: (Optional) If the automatically collected username does not look good,
+    you can override it with this option.
   - `second_place_name_override`: (Optional) ↑ditto
   - `third_place_name_override`: (Optional) ↑ditto
   - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates a PNG by default.
