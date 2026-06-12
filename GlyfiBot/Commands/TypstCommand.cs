@@ -106,7 +106,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		int currentWeek,
 		string? startDate = null,
 		string? endDate = null,
-		OutputFormat outputFormat = OutputFormat.Both,
+		OutputFormat outputFormat = OutputFormat.PNG,
 		[SlashCommandParameter(Description = PPI_DESC)]
 		int? ppi = null
 	)
@@ -158,7 +158,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		string? end = null,
 		string? startDate = null,
 		string? endDate = null,
-		OutputFormat outputFormat = OutputFormat.Both,
+		OutputFormat outputFormat = OutputFormat.PNG,
 		[SlashCommandParameter(Description = PPI_DESC)]
 		int? ppi = null
 	)
@@ -287,7 +287,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		[SlashCommandParameter(Description = "Optional display name override for third place")]
 		string? thirdPlaceNameOverride = null,
 		//
-		OutputFormat outputFormat = OutputFormat.Both,
+		OutputFormat outputFormat = OutputFormat.PNG,
 		//
 		[SlashCommandParameter(Description = PPI_DESC)]
 		int? ppi = null

@@ -22,7 +22,7 @@ The goal of this project is to encourage very collaborative development on this 
   - `current_week`: The week number to generate this image for. (Last week plus one)
   - `start_date`: (Optional) The start date of this challenge. (Format: `YYYY-MM-DD`)
   - `end_date`: (Optional) The end date of this challenge. (Format: `YYYY-MM-DD`)
-  - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates both by default.
+  - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates a PNG by default.
   - `ppi`: (Optional) The PPI of the generated PNG. Uses Typst's own 144 by default.
   - By default, only Administrators can run this.
 
@@ -37,7 +37,7 @@ The goal of this project is to encourage very collaborative development on this 
     Will look until "now" by default.
   - `start_date`: (Optional) The start date of this challenge. (Format: `YYYY-MM-DD`)
   - `end_date`: (Optional) The end date of this challenge. (Format: `YYYY-MM-DD`)
-  - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates both by default.
+  - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates a PNG by default.
   - `ppi`: (Optional) The PPI of the generated PNG. Uses Typst's own 144 by default.
   - By default, only Administrators can run this.
 
@@ -51,7 +51,7 @@ The goal of this project is to encourage very collaborative development on this 
     it with this option.
   - `second_place_name_override`: (Optional) ↑ditto
   - `third_place_name_override`: (Optional) ↑ditto
-  - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates both by default.
+  - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates a PNG by default.
   - `ppi`: (Optional) The PPI of the generated PNG. Uses Typst's own 144 by default.
   - By default, only Administrators can run this.
 
