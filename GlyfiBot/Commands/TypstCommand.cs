@@ -44,7 +44,12 @@ public static class ChallengeTypeExtensions
 
 		public (string toGenerate, string inputKey) ForAnnouncement() => challengeType.ForChallenge("announcement");
 
-		public (string toGenerate, string inputKey) ForShowcase() => challengeType.ForChallenge("showcase");
+		public (string toGenerate, string inputKey, string numColsArgName) ForShowcase()
+		{
+			(string toGenerate, string inputKey) = challengeType.ForChallenge("showcase");
+			string numColsArgName = $"{challengeType.GetShortName()}-showcase-num-cols";
+			return (toGenerate, inputKey, numColsArgName);
+		}
 
 		public (string toGenerate, string userNameKey, string nickNameKey) ForWinners(string level) => ($"{challengeType.GetLongName()}-{level}", $"{challengeType.GetShortName()}-winner-{level}-username", $"{challengeType.GetShortName()}-winner-{level}-nickname");
 	}
@@ -166,6 +171,8 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		[SlashCommandParameter(Description = "Message ID. If not provided, will select until the end")]
 		string? end = null,
 		//
+		int? columns = null,
+		//
 		string? startDate = null,
 		string? endDate = null,
 		//
@@ -181,7 +188,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		string typstExe = await SetupTypst(Context);
 		string scriptPath = await SetupScript(Context);
 
-		(string toGenerate, string inputKey) = challengeType.ForShowcase();
+		(string toGenerate, string inputKey, string numColsArgName) = challengeType.ForShowcase();
 
 		string outputDir = Path.Join(Program.SHOWCASES_DIR, challengeType.GetNameForDir(), $"{Context.Interaction.Id}");
 		string imagesDir = Path.Join(outputDir, "images");
@@ -260,6 +267,12 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			"--input", $"current-week={currentWeek}",
 			"--input", $"image-dir={Path.GetRelativePath(scriptDir, imagesDir)}",
 		];
+		if (columns is not null)
+		{
+			if (columns < 1) throw new SimpleCommandFailException($"Argument `columns` was {columns}, but it should be _1 or more_!");
+			if (columns > allSubmissions.Count) throw new SimpleCommandFailException($"Argument `columns` was {columns}, but it should be _less than or equal to_ the amount of submissions ({allSubmissions.Count})!");
+			args.AddRange(["--input", $"{numColsArgName}={columns}"]);
+		}
 		if (startDate is not null) args.AddRange(["--input", $"showcase-start-date={startDate}"]);
 		if (endDate is not null) args.AddRange(["--input", $"showcase-end-date={endDate}"]);
 

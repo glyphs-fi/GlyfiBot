@@ -35,6 +35,7 @@ The goal of this project is to encourage very collaborative development on this 
     Only messages that have been reacted to with the emoji set with `/set-emoji` by their authors will be counted.
   - `end`: (Optional) The Message ID of the message from where to stop looking for submissions.
     Will look until "now" by default.
+  - `columns`: (Optional) In how many columns to split the submission images. 3 by default.
   - `start_date`: (Optional) The start date of this challenge. (Format: `YYYY-MM-DD`)
   - `end_date`: (Optional) The end date of this challenge. (Format: `YYYY-MM-DD`)
   - `output_format`: (Optional) Whether the output as PNG, PDF, or both. Generates a PNG by default.
