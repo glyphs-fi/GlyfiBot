@@ -137,15 +137,15 @@ static internal class Program
 
 				async Task Respond(string message, string? textToSendAsAttachment = null)
 				{
+					IReadOnlyCollection<AttachmentProperties>? attachments = textToSendAsAttachment == null ? null :
+						[new AttachmentProperties("exception.txt", new MemoryStream(Encoding.UTF8.GetBytes(textToSendAsAttachment)))];
 					try
 					{
-						await slashCommandInteraction.SendEphemeralResponseAsync(message,
-							textToSendAsAttachment == null ? null : [new AttachmentProperties("exception.txt", new MemoryStream(Encoding.UTF8.GetBytes(textToSendAsAttachment)))]);
+						await slashCommandInteraction.SendEphemeralResponseAsync(message, attachments);
 					}
 					catch(RestException restException) when(restException.StatusCode == System.Net.HttpStatusCode.BadRequest)
 					{
-						await slashCommandInteraction.SendEphemeralFollowupMessageAsync(message,
-							textToSendAsAttachment == null ? null : [new AttachmentProperties("exception.txt", new MemoryStream(Encoding.UTF8.GetBytes(textToSendAsAttachment)))]);
+						await slashCommandInteraction.SendEphemeralFollowupMessageAsync(message, attachments);
 					}
 				}
 			}
