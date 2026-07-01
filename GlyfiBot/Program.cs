@@ -72,7 +72,7 @@ static internal class Program
 				new BotToken(token ?? ""),
 				new GatewayClientConfiguration
 				{
-					Intents = GatewayIntents.AllNonPrivileged | GatewayIntents.MessageContent,
+					Intents = GatewayIntents.AllNonPrivileged | GatewayIntents.MessageContent | GatewayIntents.GuildMessages | GatewayIntents.GuildModeration,
 					Logger = new ConsoleLogger(),
 				}
 			);
@@ -195,6 +195,7 @@ static internal class Program
 			ForeverService.RunAsync(),
 			StatusChangerService.RunAsync(client),
 			UpdateCheckerService.RunAsync(client),
+			DuplicateMessageCleanerService.RunAsync(client),
 		]);
 	}
 
