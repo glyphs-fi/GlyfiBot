@@ -44,6 +44,11 @@ public static class DuplicateMessageCleanerService
 		// Do not check in non-guild areas
 		if (thisMessage.Author is not GuildUser guildUser) return;
 
+		// Do not check messages from people who have permissions to delete messages (they're probably admins/mods, who don't need spam checking)
+		if (thisMessage.Guild is null) return;
+		Permissions permissions = guildUser.GetPermissions(thisMessage.Guild);
+		if (permissions.HasFlag(Permissions.ManageMessages)) return;
+
 		// Is this user's previous message loaded?
 		if (_userMessages.TryGetValue(author, out Message? prevMessage))
 		{
