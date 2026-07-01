@@ -27,6 +27,8 @@ public static class DuplicateMessageCleanerService
 
 		if (author == _botUserId) return; // Do not check own messages
 
+		if (thisMessage.Author is not GuildUser guildUser) return; // Do not check in non-guild areas
+
 		string thisContent = GetContentFromMessage(thisMessage);
 
 		if (_userMessages.TryGetValue(author, out Message? prevMessage))
@@ -36,10 +38,7 @@ public static class DuplicateMessageCleanerService
 			if (thisContent == prevContent)
 			{
 				await Task.WhenAll(DeleteMessageIfExists(thisMessage), DeleteMessageIfExists(prevMessage));
-				if (thisMessage.Author is GuildUser guildUser)
-				{
-					await guildUser.TimeOutAsync(DateTimeOffset.Now.AddHours(1)); //TODO: Add try/catch for permissions, in case attempted timeout of a higher ranked user. Perhaps earlier, to prevent mods from being hit by this mechanism?
-				}
+				await guildUser.TimeOutAsync(DateTimeOffset.Now.AddHours(1)); //TODO: Add try/catch for permissions, in case attempted timeout of a higher ranked user. Perhaps earlier, to prevent mods from being hit by this mechanism?
 			}
 			_userMessages.TryUpdate(author, thisMessage, prevMessage);
 		}
