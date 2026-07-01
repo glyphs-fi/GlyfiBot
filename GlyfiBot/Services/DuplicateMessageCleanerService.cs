@@ -8,7 +8,7 @@ namespace GlyfiBot.Services;
 
 public static class DuplicateMessageCleanerService
 {
-	private static ConcurrentDictionary<ulong, Message> _userMessages = null!;
+	private static readonly ConcurrentDictionary<ulong, Message> _userMessages = new();
 
 	private static GatewayClient _client = null!;
 	private static ulong _botUserId;
@@ -17,8 +17,6 @@ public static class DuplicateMessageCleanerService
 	{
 		_client = client;
 		_botUserId = (await _client.Rest.GetCurrentUserAsync()).Id;
-
-		_userMessages = new ConcurrentDictionary<ulong, Message>();
 
 		_client.MessageCreate += async message => await ProcessMessage(message);
 	}
