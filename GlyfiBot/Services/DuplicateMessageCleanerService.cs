@@ -51,8 +51,11 @@ public static class DuplicateMessageCleanerService
 				string prevContent = GetContentFromMessage(prevMessage);
 				if (thisContent == prevContent)
 				{
-					await Task.WhenAll(DeleteMessageIfExists(thisMessage), DeleteMessageIfExists(prevMessage));
-					await guildUser.TimeOutAsync(DateTimeOffset.Now.AddMinutes(MUTE_TIME_MINUTES)); //TODO: Add try/catch for permissions, in case attempted timeout of a higher ranked user. Perhaps earlier, to prevent mods from being hit by this mechanism?
+					await Task.WhenAll(
+						DeleteMessageIfExists(thisMessage),
+						DeleteMessageIfExists(prevMessage),
+						MuteUser(guildUser)
+					);
 				}
 			}
 			_userMessages.TryUpdate(author, thisMessage, prevMessage);
@@ -88,4 +91,17 @@ public static class DuplicateMessageCleanerService
 			//ignore
 		}
 	}
+
+	private static async Task MuteUser(GuildUser guildUser)
+	{
+		try
+		{
+			await guildUser.TimeOutAsync(DateTimeOffset.Now.AddMinutes(MUTE_TIME_MINUTES));
+		}
+		catch(RestException restException) when(restException.StatusCode == System.Net.HttpStatusCode.Forbidden)
+		{
+			//ignore
+		}
+	}
+
 }
