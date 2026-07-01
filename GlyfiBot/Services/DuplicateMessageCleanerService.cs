@@ -8,6 +8,19 @@ namespace GlyfiBot.Services;
 
 public static class DuplicateMessageCleanerService
 {
+	/// <summary>
+	/// Allowed time between duplicate messages.
+	/// If a duplicate message is sent within this time, both are deleted.
+	/// If this time has passed, neither are touched.
+	/// </summary>
+	// ReSharper disable once InconsistentNaming
+	private static readonly TimeSpan COOLDOWN = TimeSpan.FromMinutes(10);
+
+	/// <summary>
+	/// If a duplicate message gets removed, the author gets timed out for this many minutes:
+	/// </summary>
+	private const int MUTE_TIME_MINUTES = 60;
+
 	private static readonly ConcurrentDictionary<ulong, Message> _userMessages = new();
 
 	private static GatewayClient _client = null!;
@@ -32,14 +45,14 @@ public static class DuplicateMessageCleanerService
 		if (_userMessages.TryGetValue(author, out Message? prevMessage))
 		{
 			TimeSpan diff = thisMessage.CreatedAt - prevMessage.CreatedAt;
-			if (diff < TimeSpan.FromMinutes(10))
+			if (diff < COOLDOWN)
 			{
 				string thisContent = GetContentFromMessage(thisMessage);
 				string prevContent = GetContentFromMessage(prevMessage);
 				if (thisContent == prevContent)
 				{
 					await Task.WhenAll(DeleteMessageIfExists(thisMessage), DeleteMessageIfExists(prevMessage));
-					await guildUser.TimeOutAsync(DateTimeOffset.Now.AddHours(1)); //TODO: Add try/catch for permissions, in case attempted timeout of a higher ranked user. Perhaps earlier, to prevent mods from being hit by this mechanism?
+					await guildUser.TimeOutAsync(DateTimeOffset.Now.AddMinutes(MUTE_TIME_MINUTES)); //TODO: Add try/catch for permissions, in case attempted timeout of a higher ranked user. Perhaps earlier, to prevent mods from being hit by this mechanism?
 				}
 			}
 			_userMessages.TryUpdate(author, thisMessage, prevMessage);
