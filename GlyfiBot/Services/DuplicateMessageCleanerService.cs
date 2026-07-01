@@ -31,13 +31,16 @@ public static class DuplicateMessageCleanerService
 
 		if (_userMessages.TryGetValue(author, out Message? prevMessage))
 		{
-			//TODO: Add time-between check
-			string thisContent = GetContentFromMessage(thisMessage);
-			string prevContent = GetContentFromMessage(prevMessage);
-			if (thisContent == prevContent)
+			TimeSpan diff = thisMessage.CreatedAt - prevMessage.CreatedAt;
+			if (diff < TimeSpan.FromMinutes(10))
 			{
-				await Task.WhenAll(DeleteMessageIfExists(thisMessage), DeleteMessageIfExists(prevMessage));
-				await guildUser.TimeOutAsync(DateTimeOffset.Now.AddHours(1)); //TODO: Add try/catch for permissions, in case attempted timeout of a higher ranked user. Perhaps earlier, to prevent mods from being hit by this mechanism?
+				string thisContent = GetContentFromMessage(thisMessage);
+				string prevContent = GetContentFromMessage(prevMessage);
+				if (thisContent == prevContent)
+				{
+					await Task.WhenAll(DeleteMessageIfExists(thisMessage), DeleteMessageIfExists(prevMessage));
+					await guildUser.TimeOutAsync(DateTimeOffset.Now.AddHours(1)); //TODO: Add try/catch for permissions, in case attempted timeout of a higher ranked user. Perhaps earlier, to prevent mods from being hit by this mechanism?
+				}
 			}
 			_userMessages.TryUpdate(author, thisMessage, prevMessage);
 		}
