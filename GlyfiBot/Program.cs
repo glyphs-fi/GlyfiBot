@@ -166,6 +166,7 @@ static internal class Program
 		applicationCommandService.AddModule<TypstCommand>();
 		applicationCommandService.AddModule<StickyMessageCommand>();
 		applicationCommandService.AddModule<VoteReactCommand>();
+		applicationCommandService.AddModule<DuplicateMessageCleanerCommand>();
 
 		await applicationCommandService.RegisterCommandsAsync(client.Rest, client.Id);
 

@@ -15,6 +15,12 @@ The goal of this project is to encourage very collaborative development on this 
   - Only Administrators can run this command, [by default](#command-permissions).
 
 
+- `/set-dupe-notif-channel`: Set up in which channel the Moderation Notifications for the Duplicate Message Cleaner will be sent
+  - If unset, it will notify (without any details) in the first channel that has "general" in the name.
+  - Leave empty to unset the notification channel. It will go back to being like ↑
+  - Only Administrators can run this command, [by default](#command-permissions).
+
+
 - `/typst announcement`: Generates an announcement image with our Typst script.
   - `challenge_type`: Which challenge this image is for.
   - `input`: The "content" of the challenge; the glyph for the Glyph Challenge,

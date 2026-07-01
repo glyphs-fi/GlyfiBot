@@ -3,11 +3,14 @@ using NetCord.Gateway;
 using NetCord.Rest;
 using System.Collections.Concurrent;
 using System.Text;
+using System.Text.Json;
 
 namespace GlyfiBot.Services;
 
 public static class DuplicateMessageCleanerService
 {
+	private const string MOD_CHANNELS_FILE = $"{Program.SETTINGS_DIR}/duplicate_message_cleaner_mod_channels.json";
+
 	/// <summary>
 	/// Allowed time between duplicate messages.
 	/// If a duplicate message is sent within this time, both are deleted.
@@ -21,6 +24,8 @@ public static class DuplicateMessageCleanerService
 	/// </summary>
 	private const int MUTE_TIME_MINUTES = 60;
 
+	private static ConcurrentDictionary<ulong, ulong> _modChannels = null!;
+
 	private static readonly ConcurrentDictionary<ulong, Message> _userMessages = new();
 
 	private static GatewayClient _client = null!;
@@ -31,7 +36,30 @@ public static class DuplicateMessageCleanerService
 		_client = client;
 		_botUserId = (await _client.Rest.GetCurrentUserAsync()).Id;
 
+		if (File.Exists(MOD_CHANNELS_FILE))
+		{
+			await using FileStream fs = File.OpenRead(MOD_CHANNELS_FILE);
+			Dictionary<ulong, ulong> dict = (await JsonSerializer.DeserializeAsync(fs, ToJson.Default.DictionaryUInt64UInt64))!;
+			_modChannels = new ConcurrentDictionary<ulong, ulong>(dict);
+		}
+		else
+		{
+			_modChannels = new ConcurrentDictionary<ulong, ulong>();
+		}
+
 		_client.MessageCreate += async message => await ProcessMessage(message);
+	}
+
+	public static void RemoveNotificationChannel(Guild guild)
+	{
+		_modChannels.TryRemove(guild.Id, out ulong _);
+		SaveModChannels();
+	}
+
+	public static void SetModNotificationChannel(Guild guild, TextGuildChannel channel)
+	{
+		_modChannels[guild.Id] = channel.Id;
+		SaveModChannels();
 	}
 
 	private static async Task ProcessMessage(Message thisMessage)
@@ -61,12 +89,23 @@ public static class DuplicateMessageCleanerService
 				string prevContent = GetContentFromMessage(prevMessage);
 				if (thisContent == prevContent)
 				{
-					// If they are the same, then we delete both messages and mute the user
-					await Task.WhenAll(
-						DeleteMessageIfExists(thisMessage),
+					// If they are the same, then we stop the spam!
+
+					// First we mute (to prevent further infractions) and we let the mods know
+					await Task.WhenAll([
+						MuteUser(guildUser),
+						NotifyMods(prevMessage, thisMessage),
+					]);
+
+					// If the message has any attachments, we wait a moment for the moderation notification to store them,
+					//  so the notification doesn't just have a gallery full of 404's
+					if (thisMessage.Attachments.Count > 0) await Task.Delay(5000);
+
+					// Lastly, we clean up the mess
+					await Task.WhenAll([
 						DeleteMessageIfExists(prevMessage),
-						MuteUser(guildUser)
-					);
+						DeleteMessageIfExists(thisMessage),
+					]);
 				}
 			}
 			// Finally, we update the user's previous message
@@ -76,6 +115,55 @@ public static class DuplicateMessageCleanerService
 		{
 			// Add this message to the bot's memory
 			_userMessages.TryAdd(author, thisMessage);
+		}
+	}
+
+	private static async Task NotifyMods(Message prevMessage, Message thisMessage)
+	{
+		ulong? guildId = prevMessage.GuildId;
+		if (guildId == null) return;
+
+		List<IComponentContainerComponentProperties> components = [];
+		if (prevMessage.Content.Length > 0)
+		{
+			components.Add(new TextDisplayProperties($"{prevMessage.Content}"));
+		}
+		if (prevMessage.Attachments.Count > 0)
+		{
+			components.Add(new MediaGalleryProperties(
+				prevMessage.Attachments.Select(attachment => new MediaGalleryItemProperties(new ComponentMediaProperties(attachment.ProxyUrl)))
+			));
+		}
+
+		if (_modChannels.TryGetValue(guildId.Value, out ulong channelId))
+		{
+			await _client.Rest.SendMessageAsync(channelId, new MessageProperties
+			{
+				Components =
+				[
+					new TextDisplayProperties($"{prevMessage.Author} sent this message in {prevMessage.Channel} and {thisMessage.Channel}:"),
+					new ComponentContainerProperties
+					{
+						AccentColor = new Color(255, 0, 0),
+						Components = components,
+					},
+				],
+				Flags = MessageFlags.IsComponentsV2,
+			});
+		}
+		else
+		{
+			IReadOnlyList<IGuildChannel> channels = await _client.Rest.GetGuildChannelsAsync(guildId.Value);
+			TextGuildChannel? channel = channels.OfType<TextGuildChannel>().FirstOrDefault(channel => channel.Name.Contains("general", StringComparison.InvariantCultureIgnoreCase));
+			if (channel is not null)
+				await channel.SendMessageAsync(new MessageProperties
+				{
+					Content = """
+					          A double message (likely spam) was just cleaned up!
+
+					          _A moderator should set up a moderation notification channel with `/set-dupe-notif-channel` so that the moderators can see information about this, the next time this happens._
+					          """,
+				});
 		}
 	}
 
@@ -121,4 +209,10 @@ public static class DuplicateMessageCleanerService
 		}
 	}
 
+	private static void SaveModChannels()
+	{
+		Dictionary<ulong, ulong> dict = _modChannels.ToDictionary();
+		using FileStream fs = File.Open(MOD_CHANNELS_FILE, FileMode.Create);
+		JsonSerializer.Serialize(fs, dict, ToJson.Default.DictionaryUInt64UInt64);
+	}
 }
