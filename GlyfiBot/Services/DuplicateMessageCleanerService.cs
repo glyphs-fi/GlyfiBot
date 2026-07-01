@@ -29,11 +29,10 @@ public static class DuplicateMessageCleanerService
 
 		if (thisMessage.Author is not GuildUser guildUser) return; // Do not check in non-guild areas
 
-		string thisContent = GetContentFromMessage(thisMessage);
-
 		if (_userMessages.TryGetValue(author, out Message? prevMessage))
 		{
 			//TODO: Add time-between check
+			string thisContent = GetContentFromMessage(thisMessage);
 			string prevContent = GetContentFromMessage(prevMessage);
 			if (thisContent == prevContent)
 			{
