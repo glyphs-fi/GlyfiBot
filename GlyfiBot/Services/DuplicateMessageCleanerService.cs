@@ -38,19 +38,25 @@ public static class DuplicateMessageCleanerService
 	{
 		ulong author = thisMessage.Author.Id;
 
-		if (author == _botUserId) return; // Do not check own messages
+		// Do not check own bot messages
+		if (author == _botUserId) return;
 
-		if (thisMessage.Author is not GuildUser guildUser) return; // Do not check in non-guild areas
+		// Do not check in non-guild areas
+		if (thisMessage.Author is not GuildUser guildUser) return;
 
+		// Is this user's previous message loaded?
 		if (_userMessages.TryGetValue(author, out Message? prevMessage))
 		{
+			// If there isn't enough time between this new message and the previous one...
 			TimeSpan diff = thisMessage.CreatedAt - prevMessage.CreatedAt;
 			if (diff < COOLDOWN)
 			{
+				// ...then we compare contents (including attachments!)
 				string thisContent = GetContentFromMessage(thisMessage);
 				string prevContent = GetContentFromMessage(prevMessage);
 				if (thisContent == prevContent)
 				{
+					// If they are the same, then we delete both messages and mute the user
 					await Task.WhenAll(
 						DeleteMessageIfExists(thisMessage),
 						DeleteMessageIfExists(prevMessage),
@@ -58,14 +64,20 @@ public static class DuplicateMessageCleanerService
 					);
 				}
 			}
+			// Finally, we update the user's previous message
 			_userMessages.TryUpdate(author, thisMessage, prevMessage);
 		}
 		else
 		{
+			// Add this message to the bot's memory
 			_userMessages.TryAdd(author, thisMessage);
 		}
 	}
 
+	/// <summary>
+	/// Transforms a Message into a String that can be compared for spam/duplicate detection.
+	/// The special thing is that it also takes attachments into account!
+	/// </summary>
 	private static string GetContentFromMessage(Message message)
 	{
 		if (message.Attachments.Count == 0) return message.Content;
