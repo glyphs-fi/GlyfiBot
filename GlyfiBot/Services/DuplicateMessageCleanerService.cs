@@ -24,6 +24,9 @@ public static class DuplicateMessageCleanerService
 	/// </summary>
 	private const int TIMEOUT_TIME_MINUTES = 60;
 
+	private const string BUTTON_ACTION_BAN = "ban";
+	private const string BUTTON_ACTION_REMOVE_TIMEOUT = "remove-timeout";
+
 	private static ConcurrentDictionary<ulong, ulong> _modChannels = null!;
 
 	private static readonly ConcurrentDictionary<ulong, Message> _userMessages = new();
@@ -65,13 +68,13 @@ public static class DuplicateMessageCleanerService
 
 			switch(buttonAction)
 			{
-				case "ban":
+				case BUTTON_ACTION_BAN:
 					await _client.Rest.BanGuildUserAsync(guildId.Value, affectedUserId);
 					await interaction.SendResponseAsync(InteractionCallback.Message("Banned!"));
 					break;
-				case "unmute":
+				case BUTTON_ACTION_REMOVE_TIMEOUT:
 					await _client.Rest.ModifyGuildUserAsync(guildId.Value, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
-					await interaction.SendResponseAsync(InteractionCallback.Message("Unmuted!"));
+					await interaction.SendResponseAsync(InteractionCallback.Message("Timeout removed!"));
 					break;
 			}
 		};
@@ -175,8 +178,8 @@ public static class DuplicateMessageCleanerService
 						Components = components,
 					},
 					new ActionRowProperties([
-						new ButtonProperties($"{nameof(DuplicateMessageCleanerService)}:ban:{prevMessage.Author.Id}", "Ban", EmojiProperties.Standard("🔨"), ButtonStyle.Danger),
-						new ButtonProperties($"{nameof(DuplicateMessageCleanerService)}:unmute:{prevMessage.Author.Id}", "Unmute", EmojiProperties.Standard("🔊"), ButtonStyle.Success),
+						new ButtonProperties($"{nameof(DuplicateMessageCleanerService)}:{BUTTON_ACTION_BAN}:{prevMessage.Author.Id}", "Ban", EmojiProperties.Standard("🔨"), ButtonStyle.Danger),
+						new ButtonProperties($"{nameof(DuplicateMessageCleanerService)}:{BUTTON_ACTION_REMOVE_TIMEOUT}:{prevMessage.Author.Id}", "Remove timeout", EmojiProperties.Standard("🔊"), ButtonStyle.Success),
 					]),
 				],
 				Flags = MessageFlags.IsComponentsV2,
