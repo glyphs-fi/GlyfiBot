@@ -24,8 +24,8 @@ public static class DuplicateMessageCleanerService
 	/// </summary>
 	private const int TIMEOUT_TIME_MINUTES = 60;
 
-	private const string BUTTON_ACTION_BAN = "ban";
-	private const string BUTTON_ACTION_REMOVE_TIMEOUT = "remove-timeout";
+	private const string BUTTON_ACTION_BAN = "button_ban";
+	private const string BUTTON_ACTION_REMOVE_TIMEOUT = "button_remove-timeout";
 
 	private static ConcurrentDictionary<ulong, ulong> _modChannels = null!;
 
@@ -120,14 +120,22 @@ public static class DuplicateMessageCleanerService
 
 	private static async ValueTask ProcessInteraction(Interaction interaction)
 	{
-		if (interaction is not ButtonInteraction buttonInteraction) return;
+		switch(interaction)
+		{
+			case ButtonInteraction buttonInteraction:
+				await ProcessButtonInteraction(buttonInteraction);
+				break;
+		}
+	}
 
-		Guild? guild = buttonInteraction.Guild;
+	private static async ValueTask ProcessButtonInteraction(ButtonInteraction interaction)
+	{
+		Guild? guild = interaction.Guild;
 		if (guild is null) return;
 
 		if (interaction.User is not GuildUser guildUser) return;
 
-		string[] buttonIdParts = buttonInteraction.Data.CustomId.Split(":");
+		string[] buttonIdParts = interaction.Data.CustomId.Split(":");
 
 		string interactionSource = buttonIdParts[0];
 		if (interactionSource != nameof(DuplicateMessageCleanerService)) return;
