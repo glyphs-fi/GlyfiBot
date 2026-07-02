@@ -38,10 +38,10 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 			_stickyMessages = new ConcurrentDictionary<ulong, WatchedChannel>();
 		}
 
-		_client.MessageCreate += async message => await ProcessMessage(message);
+		_client.MessageCreate += ProcessMessage;
 	}
 
-	private static async Task ProcessMessage(Message message)
+	private static async ValueTask ProcessMessage(Message message)
 	{
 		if (message.Author.Id == _botUserId) return; // Do not reply after own messages
 
