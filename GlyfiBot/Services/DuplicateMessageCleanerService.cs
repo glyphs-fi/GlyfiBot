@@ -101,10 +101,6 @@ public static class DuplicateMessageCleanerService
 						NotifyMods(prevMessage, thisMessage),
 					]);
 
-					// If the message has any attachments, we wait a moment for the moderation notification to store them,
-					//  so the notification doesn't just have a gallery full of 404's
-					if (thisMessage.Attachments.Count > 0) await Task.Delay(5000);
-
 					// Lastly, we clean up the mess
 					await Task.WhenAll([
 						DeleteMessageIfExists(prevMessage),
@@ -170,28 +166,16 @@ public static class DuplicateMessageCleanerService
 
 		if (_modChannels.TryGetValue(guildId.Value, out ulong channelId))
 		{
-			List<IComponentContainerComponentProperties> components = [];
-			if (prevMessage.Content.Length > 0)
+			await _client.Rest.SendMessageAsync(channelId, new MessageProperties
 			{
-				components.Add(new TextDisplayProperties($"{prevMessage.Content}"));
-			}
-			if (prevMessage.Attachments.Count > 0)
-			{
-				components.Add(new MediaGalleryProperties(
-					prevMessage.Attachments.Select(attachment => new MediaGalleryItemProperties(new ComponentMediaProperties(attachment.ProxyUrl)))
-				));
-			}
+				MessageReference = MessageReferenceProperties.Forward(thisMessage.ChannelId, thisMessage.Id),
+			});
 
 			await _client.Rest.SendMessageAsync(channelId, new MessageProperties
 			{
 				Components =
 				[
-					new TextDisplayProperties($"{prevMessage.Author} sent this message in {prevMessage.Channel} and {thisMessage.Channel}:"),
-					new ComponentContainerProperties
-					{
-						AccentColor = new Color(255, 0, 0),
-						Components = components,
-					},
+					new TextDisplayProperties($"{prevMessage.Author} sent this↑ message in {prevMessage.Channel} and {thisMessage.Channel}!"),
 					new TextDisplayProperties($"The messages have been cleaned up, and the account has been given a timeout of {TIMEOUT_TIME_MINUTES} minutes."),
 					new ActionRowProperties([
 						new ButtonProperties($"{nameof(DuplicateMessageCleanerService)}:{BUTTON_ACTION_BAN}:{prevMessage.Author.Id}", "Ban", EmojiProperties.Standard("🔨"), ButtonStyle.Danger),
