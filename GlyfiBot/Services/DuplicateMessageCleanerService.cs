@@ -135,13 +135,11 @@ public static class DuplicateMessageCleanerService
 
 		if (interaction.User is not GuildUser guildUser) return;
 
-		string[] buttonIdParts = interaction.Data.CustomId.Split(":");
+		InteractionDataContainer<ulong> interactionData = new(interaction.Data.CustomId);
+		if (interactionData.Source != nameof(DuplicateMessageCleanerService)) return;
 
-		string interactionSource = buttonIdParts[0];
-		if (interactionSource != nameof(DuplicateMessageCleanerService)) return;
-
-		string buttonAction = buttonIdParts[1];
-		ulong affectedUserId = ulong.Parse(buttonIdParts[2]);
+		string buttonAction = interactionData.Type;
+		ulong affectedUserId = interactionData.Extra;
 		Permissions permissions = guildUser.GetPermissions(guild);
 
 		switch(buttonAction)
@@ -186,8 +184,22 @@ public static class DuplicateMessageCleanerService
 					new TextDisplayProperties($"{prevMessage.Author} sent this↑ message in {prevMessage.Channel} and {thisMessage.Channel}!"),
 					new TextDisplayProperties($"The messages have been cleaned up, and the account has been given a timeout of {TIMEOUT_TIME_MINUTES} minutes."),
 					new ActionRowProperties([
-						new ButtonProperties($"{nameof(DuplicateMessageCleanerService)}:{BUTTON_ACTION_BAN}:{prevMessage.Author.Id}", "Ban", EmojiProperties.Standard("🔨"), ButtonStyle.Danger),
-						new ButtonProperties($"{nameof(DuplicateMessageCleanerService)}:{BUTTON_ACTION_REMOVE_TIMEOUT}:{prevMessage.Author.Id}", "Remove timeout", EmojiProperties.Standard("🔊"), ButtonStyle.Success),
+						new ButtonProperties(new InteractionDataContainer<ulong>(
+								nameof(DuplicateMessageCleanerService),
+								BUTTON_ACTION_BAN,
+								prevMessage.Author.Id
+							).ToString(),
+							"Ban",
+							EmojiProperties.Standard("🔨"),
+							ButtonStyle.Danger),
+						new ButtonProperties(new InteractionDataContainer<ulong>(
+								nameof(DuplicateMessageCleanerService),
+								BUTTON_ACTION_REMOVE_TIMEOUT,
+								prevMessage.Author.Id
+							).ToString(),
+							"Remove timeout",
+							EmojiProperties.Standard("🔊"),
+							ButtonStyle.Success),
 					]),
 				],
 				Flags = MessageFlags.IsComponentsV2,
