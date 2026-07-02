@@ -140,12 +140,34 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 			try
 			{
 				await Task.Delay(_delay);
-				await SendMessageInstantly();
+				await SendMessageAfterDelay();
 			}
 			finally
 			{
 				Interlocked.Exchange(ref _busySending, false);
 			}
+		}
+
+		/// Checks if the last message is still the last message before sending, in case the new messages were deleted
+		private async Task SendMessageAfterDelay()
+		{
+			if (_previousMessageId is not null)
+			{
+				IAsyncEnumerable<RestMessage> asyncEnumerable = _client.Rest.GetMessagesAsync(
+					channelId,
+					new PaginationProperties<ulong>
+					{
+						Direction = PaginationDirection.After,
+						From = _previousMessageId,
+					});
+				List<RestMessage> messagesFromThenTillNow = await asyncEnumerable.ToListAsync();
+				if (messagesFromThenTillNow.Count == 0)
+				{
+					// Don't do anything; the new messages have already been deleted
+					return;
+				}
+			}
+			await SendMessageInstantly();
 		}
 
 		/// Delete previous message, send new message, and store for later deletion
