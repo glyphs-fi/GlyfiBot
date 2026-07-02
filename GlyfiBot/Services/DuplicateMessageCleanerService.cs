@@ -123,20 +123,20 @@ public static class DuplicateMessageCleanerService
 		ulong? guildId = prevMessage.GuildId;
 		if (guildId == null) return;
 
-		List<IComponentContainerComponentProperties> components = [];
-		if (prevMessage.Content.Length > 0)
-		{
-			components.Add(new TextDisplayProperties($"{prevMessage.Content}"));
-		}
-		if (prevMessage.Attachments.Count > 0)
-		{
-			components.Add(new MediaGalleryProperties(
-				prevMessage.Attachments.Select(attachment => new MediaGalleryItemProperties(new ComponentMediaProperties(attachment.ProxyUrl)))
-			));
-		}
-
 		if (_modChannels.TryGetValue(guildId.Value, out ulong channelId))
 		{
+			List<IComponentContainerComponentProperties> components = [];
+			if (prevMessage.Content.Length > 0)
+			{
+				components.Add(new TextDisplayProperties($"{prevMessage.Content}"));
+			}
+			if (prevMessage.Attachments.Count > 0)
+			{
+				components.Add(new MediaGalleryProperties(
+					prevMessage.Attachments.Select(attachment => new MediaGalleryItemProperties(new ComponentMediaProperties(attachment.ProxyUrl)))
+				));
+			}
+
 			await _client.Rest.SendMessageAsync(channelId, new MessageProperties
 			{
 				Components =
