@@ -26,6 +26,8 @@ public static class DuplicateMessageCleanerService
 
 	private const string BUTTON_ACTION_BAN = "button_ban";
 	private const string BUTTON_ACTION_REMOVE_TIMEOUT = "button_remove-timeout";
+	private const string MODAL_BAN = "modal_ban";
+	private const string MODAL_BAN_DELETE_RADIOS = "modal_ban-delete-radios";
 
 	private static ConcurrentDictionary<ulong, ulong> _modChannels = null!;
 
@@ -125,6 +127,9 @@ public static class DuplicateMessageCleanerService
 			case ButtonInteraction buttonInteraction:
 				await ProcessButtonInteraction(buttonInteraction);
 				break;
+			case ModalInteraction modalInteraction:
+				await ProcessModalInteraction(modalInteraction);
+				break;
 		}
 	}
 
@@ -150,8 +155,25 @@ public static class DuplicateMessageCleanerService
 					await interaction.SendResponseAsync(InteractionCallback.Message($"You do not have permission to ban users, {guildUser}!"));
 					return;
 				}
-				await _client.Rest.BanGuildUserAsync(guild.Id, affectedUserId);
-				await interaction.SendResponseAsync(InteractionCallback.Message("Banned!"));
+				await interaction.SendResponseAsync(InteractionCallback.Modal(new ModalProperties(new InteractionDataContainer<ulong>(
+						nameof(DuplicateMessageCleanerService),
+						MODAL_BAN,
+						affectedUserId
+					).ToString(),
+					"Ban",
+					[
+						new LabelProperties("Delete more messages?",
+							new RadioGroupProperties(MODAL_BAN_DELETE_RADIOS, [
+								new RadioGroupOptionProperties("Don't Delete Any", "0"),
+								new RadioGroupOptionProperties("Previous Hour", "1"),
+								new RadioGroupOptionProperties("Previous 6 Hours", "6"),
+								new RadioGroupOptionProperties("Previous 12 Hours", "12"),
+								new RadioGroupOptionProperties("Previous 24 Hours", "24"),
+								new RadioGroupOptionProperties("Previous 3 Days", "72"),
+								new RadioGroupOptionProperties("Previous 7 Days", "168"),
+							])
+						),
+					])));
 				break;
 			case BUTTON_ACTION_REMOVE_TIMEOUT:
 				if (!permissions.HasFlag(Permissions.ModerateUsers))
@@ -161,6 +183,43 @@ public static class DuplicateMessageCleanerService
 				}
 				await _client.Rest.ModifyGuildUserAsync(guild.Id, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
 				await interaction.SendResponseAsync(InteractionCallback.Message("Timeout removed!"));
+				break;
+		}
+	}
+
+	private static async ValueTask ProcessModalInteraction(ModalInteraction interaction)
+	{
+		Guild? guild = interaction.Guild;
+		if (guild is null) return;
+
+		InteractionDataContainer<ulong> interactionData = new(interaction.Data.CustomId);
+		if (interactionData.Source != nameof(DuplicateMessageCleanerService)) return;
+
+		string modalAction = interactionData.Type;
+		ulong affectedUserId = interactionData.Extra;
+
+		switch(modalAction)
+		{
+			case MODAL_BAN:
+				RadioGroup? radioGroup = interaction.Data.Components //
+					.OfType<Label>() //
+					.Select(component => component.Component) //
+					.OfType<RadioGroup>() //
+					.FirstOrDefault(radioGroup => radioGroup.CustomId == MODAL_BAN_DELETE_RADIOS);
+				if (radioGroup is null) return;
+
+				int hours = int.Parse(radioGroup.SelectedValue ?? "0");
+				if (hours == 0)
+				{
+					await _client.Rest.BanGuildUserAsync(guild.Id, affectedUserId);
+					await interaction.SendResponseAsync(InteractionCallback.Message("Banned!"));
+				}
+				else
+				{
+					int seconds = hours * 60 * 60;
+					await _client.Rest.BanGuildUserAsync(guild.Id, affectedUserId, seconds);
+					await interaction.SendResponseAsync(InteractionCallback.Message($"Banned and messages from the previous {hours} hours were cleaned too!"));
+				}
 				break;
 		}
 	}
