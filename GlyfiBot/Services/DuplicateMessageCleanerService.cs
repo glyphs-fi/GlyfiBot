@@ -179,6 +179,7 @@ public static class DuplicateMessageCleanerService
 						AccentColor = new Color(255, 0, 0),
 						Components = components,
 					},
+					new TextDisplayProperties($"The messages have been cleaned up, and the account has been given a timeout of {TIMEOUT_TIME_MINUTES} minutes."),
 					new ActionRowProperties([
 						new ButtonProperties($"{nameof(DuplicateMessageCleanerService)}:{BUTTON_ACTION_BAN}:{prevMessage.Author.Id}", "Ban", EmojiProperties.Standard("🔨"), ButtonStyle.Danger),
 						new ButtonProperties($"{nameof(DuplicateMessageCleanerService)}:{BUTTON_ACTION_REMOVE_TIMEOUT}:{prevMessage.Author.Id}", "Remove timeout", EmojiProperties.Standard("🔊"), ButtonStyle.Success),
