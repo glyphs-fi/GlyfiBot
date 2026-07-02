@@ -22,7 +22,7 @@ public static class DuplicateMessageCleanerService
 	/// <summary>
 	/// If a duplicate message gets removed, the author gets timed out for this many minutes:
 	/// </summary>
-	private const int MUTE_TIME_MINUTES = 60;
+	private const int TIMEOUT_TIME_MINUTES = 60;
 
 	private static ConcurrentDictionary<ulong, ulong> _modChannels = null!;
 
@@ -91,9 +91,9 @@ public static class DuplicateMessageCleanerService
 				{
 					// If they are the same, then we stop the spam!
 
-					// First we mute (to prevent further infractions) and we let the mods know
+					// First we timeout (to prevent further infractions) and we let the mods know
 					await Task.WhenAll([
-						MuteUser(guildUser),
+						TimeoutUser(guildUser),
 						NotifyMods(prevMessage, thisMessage),
 					]);
 
@@ -197,11 +197,11 @@ public static class DuplicateMessageCleanerService
 		}
 	}
 
-	private static async Task MuteUser(GuildUser guildUser)
+	private static async Task TimeoutUser(GuildUser guildUser)
 	{
 		try
 		{
-			await guildUser.TimeOutAsync(DateTimeOffset.Now.AddMinutes(MUTE_TIME_MINUTES));
+			await guildUser.TimeOutAsync(DateTimeOffset.Now.AddMinutes(TIMEOUT_TIME_MINUTES));
 		}
 		catch(RestException restException) when(restException.StatusCode == System.Net.HttpStatusCode.Forbidden)
 		{
