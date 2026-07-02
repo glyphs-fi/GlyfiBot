@@ -50,34 +50,8 @@ public static class DuplicateMessageCleanerService
 			_modChannels = new ConcurrentDictionary<ulong, ulong>();
 		}
 
-		_client.MessageCreate += async message => await ProcessMessage(message);
-		_client.InteractionCreate += async interaction =>
-		{
-			if (interaction is not ButtonInteraction buttonInteraction) return;
-
-			ulong? guildId = buttonInteraction.GuildId;
-			if (guildId is null) return;
-
-			string[] buttonIdParts = buttonInteraction.Data.CustomId.Split(":");
-
-			string interactionSource = buttonIdParts[0];
-			if (interactionSource != nameof(DuplicateMessageCleanerService)) return;
-
-			string buttonAction = buttonIdParts[1];
-			ulong affectedUserId = ulong.Parse(buttonIdParts[2]);
-
-			switch(buttonAction)
-			{
-				case BUTTON_ACTION_BAN:
-					await _client.Rest.BanGuildUserAsync(guildId.Value, affectedUserId);
-					await interaction.SendResponseAsync(InteractionCallback.Message("Banned!"));
-					break;
-				case BUTTON_ACTION_REMOVE_TIMEOUT:
-					await _client.Rest.ModifyGuildUserAsync(guildId.Value, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
-					await interaction.SendResponseAsync(InteractionCallback.Message("Timeout removed!"));
-					break;
-			}
-		};
+		_client.MessageCreate += ProcessMessage;
+		_client.InteractionCreate += ProcessInteraction;
 	}
 
 	public static void RemoveNotificationChannel(Guild guild)
@@ -92,7 +66,7 @@ public static class DuplicateMessageCleanerService
 		SaveModChannels();
 	}
 
-	private static async Task ProcessMessage(Message thisMessage)
+	private static async ValueTask ProcessMessage(Message thisMessage)
 	{
 		ulong author = thisMessage.Author.Id;
 
@@ -145,6 +119,34 @@ public static class DuplicateMessageCleanerService
 		{
 			// Add this message to the bot's memory
 			_userMessages.TryAdd(author, thisMessage);
+		}
+	}
+
+	private static async ValueTask ProcessInteraction(Interaction interaction)
+	{
+		if (interaction is not ButtonInteraction buttonInteraction) return;
+
+		ulong? guildId = buttonInteraction.GuildId;
+		if (guildId is null) return;
+
+		string[] buttonIdParts = buttonInteraction.Data.CustomId.Split(":");
+
+		string interactionSource = buttonIdParts[0];
+		if (interactionSource != nameof(DuplicateMessageCleanerService)) return;
+
+		string buttonAction = buttonIdParts[1];
+		ulong affectedUserId = ulong.Parse(buttonIdParts[2]);
+
+		switch(buttonAction)
+		{
+			case BUTTON_ACTION_BAN:
+				await _client.Rest.BanGuildUserAsync(guildId.Value, affectedUserId);
+				await interaction.SendResponseAsync(InteractionCallback.Message("Banned!"));
+				break;
+			case BUTTON_ACTION_REMOVE_TIMEOUT:
+				await _client.Rest.ModifyGuildUserAsync(guildId.Value, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
+				await interaction.SendResponseAsync(InteractionCallback.Message("Timeout removed!"));
+				break;
 		}
 	}
 
