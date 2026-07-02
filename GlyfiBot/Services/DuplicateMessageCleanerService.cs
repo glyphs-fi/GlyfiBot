@@ -48,6 +48,33 @@ public static class DuplicateMessageCleanerService
 		}
 
 		_client.MessageCreate += async message => await ProcessMessage(message);
+		_client.InteractionCreate += async interaction =>
+		{
+			if (interaction is not ButtonInteraction buttonInteraction) return;
+
+			ulong? guildId = buttonInteraction.GuildId;
+			if (guildId is null) return;
+
+			string[] buttonIdParts = buttonInteraction.Data.CustomId.Split(":");
+
+			string interactionSource = buttonIdParts[0];
+			if (interactionSource != nameof(DuplicateMessageCleanerService)) return;
+
+			string buttonAction = buttonIdParts[1];
+			ulong affectedUserId = ulong.Parse(buttonIdParts[2]);
+
+			switch(buttonAction)
+			{
+				case "ban":
+					await _client.Rest.BanGuildUserAsync(guildId.Value, affectedUserId);
+					await interaction.SendResponseAsync(InteractionCallback.Message("Banned!"));
+					break;
+				case "unmute":
+					await _client.Rest.ModifyGuildUserAsync(guildId.Value, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
+					await interaction.SendResponseAsync(InteractionCallback.Message("Unmuted!"));
+					break;
+			}
+		};
 	}
 
 	public static void RemoveNotificationChannel(Guild guild)
@@ -147,6 +174,10 @@ public static class DuplicateMessageCleanerService
 						AccentColor = new Color(255, 0, 0),
 						Components = components,
 					},
+					new ActionRowProperties([
+						new ButtonProperties($"{nameof(DuplicateMessageCleanerService)}:ban:{prevMessage.Author.Id}", "Ban", EmojiProperties.Standard("🔨"), ButtonStyle.Danger),
+						new ButtonProperties($"{nameof(DuplicateMessageCleanerService)}:unmute:{prevMessage.Author.Id}", "Unmute", EmojiProperties.Standard("🔊"), ButtonStyle.Success),
+					]),
 				],
 				Flags = MessageFlags.IsComponentsV2,
 			});
