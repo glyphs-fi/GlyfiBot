@@ -126,8 +126,10 @@ public static class DuplicateMessageCleanerService
 	{
 		if (interaction is not ButtonInteraction buttonInteraction) return;
 
-		ulong? guildId = buttonInteraction.GuildId;
-		if (guildId is null) return;
+		Guild? guild = buttonInteraction.Guild;
+		if (guild is null) return;
+
+		if (interaction.User is not GuildUser guildUser) return;
 
 		string[] buttonIdParts = buttonInteraction.Data.CustomId.Split(":");
 
@@ -136,15 +138,26 @@ public static class DuplicateMessageCleanerService
 
 		string buttonAction = buttonIdParts[1];
 		ulong affectedUserId = ulong.Parse(buttonIdParts[2]);
+		Permissions permissions = guildUser.GetPermissions(guild);
 
 		switch(buttonAction)
 		{
 			case BUTTON_ACTION_BAN:
-				await _client.Rest.BanGuildUserAsync(guildId.Value, affectedUserId);
+				if (!permissions.HasFlag(Permissions.BanUsers))
+				{
+					await interaction.SendResponseAsync(InteractionCallback.Message($"You do not have permission to ban users, {guildUser}!"));
+					return;
+				}
+				await _client.Rest.BanGuildUserAsync(guild.Id, affectedUserId);
 				await interaction.SendResponseAsync(InteractionCallback.Message("Banned!"));
 				break;
 			case BUTTON_ACTION_REMOVE_TIMEOUT:
-				await _client.Rest.ModifyGuildUserAsync(guildId.Value, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
+				if (!permissions.HasFlag(Permissions.ModerateUsers))
+				{
+					await interaction.SendResponseAsync(InteractionCallback.Message($"You do not have permission to remove timeouts, {guildUser}!"));
+					return;
+				}
+				await _client.Rest.ModifyGuildUserAsync(guild.Id, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
 				await interaction.SendResponseAsync(InteractionCallback.Message("Timeout removed!"));
 				break;
 		}
