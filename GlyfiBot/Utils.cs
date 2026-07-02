@@ -359,8 +359,35 @@ public static partial class Utils
 		return hash;
 	}
 }
+public class InteractionDataContainer<T> where T : IParsable<T>
+{
+	public readonly string Source;
+	public readonly string Type;
+	public readonly T Extra;
+
+	public InteractionDataContainer(string source, string type, T extra)
+	{
+		Source = source;
+		Type = type;
+		Extra = extra;
+	}
+
+	public InteractionDataContainer(string toParse)
+	{
+		string[] parts = toParse.Split(":");
+		Source = parts[0];
+		Type = parts[1];
+		Extra = T.Parse(parts[2], null);
+	}
+
+	public override string ToString()
+	{
+		return $"{Source}:{Type}:{Extra}";
+	}
+}
 public class SimpleCommandFailException(string message) : Exception(message);
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(Dictionary<ulong, string>))]
+[JsonSerializable(typeof(Dictionary<ulong, ulong>))]
 public partial class ToJson : JsonSerializerContext;
