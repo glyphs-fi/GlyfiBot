@@ -36,7 +36,6 @@ jobs:
       with:
         submodules: recursive
         token: ${{ secrets.LICENCES_REPO_FG_PAT }}
-        allow-unsafe-pr-checkout: true
 
     - name: Install .NET
       uses: actions/setup-dotnet@v5
