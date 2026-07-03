@@ -15,7 +15,6 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 	private static ConcurrentDictionary<ulong, WatchedChannel> _stickyMessages = null!;
 
 	private static GatewayClient _client = null!;
-	private static ulong _botUserId;
 
 	/// The delay for between sending the sticky message.<br/>
 	/// Used in <see cref="WatchedChannel.SendMessageDelayed"/>
@@ -24,7 +23,6 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 	public static async Task Load(GatewayClient client)
 	{
 		_client = client;
-		_botUserId = (await _client.Rest.GetCurrentUserAsync()).Id;
 
 		if (File.Exists(MESSAGES_FILE))
 		{
@@ -43,7 +41,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 
 	private static async ValueTask ProcessMessage(Message message)
 	{
-		if (message.Author.Id == _botUserId) return; // Do not reply after own messages
+		if (message.Author.Id == Program.BotUser.Id) return; // Do not reply after own messages
 
 		ulong channelId = message.ChannelId;
 		if (_stickyMessages.TryGetValue(channelId, out WatchedChannel? watchedChannel))
@@ -112,7 +110,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 			IAsyncEnumerable<RestMessage> asyncEnumerable = _client.Rest.GetMessagesAsync(channelId);
 			await foreach(RestMessage message in asyncEnumerable)
 			{
-				if (message.Author.Id == _botUserId && message.Content == _message)
+				if (message.Author.Id == Program.BotUser.Id && message.Content == _message)
 				{
 					_previousMessageId = message.Id;
 					break;

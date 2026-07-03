@@ -34,12 +34,10 @@ public static class DuplicateMessageCleanerService
 	private static readonly ConcurrentDictionary<ulong, Message> _userMessages = new();
 
 	private static GatewayClient _client = null!;
-	private static ulong _botUserId;
 
 	public static async Task RunAsync(GatewayClient client)
 	{
 		_client = client;
-		_botUserId = (await _client.Rest.GetCurrentUserAsync()).Id;
 
 		if (File.Exists(MOD_CHANNELS_FILE))
 		{
@@ -70,10 +68,10 @@ public static class DuplicateMessageCleanerService
 
 	private static async ValueTask ProcessMessage(Message thisMessage)
 	{
-		ulong author = thisMessage.Author.Id;
+		ulong authorId = thisMessage.Author.Id;
 
 		// Do not check own bot messages
-		if (author == _botUserId) return;
+		if (authorId == Program.BotUser.Id) return;
 
 		// Do not check in non-guild areas
 		if (thisMessage.Author is not GuildUser guildUser) return;
@@ -84,7 +82,7 @@ public static class DuplicateMessageCleanerService
 		if (permissions.HasFlag(Permissions.ManageMessages)) return;
 
 		// Is this user's previous message loaded?
-		if (_userMessages.TryGetValue(author, out Message? prevMessage))
+		if (_userMessages.TryGetValue(authorId, out Message? prevMessage))
 		{
 			// If there isn't enough time between this new message and the previous one...
 			TimeSpan diff = thisMessage.CreatedAt - prevMessage.CreatedAt;
@@ -111,12 +109,12 @@ public static class DuplicateMessageCleanerService
 				}
 			}
 			// Finally, we update the user's previous message
-			_userMessages.TryUpdate(author, thisMessage, prevMessage);
+			_userMessages.TryUpdate(authorId, thisMessage, prevMessage);
 		}
 		else
 		{
 			// Add this message to the bot's memory
-			_userMessages.TryAdd(author, thisMessage);
+			_userMessages.TryAdd(authorId, thisMessage);
 		}
 	}
 

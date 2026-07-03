@@ -15,6 +15,7 @@ namespace GlyfiBot;
 static internal class Program
 {
 	public static readonly HttpClient HttpClient = new();
+	public static User BotUser { get; private set; } = null!;
 
 	private const string DATA_DIR = "data";
 	public const string SETTINGS_DIR = $"{DATA_DIR}/settings";
@@ -91,6 +92,8 @@ static internal class Program
 			Console.WriteLine($"Saving Token to {tokenFile}");
 			await File.WriteAllTextAsync(tokenFile, token);
 		}
+
+		BotUser = await client.Rest.GetCurrentUserAsync();
 
 		await SetTheEmojiCommand.Load();
 
