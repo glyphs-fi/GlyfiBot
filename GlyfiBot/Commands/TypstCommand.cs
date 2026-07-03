@@ -527,25 +527,8 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	/// <exception cref="FileNotFoundException">If the download did not contain the main.typ file</exception>
 	public static async Task<string> SetupScript(SlashCommandContext context)
 	{
-		string latestCommitHash = await GetLatestCommitHash(SCRIPTS_REPO_NAME);
-
-		string scriptDir = Path.Join(Program.TYPST_SCRIPT_DIR, $"{SCRIPTS_REPO_NAME}-{latestCommitHash}");
-		if (!Directory.Exists(scriptDir))
-		{
-			await context.ModifyEphemeralResponseAsync("Downloading script... (This will only happen once)");
-
-			Directory.CreateDirectory(scriptDir);
-			string zipPath = Path.Join(Program.TYPST_SCRIPT_DIR, $"{latestCommitHash}.zip");
-			{
-				await using Stream networkStream = await Program.HttpClient.GetStreamAsync($"https://github.com/glyphs-fi/{SCRIPTS_REPO_NAME}/archive/{latestCommitHash}.zip");
-				await using FileStream fileStream = new(zipPath, FileMode.CreateNew);
-				await networkStream.CopyToAsync(fileStream);
-			}
-
-			await context.ModifyEphemeralResponseAsync("Extracting script zip... (This will only happen once)");
-			await ExtractArchive(zipPath);
-		}
-
+		await context.ModifyEphemeralResponseAsync("Setting up the Typst script... (This may take a while, the first time)");
+		(string scriptDir, bool _) = await DownloadRepo(SCRIPTS_REPO_NAME, Program.TYPST_SCRIPT_DIR);
 		string scriptPath = Path.Join(scriptDir, "main.typ");
 		return File.Exists(scriptPath) ? scriptPath : throw new FileNotFoundException("Could not find `main.typ` in the script folder!");
 	}

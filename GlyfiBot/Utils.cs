@@ -340,6 +340,25 @@ public static partial class Utils
 		throw new Exception("Failed to retrieve the latest commit hash of the Typst script!");
 	}
 
+	public static async Task<(string repoDir, bool didDownload)> DownloadRepo(string repoName, string destinationDirectory)
+	{
+		string latestCommitHash = await GetLatestCommitHash(repoName);
+
+		string repoDir = Path.Join(destinationDirectory, $"{repoName}-{latestCommitHash}");
+		if (Directory.Exists(repoDir)) return (repoDir, false);
+		Directory.CreateDirectory(repoDir);
+		string zipPath = Path.Join(destinationDirectory, $"{latestCommitHash}.zip");
+		{
+			await using Stream networkStream = await Program.HttpClient.GetStreamAsync($"https://github.com/glyphs-fi/{repoName}/archive/{latestCommitHash}.zip");
+			await using FileStream fileStream = new(zipPath, FileMode.CreateNew);
+			await networkStream.CopyToAsync(fileStream);
+		}
+
+		await ExtractArchive(zipPath);
+
+		return (repoDir, true);
+	}
+
 	public static string? ExecutableGitHash()
 	{
 		Assembly? assembly = Assembly.GetEntryAssembly();

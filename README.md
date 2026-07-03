@@ -15,10 +15,16 @@ The goal of this project is to encourage very collaborative development on this 
   - Only Administrators can run this command, [by default](#command-permissions).
 
 
-- `/set-dupe-notif-channel`: Set up in which channel the Moderation Notifications for the Duplicate Message Cleaner will be sent
+- `/set-dupe-notif-channel`: Set up in which channel the Moderation Notifications for the Duplicate Message Cleaner will be sent.
   - If unset, it will notify (without any details) in the first channel that has "general" in the name.
   - Leave empty to unset the notification channel. It will go back to being like ↑
   - Only Administrators can run this command, [by default](#command-permissions).
+
+
+- `/set-rules-channel`: Set up in which channel the rules will be posted and updated.
+  - It will check for updates every hour.
+  - Leave empty to unset the rules channel. It will delete all its messages from that channel as cleanup.
+  - Only Administrators can run this command, [by default](#command-permissions)
 
 
 - `/typst announcement`: Generates an announcement image with our Typst script.
