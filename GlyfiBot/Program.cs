@@ -197,7 +197,9 @@ static internal class Program
 		await Task.WhenAll([
 			ForeverService.RunAsync(),
 			StatusChangerService.RunAsync(client),
+#if !DEBUG
 			UpdateCheckerService.RunAsync(client),
+#endif
 			DuplicateMessageCleanerService.RunAsync(client),
 		]);
 	}
