@@ -322,10 +322,9 @@ public static partial class Utils
 	private static partial Regex HashRegex();
 
 	/// Gets latest commit hash of one of our GitHub repos (org: <c>glyphs-fi</c>)
-	public static async Task<string> GetLatestCommitHash(string repoName, HttpClient? client = null)
+	public static async Task<string> GetLatestCommitHash(string repoName)
 	{
-		client ??= new HttpClient();
-		await using Stream networkStream = await client.GetStreamAsync($"https://github.com/glyphs-fi/{repoName}/commit/main");
+		await using Stream networkStream = await Program.HttpClient.GetStreamAsync($"https://github.com/glyphs-fi/{repoName}/commit/main");
 		using StreamReader streamReader = new(networkStream);
 
 		Regex pattern = HashRegex();

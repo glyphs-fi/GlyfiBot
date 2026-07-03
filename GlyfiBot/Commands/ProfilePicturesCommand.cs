@@ -135,13 +135,12 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 		string pfpsPath = Path.Join(Program.PFPS_DIR, interaction.Id.ToString());
 		Directory.CreateDirectory(pfpsPath);
 
-		using HttpClient client = new();
 		foreach(User user in users)
 		{
 			sb.AppendLine($"- {user.ToString()}");
 			DownloadFile downloadFile = await GetAvatar(user, downloadFormat, downloadAnimated, animatedDownloadFormat, filenameType);
 			string path = Path.Join(pfpsPath, downloadFile.Filename);
-			await using Stream networkStream = await client.GetStreamAsync(downloadFile.DownloadUrl);
+			await using Stream networkStream = await Program.HttpClient.GetStreamAsync(downloadFile.DownloadUrl);
 			await using FileStream fileStream = new(path, FileMode.CreateNew);
 			await networkStream.CopyToAsync(fileStream);
 		}

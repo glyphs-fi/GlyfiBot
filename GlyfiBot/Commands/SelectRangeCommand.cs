@@ -143,7 +143,6 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			Directory.CreateDirectory(flatPath);
 		}
 
-		using HttpClient client = new();
 		foreach((User author, List<Attachment> attachmentFiles) in submissions)
 		{
 			sb.AppendLine($"- {author.ToString()}");
@@ -162,7 +161,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 				}
 
 				{
-					await using Stream networkStream = await client.GetStreamAsync(attachmentFile.Url);
+					await using Stream networkStream = await Program.HttpClient.GetStreamAsync(attachmentFile.Url);
 					await using FileStream fileStream = new(path, FileMode.CreateNew);
 					await networkStream.CopyToAsync(fileStream);
 				}

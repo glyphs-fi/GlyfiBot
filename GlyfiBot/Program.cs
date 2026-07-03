@@ -14,6 +14,8 @@ namespace GlyfiBot;
 
 static internal class Program
 {
+	public static readonly HttpClient HttpClient = new();
+
 	private const string DATA_DIR = "data";
 	public const string SETTINGS_DIR = $"{DATA_DIR}/settings";
 	public const string SELECTIONS_DIR = $"{DATA_DIR}/selections";

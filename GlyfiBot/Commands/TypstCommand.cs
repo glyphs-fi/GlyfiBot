@@ -94,8 +94,6 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	/// https://typst.app/docs/reference/visualize/image/#parameters-format
 	private static readonly HashSet<string> _supportedExtensions = new(StringComparer.OrdinalIgnoreCase) {".png", ".jpg", ".jpeg", ".gif", ".svg", ".pdf", ".webp"};
 
-	private static readonly HttpClient _client = new();
-
 	/// To prevent multiple commands from running at the same time, each command has a blocker from this.
 	/// This is necessary because file operations (like downloading the Typst Compiler and our Script) in the same folder at the same time could lead to issues.
 	private static readonly ProgressTracker _progressTracker = new();
@@ -255,7 +253,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			Attachment submission = allSubmissions[i];
 			string path = Path.Join(imagesDir, $"{challengeType.GetNameForSubmission()}_{i + 1}");
 
-			await using Stream networkStream = await _client.GetStreamAsync(submission.Url);
+			await using Stream networkStream = await Program.HttpClient.GetStreamAsync(submission.Url);
 			await using FileStream fileStream = new(path, FileMode.CreateNew);
 			await networkStream.CopyToAsync(fileStream);
 		}
@@ -375,7 +373,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 				string path = Path.Join(pfpDir, avatarDownloadFile.Filename);
 				if (!File.Exists(path))
 				{
-					await using Stream networkStream = await _client.GetStreamAsync(avatarDownloadFile.DownloadUrl);
+					await using Stream networkStream = await Program.HttpClient.GetStreamAsync(avatarDownloadFile.DownloadUrl);
 					await using FileStream fileStream = new(path, FileMode.CreateNew);
 					await networkStream.CopyToAsync(fileStream);
 				}
@@ -386,7 +384,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 				Attachment submissionAttachment = message.Attachments.First(attachment => _supportedExtensions.Contains(Path.GetExtension(attachment.FileName)));
 				string path = Path.Join(imagesDir, $"{challengeType.GetNameForSubmission()}Winner{level.UpperFirst()}");
 
-				await using Stream networkStream = await _client.GetStreamAsync(submissionAttachment.Url);
+				await using Stream networkStream = await Program.HttpClient.GetStreamAsync(submissionAttachment.Url);
 				await using FileStream fileStream = new(path, FileMode.CreateNew);
 				await networkStream.CopyToAsync(fileStream);
 			}
@@ -529,7 +527,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	/// <exception cref="FileNotFoundException">If the download did not contain the main.typ file</exception>
 	public static async Task<string> SetupScript(SlashCommandContext context)
 	{
-		string latestCommitHash = await GetLatestCommitHash(SCRIPTS_REPO_NAME, _client);
+		string latestCommitHash = await GetLatestCommitHash(SCRIPTS_REPO_NAME);
 
 		string scriptDir = Path.Join(Program.TYPST_SCRIPT_DIR, $"{SCRIPTS_REPO_NAME}-{latestCommitHash}");
 		if (!Directory.Exists(scriptDir))
@@ -539,7 +537,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			Directory.CreateDirectory(scriptDir);
 			string zipPath = Path.Join(Program.TYPST_SCRIPT_DIR, $"{latestCommitHash}.zip");
 			{
-				await using Stream networkStream = await _client.GetStreamAsync($"https://github.com/glyphs-fi/{SCRIPTS_REPO_NAME}/archive/{latestCommitHash}.zip");
+				await using Stream networkStream = await Program.HttpClient.GetStreamAsync($"https://github.com/glyphs-fi/{SCRIPTS_REPO_NAME}/archive/{latestCommitHash}.zip");
 				await using FileStream fileStream = new(zipPath, FileMode.CreateNew);
 				await networkStream.CopyToAsync(fileStream);
 			}
@@ -573,7 +571,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			Directory.CreateDirectory(typstExeVersionDir);
 			string archivePath = Path.Join(typstExeVersionDir, Path.GetFileName(typstDownloadURL));
 			{
-				await using Stream networkStream = await _client.GetStreamAsync(typstDownloadURL);
+				await using Stream networkStream = await Program.HttpClient.GetStreamAsync(typstDownloadURL);
 				await using FileStream fileStream = new(archivePath, FileMode.CreateNew);
 				await networkStream.CopyToAsync(fileStream);
 			}
