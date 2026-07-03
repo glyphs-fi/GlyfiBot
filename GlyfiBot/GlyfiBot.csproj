@@ -17,7 +17,7 @@
 	<ItemGroup>
 		<PackageReference Include="NetCord" Version="1.0.0-alpha.488"/>
 		<PackageReference Include="NetCord.Services" Version="1.0.0-alpha.488"/>
-		<PackageReference Include="JetBrains.Annotations" Version="2025.2.4"/>
+		<PackageReference Include="JetBrains.Annotations" Version="2026.2.0"/>
 		<PackageReference Include="SixLabors.ImageSharp.Drawing" Version="3.0.0" />
 	</ItemGroup>
 
