@@ -1,3 +1,3 @@
 [submodule "licences"]
 	path = licences
-	url = https://github.com/glyphs-fi/licences.git
+	url = git@github.com:glyphs-fi/licences.git
