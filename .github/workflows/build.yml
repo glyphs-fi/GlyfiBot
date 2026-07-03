@@ -36,8 +36,7 @@ jobs:
       with:
         submodules: recursive
         token: ${{ secrets.LICENCES_REPO_FG_PAT }}
-        # Only allow unsafe PR checkout if the PR is from the same repository; PRs from forks will not get this.
-        allow-unsafe-pr-checkout: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        allow-unsafe-pr-checkout: true
 
     - name: Install .NET
       uses: actions/setup-dotnet@v5
