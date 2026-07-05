@@ -1,5 +1,7 @@
+using NetCord;
 using NetCord.Gateway;
 using NetCord.Rest;
+using System.Text.Json;
 using static GlyfiBot.Utils;
 
 namespace GlyfiBot.Services;
@@ -86,7 +88,7 @@ public static class RulesUpdaterService
 		ulong channelId = _channelId.Value;
 
 		(string allRulesDir, bool didDownload) = await DownloadRepo(RULES_REPO_NAME, Program.RULES_DIR);
-		if (!didDownload && !force) return; // Did not download, so there was nothing new, so we don't need to update
+		// if (!didDownload && !force) return; // Did not download, so there was nothing new, so we don't need to update
 
 		string discordRulesDir = Path.Join(allRulesDir, "Discord");
 		if (!Directory.Exists(discordRulesDir)) throw new DirectoryNotFoundException("Could not find Discord rules folder!");
@@ -124,7 +126,14 @@ public static class RulesUpdaterService
 			if (!messageProperties.Content.IsNullOrWhiteSpace() && messageProperties.Content.Trim() == message.Content.Trim()) continue;
 			// I've decided to always edit the images, cause I'm not diffing those.
 
-			await message.Edit(messageProperties);
+			try
+			{
+				await message.Edit(messageProperties);
+			}
+			catch(RestException e)
+			{
+				await message.Edit(GetMessagePropertiesForError(e, file));
+			}
 		}
 	}
 
@@ -134,7 +143,14 @@ public static class RulesUpdaterService
 
 		foreach(string file in files)
 		{
-			await _client.Rest.SendMessageAsync(channelId, await GetMessagePropertiesForFile(file));
+			try
+			{
+				await _client.Rest.SendMessageAsync(channelId, await GetMessagePropertiesForFile(file));
+			}
+			catch(RestException e)
+			{
+				await _client.Rest.SendMessageAsync(channelId, GetMessagePropertiesForError(e, file));
+			}
 		}
 	}
 
@@ -165,7 +181,26 @@ public static class RulesUpdaterService
 			{
 				Content = await File.ReadAllTextAsync(file),
 			},
+			".json" => JsonSerializer.Deserialize(await File.ReadAllTextAsync(file), ToJson.Default.MessageProperties)!,
 			_ => throw new Exception($"Cannot handle file type {ext} from {file}"),
+		};
+	}
+
+	private static MessageProperties GetMessagePropertiesForError(RestException restException, string file)
+	{
+		string error = JsonPrettyPrint(restException.Error!.ToString()).Replace("\\u0022", "'").Replace("\\u0027", "'");
+		return new MessageProperties
+		{
+			Embeds =
+			[
+				new EmbedProperties
+				{
+					Title = $"Failed to send message: {restException.Message}",
+					Description = $"```json\n{error}\n```",
+					Footer = new EmbedFooterProperties {Text = file},
+					Color = new Color(255, 0, 0),
+				},
+			],
 		};
 	}
 }

@@ -9,6 +9,7 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
@@ -394,6 +395,12 @@ public static partial class Utils
 
 		return hash;
 	}
+
+	public static string JsonPrettyPrint(string json)
+	{
+		JsonElement jsonElement = JsonSerializer.Deserialize(json, ToJson.Default.JsonElement);
+		return JsonSerializer.Serialize(jsonElement, ToJson.Default.JsonElement);
+	}
 }
 public class InteractionDataContainer<T> where T : IParsable<T>
 {
@@ -426,4 +433,6 @@ public class SimpleCommandFailException(string message) : Exception(message);
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(Dictionary<ulong, string>))]
 [JsonSerializable(typeof(Dictionary<ulong, ulong>))]
+[JsonSerializable(typeof(MessageProperties))]
+[JsonSerializable(typeof(JsonElement))]
 public partial class ToJson : JsonSerializerContext;
