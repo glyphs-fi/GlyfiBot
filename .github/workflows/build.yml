@@ -69,6 +69,10 @@ jobs:
     permissions:
       contents: write
 
+    environment:
+      name: github-releases
+      url: ${{ steps.releaser.outputs.url }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -81,6 +85,8 @@ jobs:
           skip-decompress: true
 
       - name: Create release
+        id: releaser
         run: |
           GIT_HASH_SHORT=$(git rev-parse --short HEAD)
-          gh release create "v_$GIT_HASH_SHORT" --draft --title "${{ github.sha }}" --latest --fail-on-no-commits artifacts/*
+          RELEASE_URL=$(gh release create "v_$GIT_HASH_SHORT" --draft --title "${{ github.sha }}" --latest --fail-on-no-commits artifacts/*)
+          echo "url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
