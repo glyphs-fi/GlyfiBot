@@ -69,7 +69,9 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v7
         with:
+          path: artifacts
           merge-multiple: true
 
       - name: Display structure of downloaded files
+        working-directory: artifacts
         run: ls -R
