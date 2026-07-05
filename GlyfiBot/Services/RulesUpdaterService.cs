@@ -88,7 +88,7 @@ public static class RulesUpdaterService
 		ulong channelId = _channelId.Value;
 
 		(string allRulesDir, bool didDownload) = await DownloadRepo(RULES_REPO_NAME, Program.RULES_DIR);
-		// if (!didDownload && !force) return; // Did not download, so there was nothing new, so we don't need to update
+		if (!didDownload && !force) return; // Did not download, so there was nothing new, so we don't need to update
 
 		string discordRulesDir = Path.Join(allRulesDir, "Discord");
 		if (!Directory.Exists(discordRulesDir)) throw new DirectoryNotFoundException("Could not find Discord rules folder!");
