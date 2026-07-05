@@ -91,7 +91,13 @@ public static class RulesUpdaterService
 		string discordRulesDir = Path.Join(allRulesDir, "Discord");
 		if (!Directory.Exists(discordRulesDir)) throw new DirectoryNotFoundException("Could not find Discord rules folder!");
 
-		string[] files = Directory.GetFiles(discordRulesDir);
+		string[] files = Directory.GetFiles(discordRulesDir).Where(file =>
+		{
+			string fileName = Path.GetFileName(file);
+			if (fileName.StartsWith('.')) return false;
+			if (string.Equals(fileName, "README.md", StringComparison.InvariantCultureIgnoreCase)) return false;
+			return true;
+		}).ToArray();
 		files.Sort();
 
 		List<RestMessage> messages = await GetMessages(channelId);
