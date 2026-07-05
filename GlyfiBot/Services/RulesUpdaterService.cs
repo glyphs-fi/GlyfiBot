@@ -118,11 +118,7 @@ public static class RulesUpdaterService
 			if (!messageProperties.Content.IsNullOrWhiteSpace() && messageProperties.Content.Trim() == message.Content.Trim()) continue;
 			// I've decided to always edit the images, cause I'm not diffing those.
 
-			await message.ModifyAsync(options =>
-			{
-				options.Content = messageProperties.Content ?? "";
-				options.Attachments = messageProperties.Attachments ?? [];
-			});
+			await message.Edit(messageProperties);
 		}
 	}
 

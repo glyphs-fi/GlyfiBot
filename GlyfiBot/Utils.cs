@@ -134,35 +134,53 @@ public static partial class Utils
 		}
 	}
 
-	/// <summary>
-	/// Whether a specific message has been reacted to with this specific emoji.
-	/// </summary>
-	///
 	/// <param name="message">The message</param>
-	/// <param name="emoji">The emoji</param>
-	///
-	/// <returns>Whether it's happened or not</returns>
-	public static bool HasBeenReactedToWith(this RestMessage message, ReactionEmojiProperties emoji)
+	extension(RestMessage message)
 	{
-		ulong? id = emoji.Id;
-		string name = emoji.Name;
-
-		foreach(MessageReaction messageReaction in message.Reactions)
+		/// <summary>
+		/// Whether a specific message has been reacted to with this specific emoji.
+		/// </summary>
+		/// <param name="emoji">The emoji</param>
+		///
+		/// <returns>Whether it's happened or not</returns>
+		public bool HasBeenReactedToWith(ReactionEmojiProperties emoji)
 		{
-			ulong? reactionId = messageReaction.Emoji.Id;
-			string? reactionName = messageReaction.Emoji.Name;
+			ulong? id = emoji.Id;
+			string name = emoji.Name;
 
-			if (id is not null && reactionId is not null)
+			foreach(MessageReaction messageReaction in message.Reactions)
 			{
-				if (id == reactionId) return true;
+				ulong? reactionId = messageReaction.Emoji.Id;
+				string? reactionName = messageReaction.Emoji.Name;
+
+				if (id is not null && reactionId is not null)
+				{
+					if (id == reactionId) return true;
+				}
+				else
+				{
+					if (name == reactionName) return true;
+				}
 			}
-			else
-			{
-				if (name == reactionName) return true;
-			}
+
+			return false;
 		}
 
-		return false;
+		/// <summary>
+		/// Edit a message with the provided message properties.
+		/// </summary>
+		/// <param name="messageProperties">The message properties</param>
+		public async Task Edit(MessageProperties messageProperties)
+		{
+			await message.ModifyAsync(options =>
+			{
+				options.Content = messageProperties.Content ?? "";
+				options.Attachments = messageProperties.Attachments ?? [];
+				options.Embeds = messageProperties.Embeds ?? [];
+				options.Components = messageProperties.Components ?? [];
+				options.Flags = messageProperties.Flags ?? 0;
+			});
+		}
 	}
 
 	extension<T>(IAsyncEnumerable<T> enumerable)
