@@ -68,6 +68,9 @@ jobs:
       GH_TOKEN: ${{ github.token }}
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
       - name: Download Artifacts
         uses: actions/download-artifact@v8
         with:
@@ -75,10 +78,6 @@ jobs:
           merge-multiple: true
           skip-decompress: true
 
-      - name: Display structure of downloaded files
-        working-directory: artifacts
-        run: ls -R
-
       - name: Create release
         run: |
-          gh release create "v_${{ github.sha }}" --draft --target "main" --title "Commit" --latest --fail-on-no-commits --verify-tag artifacts/*
+          gh release create "v_${{ github.sha }}" --draft --title "Commit" --latest --fail-on-no-commits --verify-tag artifacts/*
