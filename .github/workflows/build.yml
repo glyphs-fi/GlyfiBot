@@ -59,3 +59,17 @@ jobs:
         with:
           name: GlyfiBot_${{ matrix.runtime }}
           path: "GlyfiBot/bin/Release/net${{ env.DOTNET_VERSION }}/${{ matrix.runtime }}/publish/"
+
+  release:
+    needs: build
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v7
+        with:
+          merge-multiple: true
+
+      - name: Display structure of downloaded files
+        run: ls -R
