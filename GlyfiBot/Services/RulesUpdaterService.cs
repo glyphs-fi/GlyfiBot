@@ -120,7 +120,16 @@ public static class RulesUpdaterService
 			RestMessage message = messages[i];
 			string file = files[i];
 
-			MessageProperties messageProperties = await GetMessagePropertiesForFile(file);
+			MessageProperties messageProperties;
+			try
+			{
+				messageProperties = await GetMessagePropertiesForFile(file);
+			}
+			catch(JsonException e)
+			{
+				await message.Edit(GetMessagePropertiesForError(e, file));
+				continue;
+			}
 
 			// If there is content and the content is the same, then we don't edit, cause there's no need to
 			if (!messageProperties.Content.IsNullOrWhiteSpace() && messageProperties.Content.Trim() == message.Content.Trim()) continue;
@@ -148,6 +157,10 @@ public static class RulesUpdaterService
 				await _client.Rest.SendMessageAsync(channelId, await GetMessagePropertiesForFile(file));
 			}
 			catch(RestException e)
+			{
+				await _client.Rest.SendMessageAsync(channelId, GetMessagePropertiesForError(e, file));
+			}
+			catch(JsonException e)
 			{
 				await _client.Rest.SendMessageAsync(channelId, GetMessagePropertiesForError(e, file));
 			}
@@ -197,6 +210,23 @@ public static class RulesUpdaterService
 				{
 					Title = $"Failed to send message: {restException.Message}",
 					Description = $"```json\n{error}\n```",
+					Footer = new EmbedFooterProperties {Text = file},
+					Color = new Color(255, 0, 0),
+				},
+			],
+		};
+	}
+
+	private static MessageProperties GetMessagePropertiesForError(JsonException jsonException, string file)
+	{
+		return new MessageProperties
+		{
+			Embeds =
+			[
+				new EmbedProperties
+				{
+					Title = $"Failed to send message: {jsonException.Message}",
+					Description = $"```\n{jsonException.StackTrace}\n```",
 					Footer = new EmbedFooterProperties {Text = file},
 					Color = new Color(255, 0, 0),
 				},
