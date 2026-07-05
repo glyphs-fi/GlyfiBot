@@ -88,5 +88,7 @@ jobs:
         id: releaser
         run: |
           GIT_HASH_SHORT=$(git rev-parse --short HEAD)
-          RELEASE_URL=$(gh release create "v_$GIT_HASH_SHORT" --draft --title "${{ github.sha }}" --latest --fail-on-no-commits artifacts/*)
+          GIT_COMMIT_MESSAGE=${{ github.event.head_commit.message }}
+          GIT_COMMIT_TITLE=$(echo "${GIT_COMMIT_MESSAGE}" | head -1)
+          RELEASE_URL=$(gh release create "v_${{ github.sha }}" --draft --title "$GIT_HASH_SHORT: $GIT_COMMIT_TITLE" --notes "$GIT_COMMIT_MESSAGE\n\`${{ github.sha }}\`" --latest --fail-on-no-commits artifacts/*)
           echo "url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
