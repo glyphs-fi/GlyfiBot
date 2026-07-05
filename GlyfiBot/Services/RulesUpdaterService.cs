@@ -120,11 +120,9 @@ public static class RulesUpdaterService
 
 			await message.ModifyAsync(options =>
 			{
-				options.Attachments = [];
-				options.Content = messageProperties.Content;
-				options.Attachments = messageProperties.Attachments;
+				options.Content = messageProperties.Content ?? "";
+				options.Attachments = messageProperties.Attachments ?? [];
 			});
-
 		}
 	}
 
