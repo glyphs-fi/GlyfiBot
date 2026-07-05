@@ -82,4 +82,5 @@ jobs:
 
       - name: Create release
         run: |
-          gh release create "v_${{ github.sha }}" --draft --title "Commit" --latest --fail-on-no-commits artifacts/*
+          GIT_HASH_SHORT=$(git rev-parse --short HEAD)
+          gh release create "v_$GIT_HASH_SHORT" --draft --title "${{ github.sha }}" --latest --fail-on-no-commits artifacts/*
