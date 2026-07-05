@@ -90,6 +90,6 @@ jobs:
           GIT_HASH_SHORT="$(git rev-parse --short HEAD)"
           GIT_COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
           GIT_COMMIT_TITLE=$(echo "${GIT_COMMIT_MESSAGE}" | head -1)
-          printf "\`${{ github.sha }}\`\n$GIT_COMMIT_MESSAGE\n---" >> notes.md
+          printf "\`${{ github.sha }}\`\n$GIT_COMMIT_MESSAGE\n\n---" >> notes.md
           RELEASE_URL=$(gh release create "v_${{ github.sha }}" --draft --title "$GIT_HASH_SHORT: $GIT_COMMIT_TITLE" --notes-file "notes.md" --latest --fail-on-no-commits artifacts/*)
           echo "url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
