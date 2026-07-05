@@ -19,43 +19,43 @@ jobs:
       fail-fast: false
 
       matrix:
-          os: [ ubuntu-latest, windows-latest ]
-          runtime: [ linux-x64, linux-arm64, win-x64 ]
-          configuration: [ Release ]
-          exclude:
-            - os: windows-latest
-              runtime: linux-x64
-            - os: windows-latest
-              runtime: linux-arm64
-            - os: ubuntu-latest
-              runtime: win-x64
+        os: [ ubuntu-latest, windows-latest ]
+        runtime: [ linux-x64, linux-arm64, win-x64 ]
+        configuration: [ Release ]
+        exclude:
+          - os: windows-latest
+            runtime: linux-x64
+          - os: windows-latest
+            runtime: linux-arm64
+          - os: ubuntu-latest
+            runtime: win-x64
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v7
-      with:
-        submodules: recursive
-        token: ${{ secrets.LICENCES_REPO_FG_PAT }}
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          token: ${{ secrets.LICENCES_REPO_FG_PAT }}
 
-    - name: Install .NET
-      uses: actions/setup-dotnet@v5
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}.x
+      - name: Install .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
 
-    - name: Install Cross-compilation Tooling
-      if: ${{ matrix.runtime == 'linux-arm64' }}
-      # Packages from https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/cross-compile#linux
-      run: sudo apt update && sudo apt install clang llvm binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu
+      - name: Install Cross-compilation Tooling
+        if: ${{ matrix.runtime == 'linux-arm64' }}
+        # Packages from https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/cross-compile#linux
+        run: sudo apt update && sudo apt install clang llvm binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu
 
-    - name: Publish
-      run: >
-        dotnet publish
-        --runtime ${{ matrix.runtime }}
-        --self-contained
-        --configuration ${{ matrix.configuration }}
+      - name: Publish
+        run: >
+          dotnet publish
+          --runtime ${{ matrix.runtime }}
+          --self-contained
+          --configuration ${{ matrix.configuration }}
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v7
-      with:
-        name: GlyfiBot_${{ matrix.runtime }}
-        path: "GlyfiBot/bin/Release/net${{ env.DOTNET_VERSION }}/${{ matrix.runtime }}/publish/"
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: GlyfiBot_${{ matrix.runtime }}
+          path: "GlyfiBot/bin/Release/net${{ env.DOTNET_VERSION }}/${{ matrix.runtime }}/publish/"
