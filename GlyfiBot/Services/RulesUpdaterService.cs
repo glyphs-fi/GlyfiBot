@@ -94,37 +94,78 @@ public static class RulesUpdaterService
 		string[] files = Directory.GetFiles(discordRulesDir);
 		files.Sort();
 
+		List<RestMessage> messages = await GetMessages(channelId);
+		if (messages.Count == files.Length)
+		{
+			await EditRuleMessages(messages, files);
+		}
+		else
+		{
+			await ClearAndReSendRuleMessages(channelId, files);
+		}
+	}
+
+	private static async Task EditRuleMessages(List<RestMessage> messages, string[] files)
+	{
+		for(int i = 0; i < messages.Count; i++)
+		{
+			RestMessage message = messages[i];
+			string file = files[i];
+
+			MessageProperties messageProperties = await GetMessagePropertiesForFile(file);
+
+			// If there is content and the content is the same, then we don't edit, cause there's no need to
+			if (!messageProperties.Content.IsNullOrWhiteSpace() && messageProperties.Content.Trim() == message.Content.Trim()) continue;
+			// I've decided to always edit the images, cause I'm not diffing those.
+
+			await message.ModifyAsync(options =>
+			{
+				options.Attachments = [];
+				options.Content = messageProperties.Content;
+				options.Attachments = messageProperties.Attachments;
+			});
+
+		}
+	}
+
+	private static async Task ClearAndReSendRuleMessages(ulong channelId, string[] files)
+	{
 		await ClearOldRules(channelId);
 
 		foreach(string file in files)
 		{
-			string ext = Path.GetExtension(file).ToLowerInvariant();
-			switch(ext)
-			{
-				case ".png" or ".jpg" or ".jpeg" or ".gif" or ".webp" or ".webm" or ".mp4":
-					await _client.Rest.SendMessageAsync(channelId, new MessageProperties
-					{
-						Attachments = [new AttachmentProperties(Path.GetFileName(file), new FileStream(file, FileMode.Open))],
-					});
-					break;
-				case ".md" or ".txt":
-					string fileContents = await File.ReadAllTextAsync(file);
-					await _client.Rest.SendMessageAsync(channelId, new MessageProperties
-					{
-						Content = fileContents,
-					});
-					break;
-				default:
-					throw new Exception($"Cannot handle file type {ext} from {file}");
-			}
-
+			await _client.Rest.SendMessageAsync(channelId, await GetMessagePropertiesForFile(file));
 		}
 	}
 
 	private static async Task ClearOldRules(ulong channelId)
 	{
+		List<RestMessage> messages = await GetMessages(channelId);
+		await _client.Rest.DeleteMessagesAsync(channelId, messages.Select(message => message.Id));
+	}
+
+	private static async Task<List<RestMessage>> GetMessages(ulong channelId)
+	{
 		IAsyncEnumerable<RestMessage> asyncEnumerable = _client.Rest.GetMessagesAsync(channelId, new PaginationProperties<ulong> {Direction = PaginationDirection.Before});
-		List<RestMessage> messages = await asyncEnumerable.ToListAsync();
-		await _client.Rest.DeleteMessagesAsync(channelId, messages.Where(message => message.Author.Id == Program.BotUser.Id).Select(message => message.Id));
+		List<RestMessage> messages = await asyncEnumerable.Where(message => message.Author.Id == Program.BotUser.Id).ToListAsync();
+		messages.Sort((messageA, messageB) => messageA.Id.CompareTo(messageB.Id));
+		return messages;
+	}
+
+	private static async Task<MessageProperties> GetMessagePropertiesForFile(string file)
+	{
+		string ext = Path.GetExtension(file).ToLowerInvariant();
+		return ext switch
+		{
+			".png" or ".jpg" or ".jpeg" or ".gif" or ".webp" or ".webm" or ".mp4" => new MessageProperties
+			{
+				Attachments = [new AttachmentProperties(Path.GetFileName(file), new FileStream(file, FileMode.Open))],
+			},
+			".md" or ".txt" => new MessageProperties
+			{
+				Content = await File.ReadAllTextAsync(file),
+			},
+			_ => throw new Exception($"Cannot handle file type {ext} from {file}"),
+		};
 	}
 }
