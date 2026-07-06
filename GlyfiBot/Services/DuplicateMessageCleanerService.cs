@@ -174,13 +174,20 @@ public static class DuplicateMessageCleanerService
 					])));
 				break;
 			case BUTTON_ACTION_REMOVE_TIMEOUT:
-				if (!permissions.HasFlag(Permissions.ModerateUsers))
+				try
 				{
-					await interaction.SendResponseAsync(InteractionCallback.Message($"You do not have permission to remove timeouts, {guildUser}!"));
-					return;
+					if (!permissions.HasFlag(Permissions.ModerateUsers))
+					{
+						await interaction.SendResponseAsync(InteractionCallback.Message($"You do not have permission to remove timeouts, {guildUser}!"));
+						return;
+					}
+					await _client.Rest.ModifyGuildUserAsync(guild.Id, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
+					await interaction.SendResponseAsync(InteractionCallback.Message("Timeout removed!"));
 				}
-				await _client.Rest.ModifyGuildUserAsync(guild.Id, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
-				await interaction.SendResponseAsync(InteractionCallback.Message("Timeout removed!"));
+				catch(RestException e)
+				{
+					await interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removal failed!\n```\n{e}\n```"));
+				}
 				break;
 		}
 	}
