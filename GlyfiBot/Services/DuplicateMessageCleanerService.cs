@@ -63,8 +63,14 @@ public static class DuplicateMessageCleanerService
 				StringBuilder result = new("\n");
 				foreach(Attachment attachment in attachments)
 				{
+					result.Append($"{attachment.ContentType}; ");
+					result.Append($"{attachment.Size} bytes; ");
+					if (attachment is ImageAttachment imageAttachment)
+					{
+						result.Append($"{imageAttachment.Width}×{imageAttachment.Height}; ");
+					}
 					Uri uri = new(attachment.Url);
-					result.AppendLine(Path.GetFileName(uri.LocalPath));
+					result.AppendLine($"{Path.GetFileName(uri.LocalPath)};");
 				}
 				return result.ToString();
 			}
