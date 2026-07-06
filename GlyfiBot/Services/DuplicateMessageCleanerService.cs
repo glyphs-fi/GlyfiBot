@@ -254,11 +254,11 @@ public static class DuplicateMessageCleanerService
 					}
 					await _client.Rest.ModifyGuildUserAsync(guild.Id, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
 					_userMessages.TryRemove(affectedUserId, out _);
-					await interaction.SendResponseAsync(InteractionCallback.Message("Timeout removed!"));
+					await interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removed by {guildUser}!"));
 				}
 				catch(RestException e)
 				{
-					await interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removal failed!\n```\n{e}\n```"));
+					await interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removal by {guildUser} failed!\n```\n{e}\n```"));
 				}
 				break;
 		}
@@ -269,11 +269,13 @@ public static class DuplicateMessageCleanerService
 		Guild? guild = interaction.Guild;
 		if (guild is null) return;
 
+		if (interaction.User is not GuildUser guildUser) return;
+
 		InteractionDataContainer<ulong> interactionData = new(interaction.Data.CustomId);
 		if (interactionData.Source != nameof(DuplicateMessageCleanerService)) return;
 
 		string modalAction = interactionData.Type;
-		ulong affectedUserId = interactionData.Extra;
+		GuildUser affectedUser = await _client.Rest.GetGuildUserAsync(guild.Id, interactionData.Extra);
 
 		switch(modalAction)
 		{
@@ -288,14 +290,14 @@ public static class DuplicateMessageCleanerService
 				int hours = int.Parse(radioGroup.SelectedValue ?? "0");
 				if (hours == 0)
 				{
-					await _client.Rest.BanGuildUserAsync(guild.Id, affectedUserId);
-					await interaction.SendResponseAsync(InteractionCallback.Message("Banned!"));
+					await affectedUser.BanAsync();
+					await interaction.SendResponseAsync(InteractionCallback.Message($"Banned {affectedUser} by {guildUser}!"));
 				}
 				else
 				{
 					int seconds = hours * 60 * 60;
-					await _client.Rest.BanGuildUserAsync(guild.Id, affectedUserId, seconds);
-					await interaction.SendResponseAsync(InteractionCallback.Message($"Banned and messages from the previous {hours} hours were cleaned too!"));
+					await affectedUser.BanAsync(seconds);
+					await interaction.SendResponseAsync(InteractionCallback.Message($"Banned {affectedUser} by {guildUser} and messages from the previous {hours} hours were cleaned too!"));
 				}
 				break;
 		}
