@@ -2,6 +2,7 @@ using NetCord;
 using NetCord.Gateway;
 using NetCord.Rest;
 using System.Collections.Concurrent;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 
@@ -39,6 +40,7 @@ public static class DuplicateMessageCleanerService
 		public ulong Id => message.Id;
 		public User Author => message.Author;
 		public TextChannel? Channel => message.Channel;
+		public MessageReference? MessageReference => message.MessageReference;
 		public async Task Delete() => await message.DeleteAsync();
 
 		private readonly Lazy<string> _comparableContent = new(() => GetContentFromMessage(message));
@@ -71,6 +73,27 @@ public static class DuplicateMessageCleanerService
 		public bool IsEqualTo(UserMessage other)
 		{
 			return string.Equals(ComparableContent, other.ComparableContent, StringComparison.Ordinal);
+		}
+
+		public async Task<bool> IsForwardedFromThread(UserMessage prevMessage)
+		{
+			if (MessageReference is null) return false;
+
+			try
+			{
+				Channel sourceChannel = await _client.Rest.GetChannelAsync(MessageReference.ChannelId);
+				if (sourceChannel is ForumGuildChannel or PublicGuildThread)
+				{
+					return MessageReference.MessageId == prevMessage.Id;
+				}
+			}
+			catch(RestException e) when(e.StatusCode == HttpStatusCode.Forbidden)
+			{
+				// The thread wasn't one of ours, so we don't count it as a valid exception to the duplicate detection system.
+				return false;
+			}
+
+			return false;
 		}
 	}
 
@@ -130,26 +153,30 @@ public static class DuplicateMessageCleanerService
 		// Is this user's previous message loaded?
 		if (_userMessages.TryGetValue(authorId, out UserMessage? prevMessage))
 		{
-			// If there isn't enough time between this new message and the previous one...
-			TimeSpan diff = thisMessage.CreatedAt - prevMessage.CreatedAt;
-			if (diff < COOLDOWN)
+			// We allow messages that are a forward from the previous message if it was posted in a thread
+			if (!await thisMessage.IsForwardedFromThread(prevMessage))
 			{
-				// ...then we compare contents (including attachments!)
-				if (thisMessage.IsEqualTo(prevMessage))
+				// If there isn't enough time between this new message and the previous one...
+				TimeSpan diff = thisMessage.CreatedAt - prevMessage.CreatedAt;
+				if (diff < COOLDOWN)
 				{
-					// If they are the same, then we stop the spam!
+					// ...then we compare contents (including attachments!)
+					if (thisMessage.IsEqualTo(prevMessage))
+					{
+						// If they are the same, then we stop the spam!
 
-					// First we timeout (to prevent further infractions) and we let the mods know
-					await Task.WhenAll([
-						TimeoutUser(guildUser),
-						NotifyMods(prevMessage, thisMessage),
-					]);
+						// First we timeout (to prevent further infractions) and we let the mods know
+						await Task.WhenAll([
+							TimeoutUser(guildUser),
+							NotifyMods(prevMessage, thisMessage),
+						]);
 
-					// Lastly, we clean up the mess
-					await Task.WhenAll([
-						DeleteMessageIfExists(prevMessage),
-						DeleteMessageIfExists(thisMessage),
-					]);
+						// Lastly, we clean up the mess
+						await Task.WhenAll([
+							DeleteMessageIfExists(prevMessage),
+							DeleteMessageIfExists(thisMessage),
+						]);
+					}
 				}
 			}
 			// Finally, we update the user's previous message
