@@ -9,6 +9,7 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
@@ -164,6 +165,22 @@ public static partial class Utils
 			}
 
 			return false;
+		}
+
+		/// <summary>
+		/// Edit a message with the provided message properties.
+		/// </summary>
+		/// <param name="messageProperties">The message properties</param>
+		public async Task Edit(MessageProperties messageProperties)
+		{
+			await message.ModifyAsync(options =>
+			{
+				options.Content = messageProperties.Content ?? "";
+				options.Attachments = messageProperties.Attachments ?? [];
+				options.Embeds = messageProperties.Embeds ?? [];
+				options.Components = messageProperties.Components ?? [];
+				options.Flags = messageProperties.Flags ?? 0;
+			});
 		}
 
 		public bool IsAForward()
@@ -347,6 +364,25 @@ public static partial class Utils
 		throw new Exception("Failed to retrieve the latest commit hash of the Typst script!");
 	}
 
+	public static async Task<(string repoDir, bool didDownload)> DownloadRepo(string repoName, string destinationDirectory)
+	{
+		string latestCommitHash = await GetLatestCommitHash(repoName);
+
+		string repoDir = Path.Join(destinationDirectory, $"{repoName}-{latestCommitHash}");
+		if (Directory.Exists(repoDir)) return (repoDir, false);
+		Directory.CreateDirectory(repoDir);
+		string zipPath = Path.Join(destinationDirectory, $"{latestCommitHash}.zip");
+		{
+			await using Stream networkStream = await Program.HttpClient.GetStreamAsync($"https://github.com/glyphs-fi/{repoName}/archive/{latestCommitHash}.zip");
+			await using FileStream fileStream = new(zipPath, FileMode.CreateNew);
+			await networkStream.CopyToAsync(fileStream);
+		}
+
+		await ExtractArchive(zipPath);
+
+		return (repoDir, true);
+	}
+
 	public static string? ExecutableGitHash()
 	{
 		Assembly? assembly = Assembly.GetEntryAssembly();
@@ -363,6 +399,12 @@ public static partial class Utils
 		}
 
 		return hash;
+	}
+
+	public static string JsonPrettyPrint(string json)
+	{
+		JsonElement jsonElement = JsonSerializer.Deserialize(json, ToJson.Default.JsonElement);
+		return JsonSerializer.Serialize(jsonElement, ToJson.Default.JsonElement);
 	}
 }
 public class InteractionDataContainer<T> where T : IParsable<T>
@@ -396,4 +438,6 @@ public class SimpleCommandFailException(string message) : Exception(message);
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(Dictionary<ulong, string>))]
 [JsonSerializable(typeof(Dictionary<ulong, ulong>))]
+[JsonSerializable(typeof(MessageProperties))]
+[JsonSerializable(typeof(JsonElement))]
 public partial class ToJson : JsonSerializerContext;

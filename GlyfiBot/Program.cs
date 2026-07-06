@@ -23,6 +23,7 @@ static internal class Program
 	public const string PFPS_DIR = $"{DATA_DIR}/pfps";
 	public const string TYPST_EXE_DIR = $"{DATA_DIR}/typst-exe";
 	public const string TYPST_SCRIPT_DIR = $"{DATA_DIR}/typst-script";
+	public const string RULES_DIR = $"{DATA_DIR}/rules";
 	public const string ANNOUNCEMENTS_DIR = $"{DATA_DIR}/announcements";
 	public const string SHOWCASES_DIR = $"{DATA_DIR}/showcases";
 	public const string WINNERS_DIR = $"{DATA_DIR}/winners";
@@ -172,6 +173,7 @@ static internal class Program
 		applicationCommandService.AddModule<StickyMessageCommand>();
 		applicationCommandService.AddModule<VoteReactCommand>();
 		applicationCommandService.AddModule<DuplicateMessageCleanerCommand>();
+		applicationCommandService.AddModule<RuleUpdaterCommand>();
 
 		await applicationCommandService.RegisterCommandsAsync(client.Rest, client.Id);
 
@@ -204,6 +206,7 @@ static internal class Program
 			UpdateCheckerService.RunAsync(client),
 #endif
 			DuplicateMessageCleanerService.RunAsync(client),
+			RulesUpdaterService.RunAsync(client),
 		]);
 	}
 
