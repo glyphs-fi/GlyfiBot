@@ -292,14 +292,24 @@ public static class DuplicateMessageCleanerService
 	/// </summary>
 	private static string GetContentFromMessage(Message message)
 	{
-		if (message.Attachments.Count == 0) return message.Content;
+		if (message.MessageReference?.Type.HasFlag(MessageReferenceType.Forward) ?? false)
+		{
+			MessageSnapshotMessage snapshotMessage = message.MessageSnapshots[0].Message;
+			return $"{snapshotMessage.Content}{AttachmentsToString(snapshotMessage.Attachments)}".Trim();
+		}
 
-		StringBuilder result = new(message.Content);
-		foreach(Attachment attachment in message.Attachments)
+		return $"{message.Content}{AttachmentsToString(message.Attachments)}".Trim();
+	}
+
+	private static string AttachmentsToString(IReadOnlyList<Attachment> attachments)
+	{
+		if (attachments.Count == 0) return string.Empty;
+
+		StringBuilder result = new("\n");
+		foreach(Attachment attachment in attachments)
 		{
 			Uri uri = new(attachment.Url);
-			if (result.Length != 0) result.AppendLine();
-			result.Append(Path.GetFileName(uri.LocalPath));
+			result.AppendLine(Path.GetFileName(uri.LocalPath));
 		}
 		return result.ToString();
 	}
