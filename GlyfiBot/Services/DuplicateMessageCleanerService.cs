@@ -31,7 +31,50 @@ public static class DuplicateMessageCleanerService
 
 	private static ConcurrentDictionary<ulong, ulong> _modChannels = null!;
 
-	private static readonly ConcurrentDictionary<ulong, Message> _userMessages = new();
+	private class UserMessage(Message message)
+	{
+		public DateTimeOffset CreatedAt => message.CreatedAt;
+		public ulong? GuildId => message.GuildId;
+		public ulong ChannelId => message.ChannelId;
+		public ulong Id => message.Id;
+		public User Author => message.Author;
+		public TextChannel? Channel => message.Channel;
+		public async Task Delete() => await message.DeleteAsync();
+
+		private readonly Lazy<string> _comparableContent = new(() => GetContentFromMessage(message));
+		public string ComparableContent => _comparableContent.Value;
+
+		private static string GetContentFromMessage(Message message)
+		{
+			if (message.MessageReference?.Type.HasFlag(MessageReferenceType.Forward) ?? false)
+			{
+				MessageSnapshotMessage snapshotMessage = message.MessageSnapshots[0].Message;
+				return $"{snapshotMessage.Content}{AttachmentsToString(snapshotMessage.Attachments)}".Trim();
+			}
+
+			return $"{message.Content}{AttachmentsToString(message.Attachments)}".Trim();
+
+			static string AttachmentsToString(IReadOnlyList<Attachment> attachments)
+			{
+				if (attachments.Count == 0) return string.Empty;
+
+				StringBuilder result = new("\n");
+				foreach(Attachment attachment in attachments)
+				{
+					Uri uri = new(attachment.Url);
+					result.AppendLine(Path.GetFileName(uri.LocalPath));
+				}
+				return result.ToString();
+			}
+		}
+
+		public bool IsEqualTo(UserMessage other)
+		{
+			return ComparableContent == other.ComparableContent;
+		}
+	}
+
+	private static readonly ConcurrentDictionary<ulong, UserMessage> _userMessages = new();
 
 	private static GatewayClient _client = null!;
 
@@ -66,32 +109,33 @@ public static class DuplicateMessageCleanerService
 		SaveModChannels();
 	}
 
-	private static async ValueTask ProcessMessage(Message thisMessage)
+	private static async ValueTask ProcessMessage(Message thisDiscordMessage)
 	{
-		ulong authorId = thisMessage.Author.Id;
+		ulong authorId = thisDiscordMessage.Author.Id;
 
 		// Do not check own bot messages
 		if (authorId == Program.BotUser.Id) return;
 
 		// Do not check in non-guild areas
-		if (thisMessage.Author is not GuildUser guildUser) return;
+		if (thisDiscordMessage.Author is not GuildUser guildUser) return;
 
 		// Do not check messages from people who have permissions to delete messages (they're probably admins/mods, who don't need spam checking)
-		if (thisMessage.Guild is null) return;
-		Permissions permissions = guildUser.GetPermissions(thisMessage.Guild);
+		if (thisDiscordMessage.Guild is null) return;
+		Permissions permissions = guildUser.GetPermissions(thisDiscordMessage.Guild);
 		if (permissions.HasFlag(Permissions.ManageMessages)) return;
 
+		// We process this Discord message, so we can compare it to the previous message, then store it for the next run of this function where it will be the prevMessage
+		UserMessage thisMessage = new(thisDiscordMessage);
+
 		// Is this user's previous message loaded?
-		if (_userMessages.TryGetValue(authorId, out Message? prevMessage))
+		if (_userMessages.TryGetValue(authorId, out UserMessage? prevMessage))
 		{
 			// If there isn't enough time between this new message and the previous one...
 			TimeSpan diff = thisMessage.CreatedAt - prevMessage.CreatedAt;
 			if (diff < COOLDOWN)
 			{
 				// ...then we compare contents (including attachments!)
-				string thisContent = GetContentFromMessage(thisMessage);
-				string prevContent = GetContentFromMessage(prevMessage);
-				if (thisContent == prevContent)
+				if (thisMessage.IsEqualTo(prevMessage))
 				{
 					// If they are the same, then we stop the spam!
 
@@ -230,7 +274,7 @@ public static class DuplicateMessageCleanerService
 		}
 	}
 
-	private static async Task NotifyMods(Message prevMessage, Message thisMessage)
+	private static async Task NotifyMods(UserMessage prevMessage, UserMessage thisMessage)
 	{
 		ulong? guildId = prevMessage.GuildId;
 		if (guildId == null) return;
@@ -286,39 +330,11 @@ public static class DuplicateMessageCleanerService
 		}
 	}
 
-	/// <summary>
-	/// Transforms a Message into a String that can be compared for spam/duplicate detection.
-	/// The special thing is that it also takes attachments into account!
-	/// </summary>
-	private static string GetContentFromMessage(Message message)
-	{
-		if (message.MessageReference?.Type.HasFlag(MessageReferenceType.Forward) ?? false)
-		{
-			MessageSnapshotMessage snapshotMessage = message.MessageSnapshots[0].Message;
-			return $"{snapshotMessage.Content}{AttachmentsToString(snapshotMessage.Attachments)}".Trim();
-		}
-
-		return $"{message.Content}{AttachmentsToString(message.Attachments)}".Trim();
-	}
-
-	private static string AttachmentsToString(IReadOnlyList<Attachment> attachments)
-	{
-		if (attachments.Count == 0) return string.Empty;
-
-		StringBuilder result = new("\n");
-		foreach(Attachment attachment in attachments)
-		{
-			Uri uri = new(attachment.Url);
-			result.AppendLine(Path.GetFileName(uri.LocalPath));
-		}
-		return result.ToString();
-	}
-
-	private static async Task DeleteMessageIfExists(Message message)
+	private static async Task DeleteMessageIfExists(UserMessage message)
 	{
 		try
 		{
-			await message.DeleteAsync();
+			await message.Delete();
 		}
 		catch(RestException restException) when(restException.StatusCode == System.Net.HttpStatusCode.NotFound)
 		{
