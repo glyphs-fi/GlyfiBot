@@ -2,6 +2,7 @@ using NetCord;
 using NetCord.Gateway;
 using NetCord.Rest;
 using System.Collections.Concurrent;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 
@@ -31,7 +32,72 @@ public static class DuplicateMessageCleanerService
 
 	private static ConcurrentDictionary<ulong, ulong> _modChannels = null!;
 
-	private static readonly ConcurrentDictionary<ulong, Message> _userMessages = new();
+	private class UserMessage(Message message)
+	{
+		public DateTimeOffset CreatedAt => message.CreatedAt;
+		public ulong? GuildId => message.GuildId;
+		public ulong ChannelId => message.ChannelId;
+		public ulong Id => message.Id;
+		public User Author => message.Author;
+		public TextChannel? Channel => message.Channel;
+		public MessageReference? MessageReference => message.MessageReference;
+		public async Task Delete() => await message.DeleteAsync();
+
+		private readonly Lazy<string> _comparableContent = new(() => GetContentFromMessage(message));
+		public string ComparableContent => _comparableContent.Value;
+
+		private static string GetContentFromMessage(Message message)
+		{
+			if (message.IsAForward())
+			{
+				MessageSnapshotMessage snapshotMessage = message.MessageSnapshots[0].Message;
+				return $"{snapshotMessage.Content}{AttachmentsToString(snapshotMessage.Attachments)}".Trim();
+			}
+
+			return $"{message.Content}{AttachmentsToString(message.Attachments)}".Trim();
+
+			static string AttachmentsToString(IReadOnlyList<Attachment> attachments)
+			{
+				if (attachments.Count == 0) return string.Empty;
+
+				StringBuilder result = new("\n");
+				foreach(Attachment attachment in attachments)
+				{
+					Uri uri = new(attachment.Url);
+					result.AppendLine(Path.GetFileName(uri.LocalPath));
+				}
+				return result.ToString();
+			}
+		}
+
+		public bool IsEqualTo(UserMessage other)
+		{
+			return string.Equals(ComparableContent, other.ComparableContent, StringComparison.Ordinal);
+		}
+
+		public async Task<bool> IsForwardedFromThread(UserMessage prevMessage)
+		{
+			if (MessageReference is null) return false;
+
+			try
+			{
+				Channel sourceChannel = await _client.Rest.GetChannelAsync(MessageReference.ChannelId);
+				if (sourceChannel is ForumGuildChannel or PublicGuildThread)
+				{
+					return MessageReference.MessageId == prevMessage.Id;
+				}
+			}
+			catch(RestException e) when(e.StatusCode == HttpStatusCode.Forbidden)
+			{
+				// The thread wasn't one of ours, so we don't count it as a valid exception to the duplicate detection system.
+				return false;
+			}
+
+			return false;
+		}
+	}
+
+	private static readonly ConcurrentDictionary<ulong, UserMessage> _userMessages = new();
 
 	private static GatewayClient _client = null!;
 
@@ -66,46 +132,51 @@ public static class DuplicateMessageCleanerService
 		SaveModChannels();
 	}
 
-	private static async ValueTask ProcessMessage(Message thisMessage)
+	private static async ValueTask ProcessMessage(Message thisDiscordMessage)
 	{
-		ulong authorId = thisMessage.Author.Id;
+		ulong authorId = thisDiscordMessage.Author.Id;
 
 		// Do not check own bot messages
 		if (authorId == Program.BotUser.Id) return;
 
 		// Do not check in non-guild areas
-		if (thisMessage.Author is not GuildUser guildUser) return;
+		if (thisDiscordMessage.Author is not GuildUser guildUser) return;
 
 		// Do not check messages from people who have permissions to delete messages (they're probably admins/mods, who don't need spam checking)
-		if (thisMessage.Guild is null) return;
-		Permissions permissions = guildUser.GetPermissions(thisMessage.Guild);
+		if (thisDiscordMessage.Guild is null) return;
+		Permissions permissions = guildUser.GetPermissions(thisDiscordMessage.Guild);
 		if (permissions.HasFlag(Permissions.ManageMessages)) return;
 
+		// We process this Discord message, so we can compare it to the previous message, then store it for the next run of this function where it will be the prevMessage
+		UserMessage thisMessage = new(thisDiscordMessage);
+
 		// Is this user's previous message loaded?
-		if (_userMessages.TryGetValue(authorId, out Message? prevMessage))
+		if (_userMessages.TryGetValue(authorId, out UserMessage? prevMessage))
 		{
-			// If there isn't enough time between this new message and the previous one...
-			TimeSpan diff = thisMessage.CreatedAt - prevMessage.CreatedAt;
-			if (diff < COOLDOWN)
+			// We allow messages that are a forward from the previous message if it was posted in a thread
+			if (!await thisMessage.IsForwardedFromThread(prevMessage))
 			{
-				// ...then we compare contents (including attachments!)
-				string thisContent = GetContentFromMessage(thisMessage);
-				string prevContent = GetContentFromMessage(prevMessage);
-				if (thisContent == prevContent)
+				// If there isn't enough time between this new message and the previous one...
+				TimeSpan diff = thisMessage.CreatedAt - prevMessage.CreatedAt;
+				if (diff < COOLDOWN)
 				{
-					// If they are the same, then we stop the spam!
+					// ...then we compare contents (including attachments!)
+					if (thisMessage.IsEqualTo(prevMessage))
+					{
+						// If they are the same, then we stop the spam!
 
-					// First we timeout (to prevent further infractions) and we let the mods know
-					await Task.WhenAll([
-						TimeoutUser(guildUser),
-						NotifyMods(prevMessage, thisMessage),
-					]);
+						// First we timeout (to prevent further infractions) and we let the mods know
+						await Task.WhenAll([
+							TimeoutUser(guildUser),
+							NotifyMods(prevMessage, thisMessage),
+						]);
 
-					// Lastly, we clean up the mess
-					await Task.WhenAll([
-						DeleteMessageIfExists(prevMessage),
-						DeleteMessageIfExists(thisMessage),
-					]);
+						// Lastly, we clean up the mess
+						await Task.WhenAll([
+							DeleteMessageIfExists(prevMessage),
+							DeleteMessageIfExists(thisMessage),
+						]);
+					}
 				}
 			}
 			// Finally, we update the user's previous message
@@ -174,13 +245,21 @@ public static class DuplicateMessageCleanerService
 					])));
 				break;
 			case BUTTON_ACTION_REMOVE_TIMEOUT:
-				if (!permissions.HasFlag(Permissions.ModerateUsers))
+				try
 				{
-					await interaction.SendResponseAsync(InteractionCallback.Message($"You do not have permission to remove timeouts, {guildUser}!"));
-					return;
+					if (!permissions.HasFlag(Permissions.ModerateUsers))
+					{
+						await interaction.SendResponseAsync(InteractionCallback.Message($"You do not have permission to remove timeouts, {guildUser}!"));
+						return;
+					}
+					await _client.Rest.ModifyGuildUserAsync(guild.Id, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
+					_userMessages.TryRemove(affectedUserId, out _);
+					await interaction.SendResponseAsync(InteractionCallback.Message("Timeout removed!"));
 				}
-				await _client.Rest.ModifyGuildUserAsync(guild.Id, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
-				await interaction.SendResponseAsync(InteractionCallback.Message("Timeout removed!"));
+				catch(RestException e)
+				{
+					await interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removal failed!\n```\n{e}\n```"));
+				}
 				break;
 		}
 	}
@@ -222,7 +301,7 @@ public static class DuplicateMessageCleanerService
 		}
 	}
 
-	private static async Task NotifyMods(Message prevMessage, Message thisMessage)
+	private static async Task NotifyMods(UserMessage prevMessage, UserMessage thisMessage)
 	{
 		ulong? guildId = prevMessage.GuildId;
 		if (guildId == null) return;
@@ -278,29 +357,11 @@ public static class DuplicateMessageCleanerService
 		}
 	}
 
-	/// <summary>
-	/// Transforms a Message into a String that can be compared for spam/duplicate detection.
-	/// The special thing is that it also takes attachments into account!
-	/// </summary>
-	private static string GetContentFromMessage(Message message)
-	{
-		if (message.Attachments.Count == 0) return message.Content;
-
-		StringBuilder result = new(message.Content);
-		foreach(Attachment attachment in message.Attachments)
-		{
-			Uri uri = new(attachment.Url);
-			if (result.Length != 0) result.AppendLine();
-			result.Append(Path.GetFileName(uri.LocalPath));
-		}
-		return result.ToString();
-	}
-
-	private static async Task DeleteMessageIfExists(Message message)
+	private static async Task DeleteMessageIfExists(UserMessage message)
 	{
 		try
 		{
-			await message.DeleteAsync();
+			await message.Delete();
 		}
 		catch(RestException restException) when(restException.StatusCode == System.Net.HttpStatusCode.NotFound)
 		{

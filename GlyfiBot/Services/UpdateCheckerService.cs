@@ -47,7 +47,7 @@ public static class UpdateCheckerService
 			                                  **Latest version:**  `{latestCommitHash}`
 			                                  **Current version:**  `{executableHash}`
 
-			                                  **Download here:**  <https://github.com/glyphs-fi/GlyfiBot/actions/workflows/build.yml?query=branch%3Amain>
+			                                  **Download here:**  <https://github.com/glyphs-fi/GlyfiBot/releases/latest>
 			                                  """);
 		}
 	}

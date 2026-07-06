@@ -182,6 +182,11 @@ public static partial class Utils
 				options.Flags = messageProperties.Flags ?? 0;
 			});
 		}
+
+		public bool IsAForward()
+		{
+			return message.MessageReference?.Type.HasFlag(MessageReferenceType.Forward) ?? false;
+		}
 	}
 
 	extension<T>(IAsyncEnumerable<T> enumerable)

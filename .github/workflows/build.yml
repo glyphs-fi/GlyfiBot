@@ -19,43 +19,77 @@ jobs:
       fail-fast: false
 
       matrix:
-          os: [ ubuntu-latest, windows-latest ]
-          runtime: [ linux-x64, linux-arm64, win-x64 ]
-          configuration: [ Release ]
-          exclude:
-            - os: windows-latest
-              runtime: linux-x64
-            - os: windows-latest
-              runtime: linux-arm64
-            - os: ubuntu-latest
-              runtime: win-x64
+        os: [ ubuntu-latest, windows-latest ]
+        runtime: [ linux-x64, linux-arm64, win-x64 ]
+        configuration: [ Release ]
+        exclude:
+          - os: windows-latest
+            runtime: linux-x64
+          - os: windows-latest
+            runtime: linux-arm64
+          - os: ubuntu-latest
+            runtime: win-x64
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v7
-      with:
-        submodules: recursive
-        token: ${{ secrets.LICENCES_REPO_FG_PAT }}
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          token: ${{ secrets.LICENCES_REPO_FG_PAT }}
 
-    - name: Install .NET
-      uses: actions/setup-dotnet@v5
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}.x
+      - name: Install .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
 
-    - name: Install Cross-compilation Tooling
-      if: ${{ matrix.runtime == 'linux-arm64' }}
-      # Packages from https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/cross-compile#linux
-      run: sudo apt update && sudo apt install clang llvm binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu
+      - name: Install Cross-compilation Tooling
+        if: ${{ matrix.runtime == 'linux-arm64' }}
+        # Packages from https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/cross-compile#linux
+        run: sudo apt update && sudo apt install clang llvm binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu
 
-    - name: Publish
-      run: >
-        dotnet publish
-        --runtime ${{ matrix.runtime }}
-        --self-contained
-        --configuration ${{ matrix.configuration }}
+      - name: Publish
+        run: >
+          dotnet publish
+          --runtime ${{ matrix.runtime }}
+          --self-contained
+          --configuration ${{ matrix.configuration }}
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v7
-      with:
-        name: GlyfiBot_${{ matrix.runtime }}
-        path: "GlyfiBot/bin/Release/net${{ env.DOTNET_VERSION }}/${{ matrix.runtime }}/publish/"
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: GlyfiBot_${{ matrix.runtime }}
+          path: "GlyfiBot/bin/Release/net${{ env.DOTNET_VERSION }}/${{ matrix.runtime }}/publish/"
+
+  release:
+    needs: build
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    permissions:
+      contents: write
+
+    environment:
+      name: github-releases
+      url: ${{ steps.releaser.outputs.url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+          skip-decompress: true
+
+      - name: Create release
+        id: releaser
+        run: |
+          GIT_HASH_SHORT="$(git rev-parse --short HEAD)"
+          GIT_COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+          GIT_COMMIT_TITLE=$(echo "${GIT_COMMIT_MESSAGE}" | head -1)
+          printf "\`${{ github.sha }}\`\n$GIT_COMMIT_MESSAGE\n\n---" >> notes.md
+          RELEASE_URL=$(gh release create "v_${{ github.sha }}" --title "$GIT_HASH_SHORT: $GIT_COMMIT_TITLE" --notes-file "notes.md" --latest --fail-on-no-commits artifacts/*)
+          echo "url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
