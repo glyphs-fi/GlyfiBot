@@ -46,7 +46,7 @@ public static class DuplicateMessageCleanerService
 
 		private static string GetContentFromMessage(Message message)
 		{
-			if (message.MessageReference?.Type.HasFlag(MessageReferenceType.Forward) ?? false)
+			if (message.IsAForward())
 			{
 				MessageSnapshotMessage snapshotMessage = message.MessageSnapshots[0].Message;
 				return $"{snapshotMessage.Content}{AttachmentsToString(snapshotMessage.Attachments)}".Trim();
