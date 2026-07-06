@@ -72,7 +72,9 @@ public static class DuplicateMessageCleanerService
 
 		public bool IsEqualTo(UserMessage other)
 		{
-			return string.Equals(ComparableContent, other.ComparableContent, StringComparison.Ordinal);
+			UserMessage thisMessage = this;
+			UserMessage prevMessage = other;
+			return string.Equals(thisMessage.ComparableContent, prevMessage.ComparableContent, StringComparison.Ordinal);
 		}
 
 		public async Task<bool> IsForwardedFromThread(UserMessage prevMessage)
