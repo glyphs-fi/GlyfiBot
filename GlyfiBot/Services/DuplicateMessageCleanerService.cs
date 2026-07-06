@@ -182,6 +182,7 @@ public static class DuplicateMessageCleanerService
 						return;
 					}
 					await _client.Rest.ModifyGuildUserAsync(guild.Id, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
+					_userMessages.TryRemove(affectedUserId, out _);
 					await interaction.SendResponseAsync(InteractionCallback.Message("Timeout removed!"));
 				}
 				catch(RestException e)
