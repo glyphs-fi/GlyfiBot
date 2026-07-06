@@ -70,7 +70,7 @@ public static class DuplicateMessageCleanerService
 
 		public bool IsEqualTo(UserMessage other)
 		{
-			return ComparableContent == other.ComparableContent;
+			return string.Equals(ComparableContent, other.ComparableContent, StringComparison.Ordinal);
 		}
 	}
 
