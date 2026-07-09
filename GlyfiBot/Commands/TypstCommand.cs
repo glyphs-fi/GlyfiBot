@@ -527,8 +527,10 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	/// <exception cref="FileNotFoundException">If the download did not contain the main.typ file</exception>
 	public static async Task<string> SetupScript(SlashCommandContext context)
 	{
-		await context.ModifyEphemeralResponseAsync("Setting up the Typst script... (This may take a while, the first time)");
-		(string scriptDir, bool _) = await DownloadRepo(SCRIPTS_REPO_NAME, Program.TYPST_SCRIPT_DIR);
+		(string scriptDir, bool _) = await DownloadRepo(SCRIPTS_REPO_NAME, Program.TYPST_SCRIPT_DIR,
+			onDownloading: async () => await context.ModifyEphemeralResponseAsync("Downloading script... (This will only happen once)"),
+			onExtracting: async () => await context.ModifyEphemeralResponseAsync("Extracting script zip... (This will only happen once)")
+		);
 		string scriptPath = Path.Join(scriptDir, "main.typ");
 		return File.Exists(scriptPath) ? scriptPath : throw new FileNotFoundException("Could not find `main.typ` in the script folder!");
 	}

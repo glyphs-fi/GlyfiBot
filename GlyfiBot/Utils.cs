@@ -364,12 +364,19 @@ public static partial class Utils
 		throw new Exception("Failed to retrieve the latest commit hash of the Typst script!");
 	}
 
-	public static async Task<(string repoDir, bool didDownload)> DownloadRepo(string repoName, string destinationDirectory)
+	public static async Task<(string repoDir, bool didDownload)> DownloadRepo(
+		string repoName,
+		string destinationDirectory,
+		Func<Task>? onDownloading = null,
+		Func<Task>? onExtracting = null
+	)
 	{
 		string latestCommitHash = await GetLatestCommitHash(repoName);
 
 		string repoDir = Path.Join(destinationDirectory, $"{repoName}-{latestCommitHash}");
 		if (Directory.Exists(repoDir)) return (repoDir, false);
+
+		if (onDownloading is not null) await onDownloading();
 		Directory.CreateDirectory(repoDir);
 		string zipPath = Path.Join(destinationDirectory, $"{latestCommitHash}.zip");
 		{
@@ -378,6 +385,7 @@ public static partial class Utils
 			await networkStream.CopyToAsync(fileStream);
 		}
 
+		if (onExtracting is not null) await onExtracting();
 		await ExtractArchive(zipPath);
 
 		return (repoDir, true);
