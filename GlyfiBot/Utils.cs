@@ -364,6 +364,19 @@ public static partial class Utils
 		throw new Exception("Failed to retrieve the latest commit hash of the Typst script!");
 	}
 
+	[GeneratedRegex("^v_")]
+	public static partial Regex VersionRegex();
+
+	public static async Task<string> GetLatestRelease(string repoName)
+	{
+		HttpResponseMessage httpResponseMessage = await Program.HttpClientNoRedirects.GetAsync($"https://github.com/glyphs-fi/{repoName}/releases/latest",
+			HttpCompletionOption.ResponseHeadersRead);
+
+		httpResponseMessage.Headers.TryGetValues("Location", out IEnumerable<string>? values);
+		return values is not null ? Path.GetFileNameWithoutExtension(values.First()) : "_{version not found}_";
+
+	}
+
 	public static async Task<(string repoDir, bool didDownload)> DownloadRepo(
 		string repoName,
 		string destinationDirectory,

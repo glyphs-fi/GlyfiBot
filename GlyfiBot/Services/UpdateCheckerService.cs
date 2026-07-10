@@ -33,10 +33,10 @@ public static class UpdateCheckerService
 
 	private static async Task NotifyUsers(GatewayClient client, HashSet<ulong> userIdsToNotifyOfUpdate)
 	{
-		string latestCommitHash = await GetLatestCommitHash("GlyfiBot");
+		string latestRelease = VersionRegex().Replace(await GetLatestRelease("GlyfiBot"), "");
 		string? executableHash = ExecutableGitHash();
 
-		if (string.Equals(executableHash, latestCommitHash, StringComparison.OrdinalIgnoreCase)) return;
+		if (string.Equals(executableHash, latestRelease, StringComparison.OrdinalIgnoreCase)) return;
 
 		foreach(ulong userId in userIdsToNotifyOfUpdate)
 		{
@@ -44,7 +44,7 @@ public static class UpdateCheckerService
 			await dmChannel.SendMessageAsync($"""
 			                                  I need to be updated!
 
-			                                  **Latest version:**  `{latestCommitHash}`
+			                                  **Latest version:**  `{latestRelease}`
 			                                  **Current version:**  `{executableHash}`
 
 			                                  **Download here:**  <https://github.com/glyphs-fi/GlyfiBot/releases/latest>
