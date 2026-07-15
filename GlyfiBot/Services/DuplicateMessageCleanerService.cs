@@ -370,8 +370,9 @@ public static class DuplicateMessageCleanerService
 	}
 
 	private static string GetTimeoutMessage(RestGuild guild) => $"""
-	                                                             You were just timed out in the "{guild.Name}" server for spamming.
+	                                                             ⏲️ You were just timed out in the "{guild.Name}" server for spamming (sending the same message in multiple channels).
 	                                                             A moderator will review your case.
+	                                                             -# There's a possibility this was done in error! If it was, it'll be quite clear to us and the time-out will be lifted ASAP. You'll receive a notification when that happens.
 	                                                             """;
 
 	private static async Task NotifyUserOfTimeout(GuildUser guildUser)
