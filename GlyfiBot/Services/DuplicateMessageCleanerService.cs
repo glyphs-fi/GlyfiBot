@@ -76,6 +76,19 @@ public static class DuplicateMessageCleanerService
 			}
 		}
 
+		public async Task<bool> Exists()
+		{
+			try
+			{
+				await _client.Rest.GetMessageAsync(ChannelId, Id);
+			}
+			catch(RestException restException) when(restException.StatusCode == HttpStatusCode.NotFound)
+			{
+				return false;
+			}
+			return true;
+		}
+
 		public bool IsEqualTo(UserMessage other)
 		{
 			UserMessage thisMessage = this;
@@ -171,19 +184,23 @@ public static class DuplicateMessageCleanerService
 					// ...then we compare contents (including attachments!)
 					if (thisMessage.IsEqualTo(prevMessage))
 					{
-						// If they are the same, then we stop the spam!
+						// If the previous message has been deleted, then we don't do anything.
+						if (await prevMessage.Exists())
+						{
+							// The messages the same! Stop the spam!
 
-						// First we timeout (to prevent further infractions) and we let the mods know
-						await Task.WhenAll([
-							TimeoutUser(guildUser),
-							NotifyMods(prevMessage, thisMessage),
-						]);
+							// First we timeout (to prevent further infractions) and we let the mods know
+							await Task.WhenAll([
+								TimeoutUser(guildUser),
+								NotifyMods(prevMessage, thisMessage),
+							]);
 
-						// Lastly, we clean up the mess
-						await Task.WhenAll([
-							DeleteMessageIfExists(prevMessage),
-							DeleteMessageIfExists(thisMessage),
-						]);
+							// Lastly, we clean up the mess
+							await Task.WhenAll([
+								DeleteMessageIfExists(prevMessage),
+								DeleteMessageIfExists(thisMessage),
+							]);
+						}
 					}
 				}
 			}
