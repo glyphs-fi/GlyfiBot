@@ -1,3 +1,4 @@
+using GlyfiBot.Commands;
 using NetCord;
 using NetCord.Gateway;
 using NetCord.Rest;
@@ -340,11 +341,14 @@ public static class DuplicateMessageCleanerService
 				MessageReference = MessageReferenceProperties.Forward(thisMessage.ChannelId, thisMessage.Id),
 			});
 
+			string? modsPing = SetModPingCommand.GetModsPing(guildId.Value);
+			modsPing = modsPing is null ? "" : $", {modsPing}";
+
 			await _client.Rest.SendMessageAsync(channelId, new MessageProperties
 			{
 				Components =
 				[
-					new TextDisplayProperties($"{prevMessage.Author} sent this↑ message in {prevMessage.Channel} and {thisMessage.Channel}!"),
+					new TextDisplayProperties($"{prevMessage.Author} sent this↑ message in {prevMessage.Channel} and {thisMessage.Channel}{modsPing}!"),
 					new TextDisplayProperties($"The messages have been cleaned up, and the account has been given a timeout of {TIMEOUT_TIME_MINUTES} minutes."),
 					new ActionRowProperties([
 						new ButtonProperties(new InteractionDataContainer<ulong>(

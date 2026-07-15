@@ -19,6 +19,13 @@ The goal of this project is to encourage very collaborative development on this 
   - If unset, it will notify (without any details) in the first channel that has "general" in the name.
   - Leave empty to unset the notification channel. It will go back to being like ↑
   - Only Administrators can run this command, [by default](#command-permissions).
+  - If `/set-mod-ping` is set, it will ping the mods when a duplicate message is found.
+
+
+- `/set-mod-ping`: Set up a pingable role (or user) who may be pinged whenever there's something that the mods should look at ASAP.
+  - If unset, no mods can be pinged at critical moments, so it is highly recommended that this is set up!
+  - Leave empty to unset the pingable role. It will go back to being like ↑
+  - Only Administrators can run this command, [by default](#command-permissions).
 
 
 - `/set-rules-channel`: Set up in which channel [the rules](https://github.com/glyphs-fi/Rules/tree/main/Discord) will be posted and updated.
