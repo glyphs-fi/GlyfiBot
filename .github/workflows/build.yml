@@ -62,7 +62,7 @@ jobs:
 
   release:
     needs: build
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'norel') }}
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
