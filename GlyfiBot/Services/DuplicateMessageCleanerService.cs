@@ -95,7 +95,7 @@ public static class DuplicateMessageCleanerService
 					return MessageReference.MessageId == prevMessage.Id;
 				}
 			}
-			catch(RestException e) when(e.StatusCode == HttpStatusCode.Forbidden)
+			catch(RestException restException) when(restException.StatusCode == HttpStatusCode.Forbidden)
 			{
 				// The thread wasn't one of ours, so we don't count it as a valid exception to the duplicate detection system.
 				return false;
@@ -373,7 +373,7 @@ public static class DuplicateMessageCleanerService
 		{
 			await message.Delete();
 		}
-		catch(RestException restException) when(restException.StatusCode == System.Net.HttpStatusCode.NotFound)
+		catch(RestException restException) when(restException.StatusCode == HttpStatusCode.NotFound)
 		{
 			//ignore
 		}
@@ -385,7 +385,7 @@ public static class DuplicateMessageCleanerService
 		{
 			await guildUser.TimeOutAsync(DateTimeOffset.Now.AddMinutes(TIMEOUT_TIME_MINUTES));
 		}
-		catch(RestException restException) when(restException.StatusCode == System.Net.HttpStatusCode.Forbidden)
+		catch(RestException restException) when(restException.StatusCode == HttpStatusCode.Forbidden)
 		{
 			//ignore
 		}

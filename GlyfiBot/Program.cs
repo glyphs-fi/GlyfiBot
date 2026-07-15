@@ -6,6 +6,7 @@ using NetCord.Logging;
 using NetCord.Rest;
 using NetCord.Services;
 using NetCord.Services.ApplicationCommands;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
 using static GlyfiBot.Utils;
@@ -150,7 +151,7 @@ static internal class Program
 					{
 						await slashCommandInteraction.SendEphemeralResponseAsync(message, attachments);
 					}
-					catch(RestException restException) when(restException.StatusCode == System.Net.HttpStatusCode.BadRequest)
+					catch(RestException restException) when(restException.StatusCode == HttpStatusCode.BadRequest)
 					{
 						RestMessage responseAsync = await slashCommandInteraction.GetResponseAsync();
 						if (responseAsync.Content is "" or ProgressTracker.GLYFI_IS_THINKING)
