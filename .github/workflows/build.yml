@@ -95,7 +95,7 @@ jobs:
           GIT_COMMIT_TITLE=$(echo "${GIT_COMMIT_MESSAGE}" | head -1)
           # For the release notes
           LATEST_TAG=$(git describe --tags --abbrev=0)
-          git --no-pager log "$LATEST_TAG"..HEAD --reverse --no-merges --pretty=format:"\`%H\` %ad  %n**%s**  %n%b%n---%n" --date=format:"%H:%M" > notes.md
+          git --no-pager log "$LATEST_TAG"..HEAD --reverse --no-merges --pretty=format:"\`%H\` %ad  %n**%s**  %n%b%n%n---%n" --date=format:"%H:%M" > notes.md
           # Make the actual release
           RELEASE_URL=$(gh release create "v_${{ github.sha }}" --title "$GIT_HASH_SHORT: $GIT_COMMIT_TITLE" --notes-file "notes.md" --latest --fail-on-no-commits artifacts/*)
           echo "url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
