@@ -181,6 +181,7 @@ public static class DuplicateMessageCleanerService
 
 						// Lastly, we clean up the mess
 						await Task.WhenAll([
+							NotifyUserOfTimeout(guildUser),
 							DeleteMessageIfExists(prevMessage),
 							DeleteMessageIfExists(thisMessage),
 						]);
@@ -221,7 +222,7 @@ public static class DuplicateMessageCleanerService
 		if (interactionData.Source != nameof(DuplicateMessageCleanerService)) return;
 
 		string buttonAction = interactionData.Type;
-		ulong affectedUserId = interactionData.Extra;
+		GuildUser affectedUser = await guild.GetUserAsync(interactionData.Extra);
 		Permissions permissions = guildUser.GetPermissions(guild);
 
 		switch(buttonAction)
@@ -235,7 +236,7 @@ public static class DuplicateMessageCleanerService
 				await interaction.SendResponseAsync(InteractionCallback.Modal(new ModalProperties(new InteractionDataContainer<ulong>(
 						nameof(DuplicateMessageCleanerService),
 						MODAL_BAN,
-						affectedUserId
+						affectedUser.Id
 					).ToString(),
 					"Ban",
 					[
@@ -260,9 +261,10 @@ public static class DuplicateMessageCleanerService
 						await interaction.SendResponseAsync(InteractionCallback.Message($"You do not have permission to remove timeouts, {guildUser}!"));
 						return;
 					}
-					await _client.Rest.ModifyGuildUserAsync(guild.Id, affectedUserId, options => options.TimeOutUntil = default(DateTimeOffset));
-					_userMessages.TryRemove(affectedUserId, out _);
+					await affectedUser.ModifyAsync(options => options.TimeOutUntil = default(DateTimeOffset));
+					_userMessages.TryRemove(affectedUser.Id, out _);
 					await interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removed by {guildUser}!"));
+					await NotifyUserOfForgiveness(affectedUser);
 				}
 				catch(RestException e)
 				{
@@ -364,6 +366,61 @@ public static class DuplicateMessageCleanerService
 					          _A moderator should set up a moderation notification channel with `/set-dupe-notif-channel` so that the moderators can see information about this, the next time this happens._
 					          """,
 				});
+		}
+	}
+
+	private static string GetTimeoutMessage(RestGuild guild) => $"""
+	                                                             You were just timed out in the "{guild.Name}" server for spamming.
+	                                                             A moderator will review your case.
+	                                                             """;
+
+	private static async Task NotifyUserOfTimeout(GuildUser guildUser)
+	{
+		RestGuild guild = await _client.Rest.GetGuildAsync(guildUser.GuildId);
+		DMChannel dmChannel = await guildUser.GetDMChannelAsync();
+		await dmChannel.SendMessageAsync(new MessageProperties
+		{
+			Content = GetTimeoutMessage(guild),
+		});
+	}
+
+	private static async Task NotifyUserOfForgiveness(GuildUser guildUser)
+	{
+		DMChannel dmChannel = await guildUser.GetDMChannelAsync();
+		RestGuild guild = await _client.Rest.GetGuildAsync(guildUser.GuildId);
+
+		RestMessage? previousMessage = null;
+		string searchContent = GetTimeoutMessage(guild);
+
+		IAsyncEnumerable<RestMessage> asyncEnumerable = dmChannel.GetMessagesAsync();
+		await foreach(RestMessage message in asyncEnumerable)
+		{
+			if (message.Author.Id == Program.BotUser.Id && message.Content == searchContent)
+			{
+				previousMessage = message;
+				break;
+			}
+		}
+
+		if (previousMessage is null)
+		{
+			await dmChannel.SendMessageAsync(new MessageProperties
+			{
+				Content = $"""
+				           A moderator has reviewed your case, and removed your timeout in the "{guild.Name}" server!
+				           We apologise for the inconvenience.
+				           """,
+			});
+		}
+		else
+		{
+			await previousMessage.ReplyAsync(new ReplyMessageProperties
+			{
+				Content = """
+				          A moderator has reviewed your case, and removed the timeout!
+				          We apologise for the inconvenience.
+				          """,
+			});
 		}
 	}
 
