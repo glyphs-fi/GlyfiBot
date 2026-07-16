@@ -285,14 +285,17 @@ public static class DuplicateMessageCleanerService
 						return;
 					}
 					await affectedUser.ModifyAsync(options => options.TimeOutUntil = default(DateTimeOffset));
-					_userMessages.TryRemove(affectedUser.Id, out _);
-					await interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removed by {guildUser}!"));
-					await NotifyUserOfForgiveness(affectedUser);
 				}
 				catch(RestException e)
 				{
 					await interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removal by {guildUser} failed!\n```\n{e}\n```"));
 				}
+				_userMessages.TryRemove(affectedUser.Id, out _);
+				await Task.WhenAll([
+					DisableAllButtons(interaction.Message),
+					interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removed by {guildUser}!")),
+					NotifyUserOfForgiveness(affectedUser),
+				]);
 				break;
 		}
 	}
@@ -352,7 +355,7 @@ public static class DuplicateMessageCleanerService
 
 	private static async Task NotifyMods(UserMessage prevMessage, UserMessage thisMessage)
 	{
-		ulong? guildId = prevMessage.GuildId;
+		ulong? guildId = thisMessage.GuildId;
 		if (guildId == null) return;
 
 		if (_modChannels.TryGetValue(guildId.Value, out ulong channelId))
@@ -363,29 +366,12 @@ public static class DuplicateMessageCleanerService
 			await _client.Rest.SendMessageAsync(channelId, new MessageProperties
 			{
 				Content = $"""
-				           {prevMessage.Author} sent this↑ message in {prevMessage.Channel} and {thisMessage.Channel}{modsPing}!
+				           {thisMessage.Author} sent this↑ message in {prevMessage.Channel} and {thisMessage.Channel}{modsPing}!
 				           The messages have been cleaned up, and the account has been given a timeout of {TIMEOUT_TIME_MINUTES} minutes.
 				           """,
 				Components =
 				[
-					new ActionRowProperties([
-						new ButtonProperties(new InteractionDataContainer<ulong>(
-								nameof(DuplicateMessageCleanerService),
-								BUTTON_ACTION_BAN,
-								prevMessage.Author.Id
-							).ToString(),
-							"Ban",
-							EmojiProperties.Standard("🔨"),
-							ButtonStyle.Danger),
-						new ButtonProperties(new InteractionDataContainer<ulong>(
-								nameof(DuplicateMessageCleanerService),
-								BUTTON_ACTION_REMOVE_TIMEOUT,
-								prevMessage.Author.Id
-							).ToString(),
-							"Remove timeout",
-							EmojiProperties.Standard("🔊"),
-							ButtonStyle.Success),
-					]),
+					CreateModerationActionRow(thisMessage.Author),
 				],
 			});
 		}
@@ -405,6 +391,59 @@ public static class DuplicateMessageCleanerService
 				});
 			}
 		}
+	}
+
+	/// <summary>
+	/// Creates an ActionRow with a "Ban" button and a "Remove timeout" button.
+	/// </summary>
+	/// <param name="userToModerate">The user upon whom the moderation actions will be performed.</param>
+	/// <param name="buttonsDisabled">If any buttons should be disabled, put them in this list. Use <see cref="BUTTON_ACTION_BAN"/> and <see cref="BUTTON_ACTION_REMOVE_TIMEOUT"/>.</param>
+	/// <returns></returns>
+	private static ActionRowProperties CreateModerationActionRow(User userToModerate, List<string>? buttonsDisabled = null)
+	{
+		buttonsDisabled ??= [];
+#if DEBUG
+		foreach(string buttonDisabled in buttonsDisabled)
+		{
+			switch(buttonDisabled)
+			{
+				case BUTTON_ACTION_BAN:
+				case BUTTON_ACTION_REMOVE_TIMEOUT:
+					continue;
+				default:
+					throw new ArgumentException($"Invalid button disabled: {buttonDisabled}");
+			}
+		}
+#endif
+		return new ActionRowProperties([
+			new ButtonProperties(new InteractionDataContainer<ulong>(
+					nameof(DuplicateMessageCleanerService),
+					BUTTON_ACTION_BAN,
+					userToModerate.Id
+				).ToString(),
+				"Ban",
+				EmojiProperties.Standard("🔨"),
+				ButtonStyle.Danger) {Disabled = buttonsDisabled.Contains(BUTTON_ACTION_BAN)},
+			new ButtonProperties(new InteractionDataContainer<ulong>(
+					nameof(DuplicateMessageCleanerService),
+					BUTTON_ACTION_REMOVE_TIMEOUT,
+					userToModerate.Id
+				).ToString(),
+				"Remove timeout",
+				EmojiProperties.Standard("🔊"),
+				ButtonStyle.Success) {Disabled = buttonsDisabled.Contains(BUTTON_ACTION_REMOVE_TIMEOUT)},
+		]);
+	}
+
+	private static async Task DisableAllButtons(Message message)
+	{
+		await message.ModifyAsync(options =>
+		{
+			options.Components =
+			[
+				CreateModerationActionRow(message.Author, buttonsDisabled: [BUTTON_ACTION_BAN, BUTTON_ACTION_REMOVE_TIMEOUT]),
+			];
+		});
 	}
 
 	private static string GetTimeoutMessage(RestGuild guild) => $"""
