@@ -366,10 +366,6 @@ public static class DuplicateMessageCleanerService
 				           {prevMessage.Author} sent this↑ message in {prevMessage.Channel} and {thisMessage.Channel}{modsPing}!
 				           The messages have been cleaned up, and the account has been given a timeout of {TIMEOUT_TIME_MINUTES} minutes.
 				           """,
-			});
-
-			await _client.Rest.SendMessageAsync(channelId, new MessageProperties
-			{
 				Components =
 				[
 					new ActionRowProperties([
@@ -391,7 +387,6 @@ public static class DuplicateMessageCleanerService
 							ButtonStyle.Success),
 					]),
 				],
-				Flags = MessageFlags.IsComponentsV2,
 			});
 		}
 		else
