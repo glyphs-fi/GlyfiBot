@@ -331,7 +331,8 @@ public static class DuplicateMessageCleanerService
 				}
 				else
 				{
-					int seconds = hours * 60 * 60;
+					const int secondsPerHour = 60 * 60;
+					int seconds = hours * secondsPerHour;
 					await affectedUser.BanAsync(seconds);
 					await interaction.SendResponseAsync(InteractionCallback.Message($"Banned {affectedUser} by {guildUser} and messages from the previous {hours} hours were cleaned too!"));
 				}
@@ -363,7 +364,7 @@ public static class DuplicateMessageCleanerService
 			string? modsPing = SetModPingCommand.GetModsPing(guildId.Value);
 			modsPing = modsPing is null ? "" : $", {modsPing}";
 
-			await _client.Rest.SendMessageAsync(channelId, new MessageProperties
+			RestMessage buttonMessage = await _client.Rest.SendMessageAsync(channelId, new MessageProperties
 			{
 				Content = $"""
 				           {thisMessage.Author} sent this↑ message in {prevMessage.Channel} and {thisMessage.Channel}{modsPing}!
@@ -373,6 +374,13 @@ public static class DuplicateMessageCleanerService
 				[
 					CreateModerationActionRow(thisMessage.Author),
 				],
+			});
+
+			_ = Task.Run(async () =>
+			{
+				const int millisPerMinute = 60 * 1000;
+				await Task.Delay(TIMEOUT_TIME_MINUTES * millisPerMinute);
+				await OnTimeoutRunout(buttonMessage);
 			});
 		}
 		else
@@ -391,6 +399,11 @@ public static class DuplicateMessageCleanerService
 				});
 			}
 		}
+	}
+
+	private static async Task OnTimeoutRunout(RestMessage buttonMessage)
+	{
+		await DisableTimeoutButton(buttonMessage);
 	}
 
 	/// <summary>
@@ -442,6 +455,17 @@ public static class DuplicateMessageCleanerService
 			options.Components =
 			[
 				CreateModerationActionRow(message.Author, buttonsDisabled: [BUTTON_ACTION_BAN, BUTTON_ACTION_REMOVE_TIMEOUT]),
+			];
+		});
+	}
+
+	private static async Task DisableTimeoutButton(RestMessage message)
+	{
+		await message.ModifyAsync(options =>
+		{
+			options.Components =
+			[
+				CreateModerationActionRow(message.Author, buttonsDisabled: [BUTTON_ACTION_REMOVE_TIMEOUT]),
 			];
 		});
 	}
