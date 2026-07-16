@@ -190,17 +190,22 @@ public static class DuplicateMessageCleanerService
 						{
 							// The messages the same! Stop the spam!
 
-							// First we timeout (to prevent further infractions) and we let the mods know
+							// First we timeout (to prevent further infractions), and we forward the offending message to the mods
 							await Task.WhenAll([
 								TimeoutUser(guildUser),
-								NotifyMods(prevMessage, thisMessage),
+								ForwardToMods(thisMessage),
 							]);
 
-							// Lastly, we clean up the mess
+							// Then, we clean up the mess
 							await Task.WhenAll([
-								NotifyUserOfTimeout(guildUser),
 								DeleteMessageIfExists(prevMessage),
 								DeleteMessageIfExists(thisMessage),
+							]);
+
+							// Lastly, we notify everyone who needs to be notified
+							await Task.WhenAll([
+								NotifyMods(prevMessage, thisMessage),
+								NotifyUserOfTimeout(guildUser),
 							]);
 						}
 					}
@@ -331,9 +336,9 @@ public static class DuplicateMessageCleanerService
 		}
 	}
 
-	private static async Task NotifyMods(UserMessage prevMessage, UserMessage thisMessage)
+	private static async Task ForwardToMods(UserMessage thisMessage)
 	{
-		ulong? guildId = prevMessage.GuildId;
+		ulong? guildId = thisMessage.GuildId;
 		if (guildId == null) return;
 
 		if (_modChannels.TryGetValue(guildId.Value, out ulong channelId))
@@ -342,16 +347,31 @@ public static class DuplicateMessageCleanerService
 			{
 				MessageReference = MessageReferenceProperties.Forward(thisMessage.ChannelId, thisMessage.Id),
 			});
+		}
+	}
 
+	private static async Task NotifyMods(UserMessage prevMessage, UserMessage thisMessage)
+	{
+		ulong? guildId = prevMessage.GuildId;
+		if (guildId == null) return;
+
+		if (_modChannels.TryGetValue(guildId.Value, out ulong channelId))
+		{
 			string? modsPing = SetModPingCommand.GetModsPing(guildId.Value);
 			modsPing = modsPing is null ? "" : $", {modsPing}";
 
 			await _client.Rest.SendMessageAsync(channelId, new MessageProperties
 			{
+				Content = $"""
+				           {prevMessage.Author} sent this↑ message in {prevMessage.Channel} and {thisMessage.Channel}{modsPing}!
+				           The messages have been cleaned up, and the account has been given a timeout of {TIMEOUT_TIME_MINUTES} minutes.
+				           """,
+			});
+
+			await _client.Rest.SendMessageAsync(channelId, new MessageProperties
+			{
 				Components =
 				[
-					new TextDisplayProperties($"{prevMessage.Author} sent this↑ message in {prevMessage.Channel} and {thisMessage.Channel}{modsPing}!"),
-					new TextDisplayProperties($"The messages have been cleaned up, and the account has been given a timeout of {TIMEOUT_TIME_MINUTES} minutes."),
 					new ActionRowProperties([
 						new ButtonProperties(new InteractionDataContainer<ulong>(
 								nameof(DuplicateMessageCleanerService),
@@ -379,6 +399,7 @@ public static class DuplicateMessageCleanerService
 			IReadOnlyList<IGuildChannel> channels = await _client.Rest.GetGuildChannelsAsync(guildId.Value);
 			TextGuildChannel? channel = channels.OfType<TextGuildChannel>().FirstOrDefault(channel => channel.Name.Contains("general", StringComparison.InvariantCultureIgnoreCase));
 			if (channel is not null)
+			{
 				await channel.SendMessageAsync(new MessageProperties
 				{
 					Content = """
@@ -387,6 +408,7 @@ public static class DuplicateMessageCleanerService
 					          _A moderator should set up a moderation notification channel with `/set-dupe-notif-channel` so that the moderators can see information about this, the next time this happens._
 					          """,
 				});
+			}
 		}
 	}
 
