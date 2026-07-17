@@ -141,11 +141,12 @@ public static partial class Utils
 		/// <summary>
 		/// Whether a specific message has been reacted to with this specific emoji.
 		/// </summary>
-		/// <param name="emoji">The emoji</param>
+		/// <param name="emoji">The emoji (may be null → false)</param>
 		///
 		/// <returns>Whether it's happened or not</returns>
-		public bool HasBeenReactedToWith(ReactionEmojiProperties emoji)
+		public bool HasBeenReactedToWith(ReactionEmojiProperties? emoji)
 		{
+			if (emoji is null) return false;
 			ulong? id = emoji.Id;
 			string name = emoji.Name;
 

@@ -121,6 +121,10 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 		}
 	}
 
+	private const string EMOJI_PARAMETER_DESCRIPTION = "Type a `:` and then the rest of the emoji. Let the autocomplete guide you!";
+
+#region Submission
+
 	private const string SUBMISSION_COMMAND_NAME = "submission";
 	private static readonly InternalEmoji _submission = new(SUBMISSION_COMMAND_NAME);
 
@@ -128,7 +132,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 		"Set the emoji that will mark something as a submission in this channel")]
 	[UsedImplicitly]
 	public async Task Submission(
-		[SlashCommandParameter(Description = "Type a `:` and then the rest of the emoji. Let the autocomplete guide you!")]
+		[SlashCommandParameter(Description = EMOJI_PARAMETER_DESCRIPTION)]
 		string? emoji = null)
 	{
 		await _submission.RunCommand(emoji, Context);
@@ -138,4 +142,29 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 	{
 		return _submission.GetEmoji(channel);
 	}
+
+#endregion
+
+#region Disqualification
+
+	private const string DISQUALIFICATION_COMMAND_NAME = "disqualification";
+	private static readonly InternalEmoji _disqualification = new(DISQUALIFICATION_COMMAND_NAME);
+
+	[SubSlashCommand(DISQUALIFICATION_COMMAND_NAME,
+		"Set the emoji that will mark something as disqualified in this channel")]
+	[UsedImplicitly]
+	public async Task Disqualification(
+		[SlashCommandParameter(Description = EMOJI_PARAMETER_DESCRIPTION)]
+		string? emoji = null)
+	{
+		await _disqualification.RunCommand(emoji, Context);
+	}
+
+	public static ReactionEmojiProperties? GetDisqualificationEmoji(TextChannel channel)
+	{
+		return _disqualification.GetEmoji(channel);
+	}
+
+#endregion
+
 }

@@ -12,6 +12,12 @@ The goal of this project is to encourage very collaborative development on this 
 
 - `/set-emoji submission`: Set the emoji for this channel that will mark something as a submission.
   - Leave empty to remove the emoji for this channel.
+  - With no submission emoji configured, the selectors **cannot select**!
+  - Only Administrators can run this command, [by default](#command-permissions).
+
+- `/set-emoji disqualification`: Set the emoji for this channel that will mark something as disqualified in this channel.
+  - Leave empty to remove the emoji for this channel.
+  - With no disqualification emoji configured, the selectors **will still** select!
   - Only Administrators can run this command, [by default](#command-permissions).
 
 

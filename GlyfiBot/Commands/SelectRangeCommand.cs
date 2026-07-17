@@ -54,7 +54,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 
 		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, idStart, idEnd);
 
-		(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(messages, emoji);
+		(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(Context.Channel, messages, emoji);
 
 		StringBuilder sbStats = new();
 		sbStats.AppendLine($"Selected messages: {messages.Count}");
@@ -187,16 +187,20 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		};
 	}
 
-	public static async Task<(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(List<RestMessage> messages, ReactionEmojiProperties emoji)
+	public static async Task<(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(TextChannel channel, List<RestMessage> messages, ReactionEmojiProperties emoji)
 	{
 		Dictionary<User, List<Attachment>> submissions = [];
 		uint submissionMessageCount = 0;
+
+		ReactionEmojiProperties? disqualificationEmoji = SetTheEmojiCommand.GetDisqualificationEmoji(channel);
 
 		foreach(RestMessage message in messages)
 		{
 			if (message.Attachments.Count == 0) continue;
 
 			if (!message.HasBeenReactedToWith(emoji)) continue;
+
+			if (message.HasBeenReactedToWith(disqualificationEmoji)) continue;
 
 			await foreach(User user in message.GetReactionsAsync(emoji))
 			{
