@@ -14,11 +14,11 @@ public class GetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 		ReactionEmojiProperties? theEmoji = SetTheEmojiCommand.GetSubmissionEmoji(Context.Channel);
 		if (theEmoji is null)
 		{
-			await Context.SendEphemeralResponseAsync("Emoji has not been set for this channel!");
+			await Context.SendEphemeralResponseAsync("Submission emoji has not been set for this channel");
 		}
 		else
 		{
-			await Context.SendEphemeralResponseAsync($"Emoji in this channel is set to {theEmoji.Visual()}");
+			await Context.SendEphemeralResponseAsync($"Submission emoji in this channel is set to {theEmoji.Visual()}");
 		}
 	}
 }
