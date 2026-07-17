@@ -98,7 +98,6 @@ static internal class Program
 
 		BotUser = await client.Rest.GetCurrentUserAsync();
 
-		await SetTheEmojiCommand.Load();
 		await SetModPingCommand.Load();
 
 		ApplicationCommandService<SlashCommandContext> applicationCommandService = new();

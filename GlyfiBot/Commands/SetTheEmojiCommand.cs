@@ -7,114 +7,135 @@ using System.Text.Json;
 
 namespace GlyfiBot.Commands;
 
+[SlashCommand("set-emoji",
+	"Set the emoji that will mark something in this channel",
+	DefaultGuildPermissions = Permissions.Administrator)]
 public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 {
-	private const string EMOJI_FILE = $"{Program.SETTINGS_DIR}/emoji.json";
-
-	private static ConcurrentDictionary<ulong, ReactionEmojiProperties> _emojis = null!;
-
-	public static ReactionEmojiProperties? GetEmoji(Channel channel)
+	private sealed class InternalEmoji
 	{
-		return _emojis.GetValueOrDefault(channel.Id);
-	}
+		private readonly string _commandName;
+		private readonly string _emojiFile;
+		private readonly ConcurrentDictionary<ulong, ReactionEmojiProperties> _emojis;
 
-	public static async Task Load()
-	{
-		if (File.Exists(EMOJI_FILE))
+		public InternalEmoji(string commandName)
 		{
-			await using FileStream fs = File.OpenRead(EMOJI_FILE);
-			Dictionary<ulong, string> dict = (await JsonSerializer.DeserializeAsync(fs, ToJson.Default.DictionaryUInt64String))!;
-			_emojis = new ConcurrentDictionary<ulong, ReactionEmojiProperties>(dict.Select(pair =>
+			_commandName = commandName;
+			_emojiFile = $"{Program.SETTINGS_DIR}/emoji_{_commandName}.json";
+
+			if (File.Exists(_emojiFile))
 			{
-				string[] contents = pair.Value.Split(':', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-				ReactionEmojiProperties theEmoji = contents.Length switch
+				using FileStream fs = File.OpenRead(_emojiFile);
+				Dictionary<ulong, string> dict = JsonSerializer.Deserialize(fs, ToJson.Default.DictionaryUInt64String)!;
+				_emojis = new ConcurrentDictionary<ulong, ReactionEmojiProperties>(dict.Select(pair =>
 				{
-					1 => new ReactionEmojiProperties(contents[0]),
-					2 => new ReactionEmojiProperties(contents[0], ulong.Parse(contents[1])),
-					_ => throw new InvalidOperationException($"Could not parse emoji from {pair.Value}"),
-				};
+					string[] contents = pair.Value.Split(':', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+					ReactionEmojiProperties theEmoji = contents.Length switch
+					{
+						1 => new ReactionEmojiProperties(contents[0]),
+						2 => new ReactionEmojiProperties(contents[0], ulong.Parse(contents[1])),
+						_ => throw new InvalidOperationException($"Could not parse {_commandName} emoji from {pair.Value}"),
+					};
 
-				return new KeyValuePair<ulong, ReactionEmojiProperties>(pair.Key, theEmoji);
-			}));
-		}
-		else
-		{
-			_emojis = new ConcurrentDictionary<ulong, ReactionEmojiProperties>();
-		}
-	}
-
-	[SlashCommand("set-emoji",
-		"Set the emoji that will mark something as a submission in this channel",
-		DefaultGuildPermissions = Permissions.Administrator)]
-	[UsedImplicitly]
-	public async Task ExecuteAsync(
-		[SlashCommandParameter(Description = "Type a `:` and then the rest of the emoji. Let the autocomplete guide you!")]
-		string? emoji = null)
-	{
-		if (emoji is null || emoji.IsWhiteSpace())
-		{
-			RemoveEmojiRegistration();
-			await Context.SendEphemeralResponseAsync("Cleared emoji for this channel. Remember to `/set-emoji` it to something again before using `/typst showcase` or `/select`!");
-		}
-		else
-		{
-			ReactionEmojiProperties setEmoji = AddEmojiRegistration(emoji);
-			await Context.SendEphemeralResponseAsync($"Set emoji for this channel to {setEmoji.Visual()}");
-		}
-		await SaveEmoji();
-	}
-
-	private ReactionEmojiProperties AddEmojiRegistration(string emoji)
-	{
-		ulong channelId = Context.Channel.Id;
-
-		ReactionEmojiProperties setEmoji;
-		if (emoji.Contains(':'))
-		{
-			try
-			{
-				string emojiClean = emoji.TrimStart('<').TrimEnd('>').TrimStart('a').Trim(':');
-				string[] parts = emojiClean.Split(":");
-				string name = parts[0];
-				ulong id = ulong.Parse(parts[1]);
-				setEmoji = new ReactionEmojiProperties(name, id);
-			}
-			catch(SystemException e) when(e is IndexOutOfRangeException or FormatException)
-			{
-				throw new SimpleCommandFailException($"Invalid emoji: `{emoji}`");
-			}
-		}
-		else
-		{
-			GuildEmoji? guildEmoji = Context.Guild.GetEmojiByName(emoji);
-			if (guildEmoji is not null)
-			{
-				setEmoji = new ReactionEmojiProperties(guildEmoji.Name, guildEmoji.Id);
+					return new KeyValuePair<ulong, ReactionEmojiProperties>(pair.Key, theEmoji);
+				}));
 			}
 			else
 			{
-				string? firstEmoji = Utils.FirstEmoji(emoji);
-				if (firstEmoji is null)
-				{
-					throw new SimpleCommandFailException($"Invalid emoji: `{emoji}`");
-				}
-
-				setEmoji = new ReactionEmojiProperties(firstEmoji);
+				_emojis = new ConcurrentDictionary<ulong, ReactionEmojiProperties>();
 			}
 		}
 
-		return _emojis[channelId] = setEmoji;
+		public async Task RunCommand(string? emoji, SlashCommandContext context)
+		{
+			if (emoji is null || emoji.IsWhiteSpace())
+			{
+				RemoveEmojiRegistration(context);
+				await context.SendEphemeralResponseAsync($"Cleared {_commandName} emoji for this channel. Remember to `/set-emoji {_commandName}` it to something again before using `/typst showcase` or `/select`!");
+			}
+			else
+			{
+				ReactionEmojiProperties setEmoji = AddEmojiRegistration(emoji, context);
+				await context.SendEphemeralResponseAsync($"Set {_commandName} emoji for this channel to {setEmoji.Visual()}");
+			}
+			await Save();
+		}
+
+		private ReactionEmojiProperties AddEmojiRegistration(string emoji, SlashCommandContext context)
+		{
+			ulong channelId = context.Channel.Id;
+
+			ReactionEmojiProperties setEmoji;
+			if (emoji.Contains(':'))
+			{
+				try
+				{
+					string emojiClean = emoji.TrimStart('<').TrimEnd('>').TrimStart('a').Trim(':');
+					string[] parts = emojiClean.Split(":");
+					string name = parts[0];
+					ulong id = ulong.Parse(parts[1]);
+					setEmoji = new ReactionEmojiProperties(name, id);
+				}
+				catch(SystemException e) when(e is IndexOutOfRangeException or FormatException)
+				{
+					throw new SimpleCommandFailException($"Invalid emoji: `{emoji}`");
+				}
+			}
+			else
+			{
+				GuildEmoji? guildEmoji = context.Guild.GetEmojiByName(emoji);
+				if (guildEmoji is not null)
+				{
+					setEmoji = new ReactionEmojiProperties(guildEmoji.Name, guildEmoji.Id);
+				}
+				else
+				{
+					string? firstEmoji = Utils.FirstEmoji(emoji);
+					if (firstEmoji is null)
+					{
+						throw new SimpleCommandFailException($"Invalid emoji: `{emoji}`");
+					}
+
+					setEmoji = new ReactionEmojiProperties(firstEmoji);
+				}
+			}
+
+			return _emojis[channelId] = setEmoji;
+		}
+
+		public ReactionEmojiProperties? GetEmoji(Channel channel)
+		{
+			return _emojis.GetValueOrDefault(channel.Id);
+		}
+
+		private void RemoveEmojiRegistration(SlashCommandContext context)
+		{
+			_emojis.TryRemove(context.Channel.Id, out _);
+		}
+
+		private async Task Save()
+		{
+			Dictionary<ulong, string> dict = _emojis.Select(pair => new KeyValuePair<ulong, string>(pair.Key, pair.Value.Name + ":" + pair.Value.Id)).ToDictionary();
+			await using FileStream fs = File.Open(_emojiFile, FileMode.Create);
+			await JsonSerializer.SerializeAsync(fs, dict, ToJson.Default.DictionaryUInt64String);
+		}
 	}
 
-	private void RemoveEmojiRegistration()
+	private const string SUBMISSION_COMMAND_NAME = "submission";
+	private static readonly InternalEmoji _submission = new(SUBMISSION_COMMAND_NAME);
+
+	[SubSlashCommand(SUBMISSION_COMMAND_NAME,
+		"Set the emoji that will mark something as a submission in this channel")]
+	[UsedImplicitly]
+	public async Task Submission(
+		[SlashCommandParameter(Description = "Type a `:` and then the rest of the emoji. Let the autocomplete guide you!")]
+		string? emoji = null)
 	{
-		_emojis.TryRemove(Context.Channel.Id, out _);
+		await _submission.RunCommand(emoji, Context);
 	}
 
-	private static async Task SaveEmoji()
+	public static ReactionEmojiProperties? GetSubmissionEmoji(TextChannel channel)
 	{
-		Dictionary<ulong, string> dict = _emojis.Select(pair => new KeyValuePair<ulong, string>(pair.Key, pair.Value.Name + ":" + pair.Value.Id)).ToDictionary();
-		await using FileStream fs = File.Open(EMOJI_FILE, FileMode.Create);
-		await JsonSerializer.SerializeAsync(fs, dict, ToJson.Default.DictionaryUInt64String);
+		return _submission.GetEmoji(channel);
 	}
 }

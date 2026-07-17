@@ -10,7 +10,7 @@ The goal of this project is to encourage very collaborative development on this 
 - `/emoji`: See which emoji marks something as a submission in this channel.
   - Anyone can run this command, [by default](#command-permissions).
 
-- `/set-emoji`: Set the emoji for this channel that will mark something as a submission.
+- `/set-emoji submission`: Set the emoji for this channel that will mark something as a submission.
   - Leave empty to remove the emoji for this channel.
   - Only Administrators can run this command, [by default](#command-permissions).
 

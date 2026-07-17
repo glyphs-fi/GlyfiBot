@@ -11,7 +11,7 @@ public class GetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 	[UsedImplicitly]
 	public async Task ExecuteAsync()
 	{
-		ReactionEmojiProperties? theEmoji = SetTheEmojiCommand.GetEmoji(Context.Channel);
+		ReactionEmojiProperties? theEmoji = SetTheEmojiCommand.GetSubmissionEmoji(Context.Channel);
 		if (theEmoji is null)
 		{
 			await Context.SendEphemeralResponseAsync("Emoji has not been set for this channel!");
