@@ -30,6 +30,8 @@ static internal class Program
 	public const string ANNOUNCEMENTS_DIR = $"{DATA_DIR}/announcements";
 	public const string SHOWCASES_DIR = $"{DATA_DIR}/showcases";
 	public const string WINNERS_DIR = $"{DATA_DIR}/winners";
+	public const string UPDATES_STAGING_DIR = $"{DATA_DIR}/updates-staging";
+	public const string UPDATE_AVAILABLE_DIR = "update-available";
 
 	private static async Task Main()
 	{
