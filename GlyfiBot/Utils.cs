@@ -435,18 +435,23 @@ public static partial class Utils
 		return !Directory.EnumerateFileSystemEntries(path).Any();
 	}
 
-	public static async Task<(string downloadURL, string digestHash)> GetReleaseAsset(string repoOwner, string repoName, string releaseTag, string filename)
+	public static async Task<(string downloadUrl, string digestHash)> GetReleaseAsset(
+		string repoOwner,
+		string repoName,
+		string releaseTag,
+		string filename
+	)
 	{
 		string jsonString = await Program.HttpClient.GetStringAsync($"https://api.github.com/repos/{repoOwner}/{repoName}/releases/tags/{releaseTag}");
 		JsonElement jsonElement = JsonSerializer.Deserialize(jsonString, ToJson.Default.JsonElement);
 
-		JsonElement? asset = jsonElement.GetProperty("assets").EnumerateArray().FirstOrDefault(element => element.GetProperty("name").GetString() == filename);
-		if (asset is null) throw new PlatformNotSupportedException("No asset");
+		JsonElement asset = jsonElement.GetProperty("assets").EnumerateArray().FirstOrDefault(element => element.GetProperty("name").GetString() == filename);
+		if (asset.ValueKind == JsonValueKind.Undefined) throw new PlatformNotSupportedException($"No asset that matches the desired filename: `{filename}`");
 
-		string? downloadURL = asset.Value.GetProperty("browser_download_url").GetString();
-		if (downloadURL is null) throw new PlatformNotSupportedException("No URL");
+		string? downloadUrl = asset.GetProperty("browser_download_url").GetString();
+		if (downloadUrl is null) throw new PlatformNotSupportedException("No URL");
 
-		string? digest = asset.Value.GetProperty("digest").GetString();
+		string? digest = asset.GetProperty("digest").GetString();
 		if (digest is null) throw new PlatformNotSupportedException("No digest");
 
 		string[] digestParts = digest.Split(":");
@@ -456,7 +461,7 @@ public static partial class Utils
 		if (digestAlgorithm != "sha256") throw new PlatformNotSupportedException($"Unsupported digest algorithm: `{digestAlgorithm}`");
 		string digestHash = digestParts.Last();
 
-		return (downloadURL, digestHash);
+		return (downloadUrl, digestHash);
 	}
 
 	/// Uses SHA256 to hash a file
