@@ -428,6 +428,11 @@ public static partial class Utils
 		JsonElement jsonElement = JsonSerializer.Deserialize(json, ToJson.Default.JsonElement);
 		return JsonSerializer.Serialize(jsonElement, ToJson.Default.JsonElement);
 	}
+
+	public static bool DirectoryEmpty(string path)
+	{
+		return !Directory.EnumerateFileSystemEntries(path).Any();
+	}
 }
 public class InteractionDataContainer<T> where T : IParsable<T>
 {

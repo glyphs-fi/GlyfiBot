@@ -549,7 +549,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		string typstDownloadURL = GetTypstDownloadURLForPlatform();
 
 		string typstExeVersionDir = Path.Join(Program.TYPST_EXE_DIR, TYPST_VERSION);
-		if (!Directory.Exists(typstExeVersionDir))
+		if (!Directory.Exists(typstExeVersionDir) || DirectoryEmpty(typstExeVersionDir))
 		{
 			await context.ModifyEphemeralResponseAsync("Downloading Typst... (This will only happen once)");
 
