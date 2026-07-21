@@ -1,5 +1,7 @@
 using NetCord;
 using NetCord.Gateway;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using static GlyfiBot.Utils;
 
 namespace GlyfiBot.Services;
@@ -9,11 +11,22 @@ public static class UpdateCheckerService
 	/// How long between update checks
 	private static readonly TimeSpan _timeSpan = TimeSpan.FromHours(24);
 
+	private const string REPO_NAME = "GlyfiBot";
+
 	public static async Task RunAsync(GatewayClient client)
 	{
-		HashSet<ulong> userIdsToNotifyOfUpdate = await FindUserIds(client);
+		try
+		{
+			// Clean up the previous update
+			if (Directory.Exists(Program.UPDATE_AVAILABLE_DIR)) Directory.Delete(Program.UPDATE_AVAILABLE_DIR, true);
 
-		await NotifyUsers(client, userIdsToNotifyOfUpdate); //initial
+			// Initial update check, on startup
+			await CheckForUpdate(client);
+		}
+		catch(Exception e)
+		{
+			Console.Error.WriteLine(e);
+		}
 
 		using PeriodicTimer timer = new(_timeSpan);
 
@@ -21,33 +34,108 @@ public static class UpdateCheckerService
 		{
 			try
 			{
-				await NotifyUsers(client, userIdsToNotifyOfUpdate);
+				await CheckForUpdate(client);
 			}
 			catch(Exception e)
 			{
-				Console.WriteLine(e);
+				Console.Error.WriteLine(e);
 				await Task.Delay(TimeSpan.FromSeconds(10)); // Some delay to prevent an exception from being thrown repeatedly
 			}
 		}
 	}
 
-	private static async Task NotifyUsers(GatewayClient client, HashSet<ulong> userIdsToNotifyOfUpdate)
+	private static async Task CheckForUpdate(GatewayClient client)
 	{
-		string latestRelease = VersionRegex().Replace(await GetLatestRelease("GlyfiBot"), "");
+		string latestReleaseTag = await GetLatestRelease(REPO_NAME);
+		string latestReleaseHash = VersionRegex().Replace(latestReleaseTag, "");
 		string? executableHash = ExecutableGitHash();
 
-		if (string.Equals(executableHash, latestRelease, StringComparison.OrdinalIgnoreCase)) return;
+		// Actual check
+		if (string.Equals(executableHash, latestReleaseHash, StringComparison.OrdinalIgnoreCase)) return;
 
+		// An update is available!
+		(string updateDownloadUrl, string remoteHash) = await GetReleaseAsset("glyphs-fi", REPO_NAME, latestReleaseTag, GetBotFilenameForPlatform());
+
+		string updateVersionDir = Path.Join(Program.UPDATES_STAGING_DIR, latestReleaseHash);
+		if (Directory.Exists(updateVersionDir)) Directory.Delete(updateVersionDir, true);
+
+		Console.WriteLine("Downloading update...");
+
+		Directory.CreateDirectory(updateVersionDir);
+		string archivePath = Path.Join(updateVersionDir, Path.GetFileName(updateDownloadUrl));
+		{
+			await using Stream networkStream = await Program.HttpClient.GetStreamAsync(updateDownloadUrl);
+			await using FileStream fileStream = new(archivePath, FileMode.CreateNew);
+			await networkStream.CopyToAsync(fileStream);
+		}
+
+		string localHash = await HashFile(archivePath);
+		if (!string.Equals(localHash, remoteHash, StringComparison.OrdinalIgnoreCase))
+		{
+			File.Delete(archivePath);
+			Directory.Delete(updateVersionDir);
+			throw new PlatformNotSupportedException($"Failed to verify the update download!\nLocal hash `{localHash.ToLower()}` did not match remote hash `{remoteHash.ToLower()}`");
+		}
+
+		Console.WriteLine("Extracting update...");
+		await ExtractArchive(archivePath);
+		File.Delete(archivePath);
+
+		Console.WriteLine("Update downloaded! Staging...");
+
+		// Clean up the previous update
+		if (Directory.Exists(Program.UPDATE_AVAILABLE_DIR)) Directory.Delete(Program.UPDATE_AVAILABLE_DIR, true);
+
+		Directory.Move(updateVersionDir, Program.UPDATE_AVAILABLE_DIR);
+
+		Console.WriteLine("Update staged and ready to be installed!");
+
+		await NotifyUsers(client, latestReleaseHash, executableHash);
+	}
+
+	[SuppressMessage("ReSharper", "SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault")]
+	private static string GetBotFilenameForPlatform()
+	{
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+		{
+			return RuntimeInformation.OSArchitecture switch
+			{
+				Architecture.X64 => "GlyfiBot_linux-x64.zip",
+				Architecture.Arm64 => "GlyfiBot_linux-arm64.zip",
+				_ => throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Architecture for Linux that this bot supports, so it cannot download the update! ({RuntimeInformation.OSArchitecture})"),
+			};
+		}
+
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+		{
+			return RuntimeInformation.OSArchitecture switch
+			{
+				Architecture.X64 => "GlyfiBot_win-x64.zip",
+				_ => throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Architecture for Windows that this bot supports, so it cannot download the update! ({RuntimeInformation.OSArchitecture})"),
+			};
+		}
+
+		throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Operating System that this bot supports, so it cannot download the update! ({RuntimeInformation.OSDescription})");
+	}
+
+	private static async Task NotifyUsers(GatewayClient client, string latestReleaseHash, string? executableHash)
+	{
+		HashSet<ulong> userIdsToNotifyOfUpdate = await FindUserIds(client);
 		foreach(ulong userId in userIdsToNotifyOfUpdate)
 		{
 			DMChannel dmChannel = await client.Rest.GetDMChannelAsync(userId);
 			await dmChannel.SendMessageAsync($"""
 			                                  I need to be updated!
 
-			                                  **Latest version:**  `{latestRelease}`
-			                                  **Current version:**  `{executableHash}`
+			                                  _Luckily, I have already downloaded the update for you!_
+			                                  Please look in the folder where I'm running, and you'll find a folder called `{Program.UPDATE_AVAILABLE_DIR}`.
+			                                  In there, are the new executables for me :)
 
-			                                  **Download here:**  <https://github.com/glyphs-fi/GlyfiBot/releases/latest>
+			                                  So please shut me down, and replace my files with these new ones!
+
+			                                  > **Current version:**  `{executableHash}`
+			                                  > **Latest version:**  `{latestReleaseHash}`
+			                                  > **Changelog:** <https://github.com/glyphs-fi/GlyfiBot/releases/v_{latestReleaseHash}>
 			                                  """);
 		}
 	}
