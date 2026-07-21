@@ -430,10 +430,9 @@ public static partial class Utils
 		return JsonSerializer.Serialize(jsonElement, ToJson.Default.JsonElement);
 	}
 
-	/// If the directory does not exist, this returns false
 	public static bool DirectoryEmpty(string path)
 	{
-		if (!Directory.Exists(path)) return false;
+		if (!Directory.Exists(path)) throw new DirectoryNotFoundException($"Tried to check if directory `{path}` was empty, but it doesn't even exist!");
 		return !Directory.EnumerateFileSystemEntries(path).Any();
 	}
 
