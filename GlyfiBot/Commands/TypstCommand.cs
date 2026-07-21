@@ -546,7 +546,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	/// <exception cref="FileNotFoundException">If the download did not contain a Typst executable</exception>
 	public static async Task<string> SetupTypst(SlashCommandContext context)
 	{
-		string typstDownloadURL = GetTypstDownloadURLForPlatform();
+		(string typstDownloadURL, string remoteHash) = await GetReleaseAsset("typst", "typst", TYPST_VERSION, GetTypstFilenameForPlatform());
 
 		string typstExeVersionDir = Path.Join(Program.TYPST_EXE_DIR, TYPST_VERSION);
 		if (!Directory.Exists(typstExeVersionDir) || DirectoryEmpty(typstExeVersionDir))
@@ -561,6 +561,14 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 				await networkStream.CopyToAsync(fileStream);
 			}
 
+			string localHash = await HashFile(archivePath);
+			if (!string.Equals(localHash, remoteHash, StringComparison.OrdinalIgnoreCase))
+			{
+				File.Delete(archivePath);
+				Directory.Delete(typstExeVersionDir);
+				throw new PlatformNotSupportedException($"Failed to verify the Typst download!\nLocal hash `{localHash.ToLower()}` did not match remote hash `{remoteHash.ToLower()}`");
+			}
+
 			await context.ModifyEphemeralResponseAsync("Extracting Typst... (This will only happen once)");
 			await ExtractArchive(archivePath);
 		}
@@ -569,20 +577,19 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		return exeLocation ?? throw new FileNotFoundException("Could not find a Typst executable in the unpacked archive!");
 	}
 
-	private const string URL = $"https://github.com/typst/typst/releases/download/{TYPST_VERSION}";
-	private const string URL_LINUX_X64 = $"{URL}/typst-x86_64-unknown-linux-musl.tar.xz";
-	private const string URL_LINUX_ARM64 = $"{URL}/typst-aarch64-unknown-linux-musl.tar.xz";
-	private const string URL_WIN_X64 = $"{URL}/typst-x86_64-pc-windows-msvc.zip";
+	private const string FILENAME_LINUX_X64 = "typst-x86_64-unknown-linux-musl.tar.xz";
+	private const string FILENAME_LINUX_ARM64 = "typst-aarch64-unknown-linux-musl.tar.xz";
+	private const string FILENAME_WIN_X64 = "typst-x86_64-pc-windows-msvc.zip";
 
 	[SuppressMessage("ReSharper", "SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault")]
-	private static string GetTypstDownloadURLForPlatform()
+	private static string GetTypstFilenameForPlatform()
 	{
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 		{
 			return RuntimeInformation.OSArchitecture switch
 			{
-				Architecture.X64 => URL_LINUX_X64,
-				Architecture.Arm64 => URL_LINUX_ARM64,
+				Architecture.X64 => FILENAME_LINUX_X64,
+				Architecture.Arm64 => FILENAME_LINUX_ARM64,
 				_ => throw new PlatformNotSupportedException("The bot is running on a server that is not of an Architecture for Linux that this bot supports, so Typst cannot be installed!"),
 			};
 		}
@@ -591,7 +598,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		{
 			return RuntimeInformation.OSArchitecture switch
 			{
-				Architecture.X64 => URL_WIN_X64,
+				Architecture.X64 => FILENAME_WIN_X64,
 				_ => throw new PlatformNotSupportedException("The bot is running on a server that is not of an Architecture for Windows that this bot supports, so Typst cannot be installed"),
 			};
 		}
