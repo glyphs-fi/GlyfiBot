@@ -127,14 +127,15 @@ public static class UpdateCheckerService
 			await dmChannel.SendMessageAsync($"""
 			                                  I need to be updated!
 
-			                                  **Latest version:**  `{latestReleaseHash}`
-			                                  **Current version:**  `{executableHash}`
-
-			                                  _**I have already downloaded the update for you!**_
+			                                  _Luckily, I have already downloaded the update for you!_
 			                                  Please look in the folder where I'm running, and you'll find a folder called `{Program.UPDATE_AVAILABLE_DIR}`.
 			                                  In there, are the new executables for me :)
 
 			                                  So please shut me down, and replace my files with these new ones!
+
+			                                  > **Current version:**  `{executableHash}`
+			                                  > **Latest version:**  `{latestReleaseHash}`
+			                                  > **Changelog:** <https://github.com/glyphs-fi/GlyfiBot/releases/v_{latestReleaseHash}>
 			                                  """);
 		}
 	}
