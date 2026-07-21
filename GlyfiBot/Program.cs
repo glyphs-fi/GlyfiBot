@@ -15,8 +15,9 @@ namespace GlyfiBot;
 
 static internal class Program
 {
-	public static readonly HttpClient HttpClient = new();
-	public static readonly HttpClient HttpClientNoRedirects = new(new HttpClientHandler {AllowAutoRedirect = false});
+	private const string USER_AGENT = "GlyfiBot";
+	public static readonly HttpClient HttpClient = new() {DefaultRequestHeaders = {{"User-Agent", USER_AGENT}}};
+	public static readonly HttpClient HttpClientNoRedirects = new(new HttpClientHandler {AllowAutoRedirect = false}) {DefaultRequestHeaders = {{"User-Agent", USER_AGENT}}};
 	public static User BotUser { get; private set; } = null!;
 
 	private const string DATA_DIR = "data";

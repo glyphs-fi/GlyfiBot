@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO.Compression;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -427,6 +428,42 @@ public static partial class Utils
 	{
 		JsonElement jsonElement = JsonSerializer.Deserialize(json, ToJson.Default.JsonElement);
 		return JsonSerializer.Serialize(jsonElement, ToJson.Default.JsonElement);
+	}
+
+	public static bool DirectoryEmpty(string path)
+	{
+		return !Directory.EnumerateFileSystemEntries(path).Any();
+	}
+
+	public static async Task<(string downloadURL, string digestHash)> GetReleaseAsset(string repoOwner, string repoName, string releaseTag, string filename)
+	{
+		string jsonString = await Program.HttpClient.GetStringAsync($"https://api.github.com/repos/{repoOwner}/{repoName}/releases/tags/{releaseTag}");
+		JsonElement jsonElement = JsonSerializer.Deserialize(jsonString, ToJson.Default.JsonElement);
+
+		JsonElement? asset = jsonElement.GetProperty("assets").EnumerateArray().FirstOrDefault(element => element.GetProperty("name").GetString() == filename);
+		if (asset is null) throw new PlatformNotSupportedException("No asset");
+
+		string? downloadURL = asset.Value.GetProperty("browser_download_url").GetString();
+		if (downloadURL is null) throw new PlatformNotSupportedException("No URL");
+
+		string? digest = asset.Value.GetProperty("digest").GetString();
+		if (digest is null) throw new PlatformNotSupportedException("No digest");
+
+		string[] digestParts = digest.Split(":");
+
+		string digestAlgorithm = digestParts.First();
+
+		if (digestAlgorithm != "sha256") throw new PlatformNotSupportedException($"Unsupported digest algorithm: `{digestAlgorithm}`");
+		string digestHash = digestParts.Last();
+
+		return (downloadURL, digestHash);
+	}
+
+	/// Uses SHA256 to hash a file
+	public static async Task<string> HashFile(string path)
+	{
+		byte[] digestBytes = SHA256.HashData(await File.ReadAllBytesAsync(path));
+		return Convert.ToHexString(digestBytes);
 	}
 }
 public class InteractionDataContainer<T> where T : IParsable<T>
