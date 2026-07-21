@@ -102,7 +102,7 @@ public static class UpdateCheckerService
 			{
 				Architecture.X64 => "GlyfiBot_linux-x64.zip",
 				Architecture.Arm64 => "GlyfiBot_linux-arm64.zip",
-				_ => throw new PlatformNotSupportedException("The bot is running on a server that is not of an Architecture for Linux that this bot supports, so it cannot download the update!"),
+				_ => throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Architecture for Linux that this bot supports, so it cannot download the update! ({RuntimeInformation.OSArchitecture})"),
 			};
 		}
 
@@ -111,11 +111,11 @@ public static class UpdateCheckerService
 			return RuntimeInformation.OSArchitecture switch
 			{
 				Architecture.X64 => "GlyfiBot_win-x64.zip",
-				_ => throw new PlatformNotSupportedException("The bot is running on a server that is not of an Architecture for Windows that this bot supports, so it cannot download the update!"),
+				_ => throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Architecture for Windows that this bot supports, so it cannot download the update! ({RuntimeInformation.OSArchitecture})"),
 			};
 		}
 
-		throw new PlatformNotSupportedException("The bot is running on a server that is not of an Operating System that this bot supports, so it cannot download the update!");
+		throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Operating System that this bot supports, so it cannot download the update! ({RuntimeInformation.OSDescription})");
 	}
 
 	private static async Task NotifyUsers(GatewayClient client, string latestReleaseHash, string? executableHash)

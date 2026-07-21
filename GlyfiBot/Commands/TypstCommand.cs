@@ -590,7 +590,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			{
 				Architecture.X64 => FILENAME_LINUX_X64,
 				Architecture.Arm64 => FILENAME_LINUX_ARM64,
-				_ => throw new PlatformNotSupportedException("The bot is running on a server that is not of an Architecture for Linux that this bot supports, so Typst cannot be installed!"),
+				_ => throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Architecture for Linux that this bot supports, so Typst cannot be installed! ({RuntimeInformation.OSArchitecture})"),
 			};
 		}
 
@@ -599,11 +599,11 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			return RuntimeInformation.OSArchitecture switch
 			{
 				Architecture.X64 => FILENAME_WIN_X64,
-				_ => throw new PlatformNotSupportedException("The bot is running on a server that is not of an Architecture for Windows that this bot supports, so Typst cannot be installed"),
+				_ => throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Architecture for Windows that this bot supports, so Typst cannot be installed! ({RuntimeInformation.OSArchitecture})"),
 			};
 		}
 
-		throw new PlatformNotSupportedException("The bot is running on a server that is not of an Operating System that this bot supports, so Typst cannot be installed!");
+		throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Operating System that this bot supports, so Typst cannot be installed! ({RuntimeInformation.OSDescription})");
 	}
 
 #endregion
