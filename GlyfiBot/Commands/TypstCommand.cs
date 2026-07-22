@@ -86,8 +86,14 @@ public static class OutputFormatExtensions
 public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	public const string COMMAND_NAME = "typst";
+
 	private const string TYPST_VERSION = "v0.14.2";
+	private const string TYPST_HASH_LINUX_X64 = "a6044cbad2a954deb921167e257e120ac0a16b20339ec01121194ff9d394996d";
+	private const string TYPST_HASH_LINUX_ARM64 = "491b101aa40a3a7ea82a3f8a6232cabb4e6a7e233810082e5ac812d43fdcd47a";
+	private const string TYPST_HASH_WINDOWS_X64 = "51353994ac83218c3497052e89b2c432c53b9d4439cdc1b361e2ea4798ebfc13";
+
 	private const string SCRIPTS_REPO_NAME = "weekly-challenges-typst";
+
 	private const string PPI_DESC = "Only used when the output_format is PNG or Both. If not provided, Typst defaults to 144";
 
 	/// All the file types Typst supports
@@ -575,7 +581,13 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			linuxArm64: "typst-aarch64-unknown-linux-musl.tar.xz",
 			winX64: "typst-x86_64-pc-windows-msvc.zip"
 		);
-		(string typstDownloadURL, string remoteHash) = await GetReleaseAsset("typst", "typst", TYPST_VERSION, filename);
+		string hardcodedHash = SwitchOnPlatformArch(
+			linuxX64: TYPST_HASH_LINUX_X64,
+			linuxArm64: TYPST_HASH_LINUX_ARM64,
+			winX64: TYPST_HASH_WINDOWS_X64
+		);
+
+		(string typstDownloadURL, string remoteHash) = await GetReleaseAsset("typst", "typst", TYPST_VERSION, filename, ifReleaseNotMutableThenProvideHash: hardcodedHash);
 
 		string typstExeVersionDir = Path.Join(Program.TYPST_EXE_DIR, TYPST_VERSION);
 		if (!Directory.Exists(typstExeVersionDir) || DirectoryEmpty(typstExeVersionDir))

@@ -441,11 +441,15 @@ public static partial class Utils
 		string repoOwner,
 		string repoName,
 		string releaseTag,
-		string filename
+		string filename,
+		string? ifReleaseNotMutableThenProvideHash = null
 	)
 	{
 		string jsonString = await Program.HttpClient.GetStringAsync($"https://api.github.com/repos/{repoOwner}/{repoName}/releases/tags/{releaseTag}");
 		JsonElement jsonElement = JsonSerializer.Deserialize(jsonString, ToJson.Default.JsonElement);
+
+		bool immutable = jsonElement.GetProperty("immutable").GetBoolean();
+		if (!immutable && ifReleaseNotMutableThenProvideHash is null) throw new PlatformNotSupportedException($"`{repoName}` release `{releaseTag}` is mutable, but we requested an immutable release");
 
 		JsonElement asset = jsonElement.GetProperty("assets").EnumerateArray().FirstOrDefault(element => element.GetProperty("name").GetString() == filename);
 		if (asset.ValueKind == JsonValueKind.Undefined) throw new PlatformNotSupportedException($"No asset that matches the desired filename: `{filename}`");
@@ -462,6 +466,11 @@ public static partial class Utils
 
 		if (digestAlgorithm != "sha256") throw new PlatformNotSupportedException($"Unsupported digest algorithm: `{digestAlgorithm}`");
 		string digestHash = digestParts.Last();
+
+		if (ifReleaseNotMutableThenProvideHash is not null && !string.Equals(digestHash, ifReleaseNotMutableThenProvideHash, StringComparison.OrdinalIgnoreCase))
+		{
+			throw new PlatformNotSupportedException($"Remote hash `{digestHash.ToLower()}` did not match hardcoded hash `{ifReleaseNotMutableThenProvideHash.ToLower()}`");
+		}
 
 		return (downloadUrl, digestHash);
 	}
