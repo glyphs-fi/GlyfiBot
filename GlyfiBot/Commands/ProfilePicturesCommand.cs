@@ -130,7 +130,15 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 		}
 	}
 
-	private static async Task<string> DownloadPfpsAsync(SlashCommandInteraction interaction, User[] users, StringBuilder sb, DownloadFormat downloadFormat, bool downloadAnimated, AnimatedDownloadFormat animatedDownloadFormat, FilenameType filenameType)
+	private static async Task<string> DownloadPfpsAsync(
+		SlashCommandInteraction interaction,
+		User[] users,
+		StringBuilder sb,
+		DownloadFormat downloadFormat,
+		bool downloadAnimated,
+		AnimatedDownloadFormat animatedDownloadFormat,
+		FilenameType filenameType
+	)
 	{
 		string pfpsPath = Path.Join(Program.PFPS_DIR, interaction.Id.ToString());
 		Directory.CreateDirectory(pfpsPath);
@@ -150,7 +158,13 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 
 	public record DownloadFile(string Filename, string DownloadUrl);
 
-	public static async Task<DownloadFile> GetAvatar(User user, DownloadFormat downloadFormat, bool downloadAnimated, AnimatedDownloadFormat animatedDownloadFormat, FilenameType filenameType)
+	public static async Task<DownloadFile> GetAvatar(
+		User user,
+		DownloadFormat downloadFormat,
+		bool downloadAnimated,
+		AnimatedDownloadFormat animatedDownloadFormat,
+		FilenameType filenameType
+	)
 	{
 		string username = filenameType switch
 		{

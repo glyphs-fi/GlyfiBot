@@ -50,7 +50,8 @@ public static class ChallengeTypeExtensions
 			return (toGenerate, inputKey, numColsArgName);
 		}
 
-		public (string toGenerate, string userNameKey, string nickNameKey) ForWinners(string level) => ($"{challengeType.GetLongName()}-{level}", $"{challengeType.GetShortName()}-winner-{level}-username", $"{challengeType.GetShortName()}-winner-{level}-nickname");
+		public (string toGenerate, string userNameKey, string nickNameKey) ForWinners(string level) =>
+			($"{challengeType.GetLongName()}-{level}", $"{challengeType.GetShortName()}-winner-{level}-username", $"{challengeType.GetShortName()}-winner-{level}-nickname");
 	}
 }
 public enum OutputFormat
@@ -138,7 +139,8 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		if (endDate is not null) args.AddRange(["--input", $"announcement-end-date={endDate}"]);
 
 		List<AttachmentProperties> attachments = [];
-		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{currentWeek}_{challengeType.GetNameForDir()}_{nameof(Announcement)}", outputFormat, args, ppi, attachments);
+		string outputFilename = $"w{currentWeek}_{challengeType.GetNameForDir()}_{nameof(Announcement)}";
+		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, outputFilename, outputFormat, args, ppi, attachments);
 
 		await ModifyResponseAsync(msg =>
 		{
@@ -278,7 +280,8 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		if (endDate is not null) args.AddRange(["--input", $"showcase-end-date={endDate}"]);
 
 		List<AttachmentProperties> attachments = [];
-		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{currentWeek}_{challengeType.GetNameForDir()}_{nameof(Showcase)}", outputFormat, args, ppi, attachments);
+		string outputFilename = $"w{currentWeek}_{challengeType.GetNameForDir()}_{nameof(Showcase)}";
+		string content = "Done!" + await GenerateAttachments(typstExe, scriptPath, outputDir, outputFilename, outputFormat, args, ppi, attachments);
 
 		await ModifyResponseAsync(msg =>
 		{
@@ -402,13 +405,23 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 				"--input", $"{userNameKey}={profilePictureFileName}",
 				"--input", $"{nickNameKey}={displayName}",
 			];
-			content += await GenerateAttachments(typstExe, scriptPath, outputDir, $"w{currentWeek}_{challengeType.GetNameForDir()}_{nameof(Winners)}_{level.UpperFirst()}", outputFormat, localArgs, ppi, attachments);
+			string outputFilename = $"w{currentWeek}_{challengeType.GetNameForDir()}_{nameof(Winners)}_{level.UpperFirst()}";
+			content += await GenerateAttachments(typstExe, scriptPath, outputDir, outputFilename, outputFormat, localArgs, ppi, attachments);
 		}
 	}
 
 #region Run Script with Typst
 
-	private static async Task<string> GenerateAttachments(string typstExe, string scriptPath, string outputDir, string outputFilename, OutputFormat outputFormat, List<string> args, int? ppi, List<AttachmentProperties> attachments)
+	private static async Task<string> GenerateAttachments(
+		string typstExe,
+		string scriptPath,
+		string outputDir,
+		string outputFilename,
+		OutputFormat outputFormat,
+		List<string> args,
+		int? ppi,
+		List<AttachmentProperties> attachments
+	)
 	{
 		const string header = "--------------------------------------- {0} Export ---------------------------------------\n";
 		Directory.CreateDirectory(outputDir);
@@ -442,7 +455,15 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		}
 	}
 
-	private static async Task<(int exitCode, string stdout, string stderr)> GenerateAttachmentForFormat(string typstExe, string scriptPath, string outputDir, string outputFilename, OutputFormat outputFormat, IEnumerable<string> args, List<AttachmentProperties> attachments)
+	private static async Task<(int exitCode, string stdout, string stderr)> GenerateAttachmentForFormat(
+		string typstExe,
+		string scriptPath,
+		string outputDir,
+		string outputFilename,
+		OutputFormat outputFormat,
+		IEnumerable<string> args,
+		List<AttachmentProperties> attachments
+	)
 	{
 		if (outputFormat == OutputFormat.Both) throw new ArgumentOutOfRangeException(nameof(outputFormat), outputFormat, null);
 
