@@ -183,7 +183,10 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		ReactionEmojiProperties? emoji = SetTheEmojiCommand.GetSubmissionEmoji(Context.Channel);
 		if (emoji is null)
 		{
-			throw new SimpleCommandFailException("Emoji has not been set for this channel! Use `/set-emoji submission` to set the emoji first");
+			throw new SimpleCommandFailException("""
+			                                     Emoji has not been set for this channel! Use `/set-emoji submission` to set the emoji first
+			                                     -# You may also want to set a disqualification emoji with `/set-emoji disqualification`
+			                                     """);
 		}
 
 		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
