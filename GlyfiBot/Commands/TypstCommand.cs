@@ -179,6 +179,13 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		int? ppi = null
 	)
 	{
+		// Check the emoji first, to let the user know if they forgot to set it, before they can get any other errors from the next steps
+		ReactionEmojiProperties? emoji = SetTheEmojiCommand.GetSubmissionEmoji(Context.Channel);
+		if (emoji is null)
+		{
+			throw new SimpleCommandFailException("Emoji has not been set for this channel! Use `/set-emoji submission` to set the emoji first");
+		}
+
 		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
 		await _progressTracker.Start(Context);
 
@@ -192,12 +199,6 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		Directory.CreateDirectory(imagesDir);
 
 		// Select messages in the provided range
-		ReactionEmojiProperties? emoji = SetTheEmojiCommand.GetSubmissionEmoji(Context.Channel);
-		if (emoji is null)
-		{
-			throw new SimpleCommandFailException("Emoji has not been set for this channel! Use `/set-emoji submission` to set the emoji first");
-		}
-
 		if (!ulong.TryParse(start, null, out ulong idStart))
 		{
 			throw new SimpleCommandFailException("`start` needs to be a number: the Message ID");
