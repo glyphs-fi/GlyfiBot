@@ -38,7 +38,7 @@ jobs:
           token: ${{ secrets.LICENCES_REPO_FG_PAT }}
 
       - name: Install .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
 
