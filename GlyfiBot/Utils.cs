@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO.Compression;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -470,6 +471,31 @@ public static partial class Utils
 	{
 		byte[] digestBytes = SHA256.HashData(await File.ReadAllBytesAsync(path));
 		return Convert.ToHexString(digestBytes);
+	}
+
+	[SuppressMessage("ReSharper", "SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault")]
+	public static T SwitchOnPlatformArch<T>(T linuxX64, T linuxArm64, T winX64)
+	{
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+		{
+			return RuntimeInformation.OSArchitecture switch
+			{
+				Architecture.X64 => linuxX64,
+				Architecture.Arm64 => linuxArm64,
+				_ => throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Architecture for Linux that this bot supports! ({RuntimeInformation.OSArchitecture})"),
+			};
+		}
+
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+		{
+			return RuntimeInformation.OSArchitecture switch
+			{
+				Architecture.X64 => winX64,
+				_ => throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Architecture for Windows that this bot supports! ({RuntimeInformation.OSArchitecture})"),
+			};
+		}
+
+		throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Operating System that this bot supports! ({RuntimeInformation.OSDescription})");
 	}
 }
 public class InteractionDataContainer<T> where T : IParsable<T>

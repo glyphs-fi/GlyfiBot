@@ -1,7 +1,5 @@
 using NetCord;
 using NetCord.Gateway;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 using static GlyfiBot.Utils;
 
 namespace GlyfiBot.Services;
@@ -54,7 +52,12 @@ public static class UpdateCheckerService
 		if (string.Equals(executableHash, latestReleaseHash, StringComparison.OrdinalIgnoreCase)) return;
 
 		// An update is available!
-		(string updateDownloadUrl, string remoteHash) = await GetReleaseAsset("glyphs-fi", REPO_NAME, latestReleaseTag, GetBotFilenameForPlatform());
+		string filename = SwitchOnPlatformArch(
+			linuxX64: "GlyfiBot_linux-x64.zip",
+			linuxArm64: "GlyfiBot_linux-arm64.zip",
+			winX64: "GlyfiBot_win-x64.zip"
+		);
+		(string updateDownloadUrl, string remoteHash) = await GetReleaseAsset("glyphs-fi", REPO_NAME, latestReleaseTag, filename);
 
 		string updateVersionDir = Path.Join(Program.UPDATES_STAGING_DIR, latestReleaseHash);
 		if (Directory.Exists(updateVersionDir)) Directory.Delete(updateVersionDir, true);
@@ -62,7 +65,7 @@ public static class UpdateCheckerService
 		Console.WriteLine("Downloading update...");
 
 		Directory.CreateDirectory(updateVersionDir);
-		string archivePath = Path.Join(updateVersionDir, Path.GetFileName(updateDownloadUrl));
+		string archivePath = Path.Join(updateVersionDir, filename);
 		{
 			await using Stream networkStream = await Program.HttpClient.GetStreamAsync(updateDownloadUrl);
 			await using FileStream fileStream = new(archivePath, FileMode.CreateNew);
@@ -91,31 +94,6 @@ public static class UpdateCheckerService
 		Console.WriteLine("Update staged and ready to be installed!");
 
 		await NotifyUsers(client, latestReleaseHash, executableHash);
-	}
-
-	[SuppressMessage("ReSharper", "SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault")]
-	private static string GetBotFilenameForPlatform()
-	{
-		if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-		{
-			return RuntimeInformation.OSArchitecture switch
-			{
-				Architecture.X64 => "GlyfiBot_linux-x64.zip",
-				Architecture.Arm64 => "GlyfiBot_linux-arm64.zip",
-				_ => throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Architecture for Linux that this bot supports, so it cannot download the update! ({RuntimeInformation.OSArchitecture})"),
-			};
-		}
-
-		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-		{
-			return RuntimeInformation.OSArchitecture switch
-			{
-				Architecture.X64 => "GlyfiBot_win-x64.zip",
-				_ => throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Architecture for Windows that this bot supports, so it cannot download the update! ({RuntimeInformation.OSArchitecture})"),
-			};
-		}
-
-		throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Operating System that this bot supports, so it cannot download the update! ({RuntimeInformation.OSDescription})");
 	}
 
 	private static async Task NotifyUsers(GatewayClient client, string latestReleaseHash, string? executableHash)

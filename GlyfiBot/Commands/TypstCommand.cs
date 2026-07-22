@@ -4,7 +4,6 @@ using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using static GlyfiBot.Utils;
@@ -546,7 +545,12 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 	/// <exception cref="FileNotFoundException">If the download did not contain a Typst executable</exception>
 	public static async Task<string> SetupTypst(SlashCommandContext context)
 	{
-		(string typstDownloadURL, string remoteHash) = await GetReleaseAsset("typst", "typst", TYPST_VERSION, GetTypstFilenameForPlatform());
+		string filename = SwitchOnPlatformArch(
+			linuxX64: "typst-x86_64-unknown-linux-musl.tar.xz",
+			linuxArm64: "typst-aarch64-unknown-linux-musl.tar.xz",
+			winX64: "typst-x86_64-pc-windows-msvc.zip"
+		);
+		(string typstDownloadURL, string remoteHash) = await GetReleaseAsset("typst", "typst", TYPST_VERSION, filename);
 
 		string typstExeVersionDir = Path.Join(Program.TYPST_EXE_DIR, TYPST_VERSION);
 		if (!Directory.Exists(typstExeVersionDir) || DirectoryEmpty(typstExeVersionDir))
@@ -554,7 +558,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			await context.ModifyEphemeralResponseAsync("Downloading Typst... (This will only happen once)");
 
 			Directory.CreateDirectory(typstExeVersionDir);
-			string archivePath = Path.Join(typstExeVersionDir, Path.GetFileName(typstDownloadURL));
+			string archivePath = Path.Join(typstExeVersionDir, filename);
 			{
 				await using Stream networkStream = await Program.HttpClient.GetStreamAsync(typstDownloadURL);
 				await using FileStream fileStream = new(archivePath, FileMode.CreateNew);
@@ -575,35 +579,6 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 
 		string? exeLocation = FindExe(typstExeVersionDir, "typst");
 		return exeLocation ?? throw new FileNotFoundException("Could not find a Typst executable in the unpacked archive!");
-	}
-
-	private const string FILENAME_LINUX_X64 = "typst-x86_64-unknown-linux-musl.tar.xz";
-	private const string FILENAME_LINUX_ARM64 = "typst-aarch64-unknown-linux-musl.tar.xz";
-	private const string FILENAME_WIN_X64 = "typst-x86_64-pc-windows-msvc.zip";
-
-	[SuppressMessage("ReSharper", "SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault")]
-	private static string GetTypstFilenameForPlatform()
-	{
-		if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-		{
-			return RuntimeInformation.OSArchitecture switch
-			{
-				Architecture.X64 => FILENAME_LINUX_X64,
-				Architecture.Arm64 => FILENAME_LINUX_ARM64,
-				_ => throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Architecture for Linux that this bot supports, so Typst cannot be installed! ({RuntimeInformation.OSArchitecture})"),
-			};
-		}
-
-		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-		{
-			return RuntimeInformation.OSArchitecture switch
-			{
-				Architecture.X64 => FILENAME_WIN_X64,
-				_ => throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Architecture for Windows that this bot supports, so Typst cannot be installed! ({RuntimeInformation.OSArchitecture})"),
-			};
-		}
-
-		throw new PlatformNotSupportedException($"The bot is running on a server that is not of an Operating System that this bot supports, so Typst cannot be installed! ({RuntimeInformation.OSDescription})");
 	}
 
 #endregion
