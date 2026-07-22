@@ -1,5 +1,6 @@
 using JetBrains.Annotations;
 using NetCord;
+using NetCord.Gateway;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
 using System.IO.Compression;
@@ -54,7 +55,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 
 		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, idStart, idEnd);
 
-		(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(Context.Channel, messages, emoji);
+		(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(Context.Guild, Context.Channel, messages, emoji);
 
 		StringBuilder sbStats = new();
 		sbStats.AppendLine($"Selected messages: {messages.Count}");
@@ -187,7 +188,12 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		};
 	}
 
-	public static async Task<(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(TextChannel channel, List<RestMessage> messages, ReactionEmojiProperties emoji)
+	public static async Task<(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(
+		Guild? guild,
+		TextChannel channel,
+		List<RestMessage> messages,
+		ReactionEmojiProperties emoji
+	)
 	{
 		Dictionary<User, List<Attachment>> submissions = [];
 		uint submissionMessageCount = 0;
@@ -200,7 +206,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 
 			if (!message.HasBeenReactedToWith(emoji)) continue;
 
-			if (message.HasBeenReactedToWith(disqualificationEmoji)) continue;
+			if (await IsMessageDisqualified(guild, message, disqualificationEmoji)) continue;
 
 			await foreach(User user in message.GetReactionsAsync(emoji))
 			{
@@ -222,5 +228,29 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		}
 
 		return (submissions, submissionMessageCount);
+	}
+
+	private static async Task<bool> IsMessageDisqualified(Guild? guild, RestMessage message, ReactionEmojiProperties? disqualificationEmoji)
+	{
+		if (disqualificationEmoji is not null)
+		{
+			await foreach(User user in message.GetReactionsAsync(disqualificationEmoji))
+			{
+				if (guild is not null)
+				{
+					GuildUser guildUser = await guild.GetUserAsync(user.Id);
+					Permissions permissions = guildUser.GetPermissions(guild);
+					if (permissions.HasFlag(Permissions.ManageMessages)) return true;
+				}
+				else
+				{
+					// We're not in a guild, so we're probably in a DM
+
+					// Here, users may disqualify their own messages (dunno why, but let's do it)
+					if (user == message.Author) return true;
+				}
+			}
+		}
+		return false;
 	}
 }

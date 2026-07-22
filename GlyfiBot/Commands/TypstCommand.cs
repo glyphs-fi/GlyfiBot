@@ -230,7 +230,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, idStart, idEnd);
 
 		// Filter submissions from the messages
-		(Dictionary<User, List<Attachment>> submissions, uint _) = await SelectRangeCommand.FilterSubmissionsFromMessagesAsync(Context.Channel, messages, emoji);
+		(Dictionary<User, List<Attachment>> submissions, uint _) = await SelectRangeCommand.FilterSubmissionsFromMessagesAsync(Context.Guild, Context.Channel, messages, emoji);
 		List<Attachment> allSubmissions = submissions.Values //
 			.SelectMany(attachments => attachments) //
 			.Where(attachment => _supportedExtensions.Contains(Path.GetExtension(attachment.FileName))) //
