@@ -234,6 +234,8 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 	{
 		if (disqualificationEmoji is not null)
 		{
+			if (!message.HasBeenReactedToWith(disqualificationEmoji)) return false;
+
 			await foreach(User user in message.GetReactionsAsync(disqualificationEmoji))
 			{
 				if (guild is not null)
