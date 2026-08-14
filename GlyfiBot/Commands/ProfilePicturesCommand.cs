@@ -216,7 +216,8 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 			{
 				url = user.AlwaysGetAvatarUrl(ImageFormat.Png);
 			}
-			return new DownloadFile($"{username}{url.GetExtension()}", url.ToString(4096));
+			string downloadUrl = url.SupportsSize ? url.ToString(4096) : url.ToString();
+			return new DownloadFile($"{username}{url.GetExtension()}", downloadUrl);
 		}
 	}
 }
