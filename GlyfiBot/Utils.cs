@@ -251,12 +251,33 @@ public static partial class Utils
 		return errorGroup is RestErrorDetailGroup group && group.Errors.Any(restErrorDetail => restErrorDetail.Code == errorKey);
 	}
 
+	public class AvatarUrl(ImageUrl url)
+	{
+		protected readonly ImageUrl URL = url;
+
+		public override string ToString() => URL.ToString();
+		public string ToString(bool animated) => $"{ToString()}?animated={animated}";
+
+		/// <remarks>
+		/// Includes the <c>.</c> of the extension.
+		/// </remarks>
+		public string GetExtension() => Path.GetExtension(ToString());
+
+		public bool IsAnimated() => GetExtension() == ".gif";
+	}
+	public class SizeableAvatarUrl(ImageUrl url) : AvatarUrl(url)
+	{
+		public string ToString(int size) => URL.ToString(size);
+		public string ToString(int size, bool animated) => $"{ToString(size)}&animated={animated}";
+	}
 	extension(User user)
 	{
-		public ImageUrl AlwaysGetAvatarUrl(ImageFormat? format = null)
+		public AvatarUrl AlwaysGetAvatarUrl(ImageFormat? format = null)
 		{
 			ImageUrl? avatarUrl = user.GetAvatarUrl(format);
-			return avatarUrl ?? user.DefaultAvatarUrl;
+			if (avatarUrl is null) return new AvatarUrl(user.DefaultAvatarUrl);
+			if (avatarUrl.SupportsSize) return new SizeableAvatarUrl(avatarUrl);
+			return new AvatarUrl(avatarUrl);
 		}
 
 		/// <summary>
@@ -275,23 +296,6 @@ public static partial class Utils
 			return await guildUserGet.GetNickNameAsync(guild);
 		}
 	}
-
-	extension(ImageUrl imageUrl)
-	{
-		/// <remarks>
-		/// Includes the <c>.</c> of the extension.
-		/// </remarks>
-		public string GetExtension()
-		{
-			return Path.GetExtension(imageUrl.ToString());
-		}
-
-		public bool IsAnimated()
-		{
-			return imageUrl.GetExtension() == ".gif";
-		}
-	}
-
 
 	/// <summary>
 	/// Extracts the archive at the provided path into its parent directory.

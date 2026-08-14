@@ -4,6 +4,7 @@ using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
 using System.IO.Compression;
 using System.Text;
+using static GlyfiBot.Utils;
 
 namespace GlyfiBot.Commands;
 
@@ -175,7 +176,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 		};
 		if (downloadAnimated)
 		{
-			ImageUrl url = user.AlwaysGetAvatarUrl();
+			AvatarUrl url = user.AlwaysGetAvatarUrl();
 
 			if (url.IsAnimated())
 			{
@@ -185,7 +186,8 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 					AnimatedDownloadFormat.WebP => user.AlwaysGetAvatarUrl(ImageFormat.WebP),
 					_ => throw new ArgumentOutOfRangeException(nameof(animatedDownloadFormat), animatedDownloadFormat, null),
 				};
-				return new DownloadFile($"{username}{url.GetExtension()}", $"{url.ToString(4096)}&animated=true");
+				string downloadUrl = url is SizeableAvatarUrl sizeableUrl ? sizeableUrl.ToString(size: 4096, animated: true) : url.ToString(animated: true);
+				return new DownloadFile($"{username}{url.GetExtension()}", downloadUrl);
 			}
 			else
 			{
@@ -197,12 +199,13 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 					DownloadFormat.WebP => user.AlwaysGetAvatarUrl(ImageFormat.WebP),
 					_ => throw new ArgumentOutOfRangeException(nameof(downloadFormat), downloadFormat, null),
 				};
-				return new DownloadFile($"{username}{url.GetExtension()}", url.ToString(4096));
+				string downloadUrl = url is SizeableAvatarUrl sizeableUrl ? sizeableUrl.ToString(size: 4096) : url.ToString();
+				return new DownloadFile($"{username}{url.GetExtension()}", downloadUrl);
 			}
 		}
 		else
 		{
-			ImageUrl url = downloadFormat switch
+			AvatarUrl url = downloadFormat switch
 			{
 				DownloadFormat.Original => user.AlwaysGetAvatarUrl(),
 				DownloadFormat.PNG => user.AlwaysGetAvatarUrl(ImageFormat.Png),
@@ -216,7 +219,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 			{
 				url = user.AlwaysGetAvatarUrl(ImageFormat.Png);
 			}
-			string downloadUrl = url.SupportsSize ? url.ToString(4096) : url.ToString();
+			string downloadUrl = url is SizeableAvatarUrl sizeableUrl ? sizeableUrl.ToString(size: 4096) : url.ToString();
 			return new DownloadFile($"{username}{url.GetExtension()}", downloadUrl);
 		}
 	}
