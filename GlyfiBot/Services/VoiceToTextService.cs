@@ -69,7 +69,10 @@ public static partial class VoiceToTextService
 				The input may be any language, but you *ALWAYS* _have_ to include proper punctuation, or bad things will happen…
 				The language may change during speech! You have to handle this properly, and start transcribing in that new language.
 				Do *NOT* write anything like "[speaking foreign language]"!
-				"""
+				If you transcribe anything as "[speaking foreign language]", bad things will also happen!
+				If you _really_ don't know how to transcribe something, you may write "[gibberish]".
+				Only do this as an ultimate last resort! You really have to try your best first. I believe in you, you can do it!
+				""" //blegh 🤮
 			).WithLanguageDetection().Build();
 		}
 
