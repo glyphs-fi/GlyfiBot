@@ -199,7 +199,7 @@ public static partial class VoiceToTextService
 	}
 
 	// [GeneratedRegex(@"(?<!\b(?:dr|mr|mx|mrs|ms|e\.?t\.?c|e\.?g|i\.?e)\b)([.?!]+)\s*", RegexOptions.IgnoreCase, "en-GB")]
-	[GeneratedRegex(@"(?<!\b(?:dr|mr|mx|mrs|ms|e\.?t\.?c|e\.?g|i\.?e)\b)([.?!]+['""]?)\s*", RegexOptions.IgnoreCase, "en-GB")]
+	[GeneratedRegex("""(?<!\b(?:dr|mr|mx|mrs|ms|e\.?t\.?c|e\.?g|i\.?e)\b)([.?!]+['"]?)\s*""", RegexOptions.IgnoreCase, "en-GB")]
 	private static partial Regex LineSplitter();
 
 #endregion
