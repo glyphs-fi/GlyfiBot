@@ -38,7 +38,7 @@ public static partial class FfmpegService
 	{
 		try
 		{
-			Process ffmpegCmd = await RunFfmpegCommand("ffmpeg5", ["-version"]);
+			Process ffmpegCmd = await RunFfmpegCommand("ffmpeg", ["-version"]);
 			if (ffmpegCmd.ExitCode != 0)
 			{
 				throw new InvalidOperationException($"""
