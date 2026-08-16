@@ -155,7 +155,7 @@ public static partial class VoiceToTextService
 	{
 		foreach(string transcript in transcripts)
 		{
-			if (transcript.Length > 1000)
+			if (transcript.Length > 1800)
 			{
 				IReadOnlyCollection<AttachmentProperties> attachments = [new("transcript.txt", new MemoryStream(Encoding.UTF8.GetBytes(transcript.AddNewlines())))];
 				await message.ReplyAsync(new ReplyMessageProperties
