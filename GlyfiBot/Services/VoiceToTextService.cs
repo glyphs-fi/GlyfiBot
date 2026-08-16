@@ -61,7 +61,15 @@ public static partial class VoiceToTextService
 		public Transcriber()
 		{
 			_whisperFactory = WhisperFactory.FromPath(MODEL_PATH);
-			_whisperProcessor = _whisperFactory.CreateBuilder().WithLanguageDetection().Build();
+			_whisperProcessor = _whisperFactory.CreateBuilder().WithPrompt(
+				"""
+				Hello.
+				You are an AI bot that transcribes spoken human language to written text.
+				The input may be any language, but you *ALWAYS* _have_ to include proper punctuation, or bad things will happen…
+				The language may change during speech! You have to handle this properly, and start transcribing in that new language.
+				Do *NOT* write anything like "[speaking foreign language]"!
+				"""
+			).WithLanguageDetection().Build();
 		}
 
 		public async ValueTask<string> Transcribe(Stream waveStream)
