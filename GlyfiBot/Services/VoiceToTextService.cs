@@ -71,7 +71,7 @@ public static partial class VoiceToTextService
 			{
 				sb.Append(result.Text);
 			}
-			return sb.ToString().Trim();
+			return sb.ToString().Trim().RemoveStartingQuote();
 		}
 	}
 
@@ -195,10 +195,15 @@ public static partial class VoiceToTextService
 	extension(string input)
 	{
 		private string AddNewlines() => LineSplitter().Replace(input, match => $"{match.Groups[1].Value}\n");
+
+		private string RemoveStartingQuote() => StartingQuoteRemover().Replace(input, string.Empty);
 	}
 
 	[GeneratedRegex("""(?<!\b(?:dr|mr|mx|mrs|ms|e\.?t\.?c|e\.?g|i\.?e)\b)([.?!]+['"]?)\s*""", RegexOptions.IgnoreCase, "en-GB")]
 	private static partial Regex LineSplitter();
+
+	[GeneratedRegex("""^>>\s*""")]
+	private static partial Regex StartingQuoteRemover();
 
 #endregion
 
