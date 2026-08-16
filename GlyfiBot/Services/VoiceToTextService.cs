@@ -149,7 +149,7 @@ public static partial class VoiceToTextService
 		{
 			if (transcript.Length > 1000)
 			{
-				IReadOnlyCollection<AttachmentProperties> attachments = [new("transcript.txt", new MemoryStream(Encoding.UTF8.GetBytes(AddNewlines(transcript))))];
+				IReadOnlyCollection<AttachmentProperties> attachments = [new("transcript.txt", new MemoryStream(Encoding.UTF8.GetBytes(transcript.AddNewlines())))];
 				await message.ReplyAsync(new ReplyMessageProperties
 				{
 					Content = "**Transcript:**",
@@ -192,12 +192,11 @@ public static partial class VoiceToTextService
 
 #region Utils
 
-	private static string AddNewlines(string input)
+	extension(string input)
 	{
-		return LineSplitter().Replace(input, match => $"{match.Groups[1].Value}\n");
+		private string AddNewlines() => LineSplitter().Replace(input, match => $"{match.Groups[1].Value}\n");
 	}
 
-	// [GeneratedRegex(@"(?<!\b(?:dr|mr|mx|mrs|ms|e\.?t\.?c|e\.?g|i\.?e)\b)([.?!]+)\s*", RegexOptions.IgnoreCase, "en-GB")]
 	[GeneratedRegex("""(?<!\b(?:dr|mr|mx|mrs|ms|e\.?t\.?c|e\.?g|i\.?e)\b)([.?!]+['"]?)\s*""", RegexOptions.IgnoreCase, "en-GB")]
 	private static partial Regex LineSplitter();
 
