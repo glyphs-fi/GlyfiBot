@@ -37,6 +37,7 @@ public static partial class VoiceToTextService
 	{
 		if (message.Attachments.Count == 0) return;
 		if (message.Author.IsBot) return;
+		// if (!message.Flags.HasFlag(MessageFlags.IsVoiceMessage)) return; // Only process original voice messages. No arbitrary ogg or opus files.
 		if (_transcriber is null) return;
 
 		string downloadPath = Path.Join(Program.VOICE_TO_TEXT_RUNS_DIR, message.Id.ToString());
@@ -95,6 +96,8 @@ public static partial class VoiceToTextService
 			string? contentType = attachmentFile.ContentType;
 			if (contentType is null) continue;
 			if (!contentType.StartsWith("audio/")) continue;
+			// if (contentType is not ("audio/ogg" or "audio/opus")) continue; // Better filtering
+			// if (attachmentFile is not VoiceAttachment) continue; // Possibly even better filtering
 
 			string path = CreateDownloadFilePath();
 			if (File.Exists(path))
