@@ -152,7 +152,7 @@ public static partial class VoiceToTextService
 				IReadOnlyCollection<AttachmentProperties> attachments = [new("transcript.txt", new MemoryStream(Encoding.UTF8.GetBytes(AddNewlines(transcript))))];
 				await message.ReplyAsync(new ReplyMessageProperties
 				{
-					Content = "Transcript",
+					Content = "**Transcript:**",
 					Attachments = attachments,
 				});
 			}
@@ -162,8 +162,7 @@ public static partial class VoiceToTextService
 				{
 					Content = $"""
 					           **Transcript:**
-
-					           {transcript}
+					           > {transcript}
 					           """,
 				});
 			}
