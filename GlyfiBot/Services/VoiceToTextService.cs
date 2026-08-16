@@ -162,6 +162,7 @@ public static partial class VoiceToTextService
 				{
 					Content = "**Transcript:**",
 					Attachments = attachments,
+					AllowedMentions = AllowedMentionsProperties.None,
 				});
 			}
 			else
@@ -172,6 +173,7 @@ public static partial class VoiceToTextService
 					           **Transcript:**
 					           > {transcript}
 					           """,
+					AllowedMentions = AllowedMentionsProperties.None,
 				});
 			}
 		}
