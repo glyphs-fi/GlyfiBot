@@ -18,7 +18,13 @@
 		<PackageReference Include="NetCord" Version="1.0.0-beta.12"/>
 		<PackageReference Include="NetCord.Services" Version="1.0.0-beta.12"/>
 		<PackageReference Include="JetBrains.Annotations" Version="2026.2.0"/>
-		<PackageReference Include="SixLabors.ImageSharp.Drawing" Version="3.1.0" />
+		<PackageReference Include="SixLabors.ImageSharp.Drawing" Version="3.1.0"/>
+		<PackageReference Include="Whisper.net" Version="1.9.1"/>
+		<!-- This package is for the CPU runtime, but it brings a LOT of extra runtime files with it that I don't want. -->
+		<!--<PackageReference Include="Whisper.net.Runtime" Version="1.9.1"/>-->
+		<PackageReference Include="Whisper.net.Runtime.Cuda.Linux" Version="1.9.1"/>
+		<PackageReference Include="Whisper.net.Runtime.Cuda.Windows" Version="1.9.1"/>
+		<PackageReference Include="Whisper.net.Runtime.Vulkan" Version="1.9.1"/>
 	</ItemGroup>
 
 	<PropertyGroup>

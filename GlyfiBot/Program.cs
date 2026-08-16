@@ -16,7 +16,7 @@ namespace GlyfiBot;
 static internal class Program
 {
 	private const string USER_AGENT = "GlyfiBot";
-	public static readonly HttpClient HttpClient = new() {DefaultRequestHeaders = {{"User-Agent", USER_AGENT}}};
+	public static readonly HttpClient HttpClient = new() {DefaultRequestHeaders = {{"User-Agent", USER_AGENT}}, Timeout = TimeSpan.FromHours(1)};
 	public static readonly HttpClient HttpClientNoRedirects = new(new HttpClientHandler {AllowAutoRedirect = false}) {DefaultRequestHeaders = {{"User-Agent", USER_AGENT}}};
 	public static User BotUser { get; private set; } = null!;
 
@@ -32,6 +32,10 @@ static internal class Program
 	public const string WINNERS_DIR = $"{DATA_DIR}/winners";
 	public const string UPDATES_STAGING_DIR = $"{DATA_DIR}/updates-staging";
 	public const string UPDATE_AVAILABLE_DIR = "update-available";
+	public const string FFMPEG_EXE_DIR = $"{DATA_DIR}/ffmpeg-exe";
+	private const string VOICE_TO_TEXT_DIR = $"{DATA_DIR}/voice-to-text";
+	public const string VOICE_TO_TEXT_RUNS_DIR = $"{VOICE_TO_TEXT_DIR}/runs";
+	public const string VOICE_MODEL_DIR = $"{VOICE_TO_TEXT_DIR}/models";
 
 	private static async Task Main()
 	{
@@ -213,6 +217,8 @@ static internal class Program
 #endif
 			DuplicateMessageCleanerService.RunAsync(client),
 			RulesUpdaterService.RunAsync(client),
+			FfmpegService.RunAsync(),
+			VoiceToTextService.RunAsync(client),
 		]);
 	}
 

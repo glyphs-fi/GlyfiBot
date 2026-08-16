@@ -331,7 +331,7 @@ public static partial class Utils
 		string[] files = Directory.GetFiles(searchPath, $"{exeName}*", new EnumerationOptions
 		{
 			RecurseSubdirectories = true,
-			MaxRecursionDepth = 1,
+			MaxRecursionDepth = 2,
 			MatchCasing = MatchCasing.CaseInsensitive,
 			MatchType = MatchType.Simple,
 		});

@@ -41,11 +41,10 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 
 	private static async ValueTask ProcessMessage(Message message)
 	{
-		if (message.Author.Id == Program.BotUser.Id) return; // Do not reply after own messages
-
 		ulong channelId = message.ChannelId;
 		if (_stickyMessages.TryGetValue(channelId, out WatchedChannel? watchedChannel))
 		{
+			if (message.Author.Id == Program.BotUser.Id && watchedChannel.IsSameAsMessage(message.Content)) return; // Do not reply after own sticky messages
 			await watchedChannel.SendMessageDelayed();
 		}
 	}
@@ -128,6 +127,11 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 		public void ChangeMessage(string newMessage)
 		{
 			_message = newMessage;
+		}
+
+		public bool IsSameAsMessage(string test)
+		{
+			return _message.Equals(test, StringComparison.Ordinal);
 		}
 
 		/// Do not run for every single message that comes in, but only every <see cref="_delay"/>
