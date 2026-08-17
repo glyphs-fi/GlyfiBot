@@ -10,15 +10,21 @@ namespace GlyfiBot.Services;
 
 public static partial class VoiceToTextService
 {
+	private const string REMOVAL_EMOJI = "❌";
+	private const string TRANSCRIPT_HEADER = "**Transcript:**";
+	private const string TRANSCRIPT_FOOTER = $"-# Click the {REMOVAL_EMOJI} below to remove this transcript. (Only the original author can do this.)";
+
 	// https://github.com/openai/whisper#available-models-and-languages
 	private const GgmlType MODEL_TYPE = GgmlType.Small;
 	// ReSharper disable once InconsistentNaming
 	private static readonly string MODEL_PATH = $"{Program.VOICE_MODEL_DIR}/ggml-{(int)MODEL_TYPE}-{MODEL_TYPE.ToString().ToLowerInvariant()}.bin";
 
 	private static Transcriber? _transcriber;
+	private static GatewayClient _client = null!;
 
 	public static async Task RunAsync(GatewayClient client)
 	{
+		_client = client;
 		Directory.CreateDirectory(Program.VOICE_MODEL_DIR);
 		try
 		{
@@ -30,7 +36,8 @@ public static partial class VoiceToTextService
 			Console.Error.WriteLine(e);
 		}
 
-		client.MessageCreate += ProcessMessage;
+		_client.MessageCreate += ProcessMessage;
+		_client.MessageReactionAdd += ProcessReaction;
 	}
 
 	private static async ValueTask ProcessMessage(Message message)
@@ -51,6 +58,28 @@ public static partial class VoiceToTextService
 		if (transcripts.Count == 0) return;
 
 		await SendTranscripts(transcripts, message);
+	}
+
+	private static async ValueTask ProcessReaction(MessageReactionAddEventArgs arg)
+	{
+		if (arg.MessageAuthorId != Program.BotUser.Id) return; // Only process messages sent by the bot.
+		if (arg.Emoji.Name != REMOVAL_EMOJI) return; // Only process reactions with the removal emoji.
+		if (arg.UserId == Program.BotUser.Id) return; // Ignore reactions from the bot itself.
+
+		RestMessage transcriptionMessage = await _client.Rest.GetMessageAsync(arg.ChannelId, arg.MessageId);
+		if (!transcriptionMessage.Content.StartsWith(TRANSCRIPT_HEADER)) return;
+
+		RestMessage? originalMessage = transcriptionMessage.ReferencedMessage;
+		if (originalMessage is null) return;
+
+		if (originalMessage.Author.Id == arg.UserId)
+		{
+			await transcriptionMessage.DeleteAsync();
+		}
+		else
+		{
+			await transcriptionMessage.DeleteUserReactionAsync(new ReactionEmojiProperties(REMOVAL_EMOJI), arg.UserId);
+		}
 	}
 
 	private class Transcriber
@@ -161,27 +190,33 @@ public static partial class VoiceToTextService
 	{
 		foreach(string transcript in transcripts)
 		{
+			RestMessage sentMessage;
 			if (transcript.Length > 1800)
 			{
 				IReadOnlyCollection<AttachmentProperties> attachments = [new("transcript.txt", new MemoryStream(Encoding.UTF8.GetBytes(transcript.AddNewlines())))];
-				await message.ReplyAsync(new ReplyMessageProperties
+				sentMessage = await message.ReplyAsync(new ReplyMessageProperties
 				{
-					Content = "**Transcript:**",
+					Content = $"""
+					           {TRANSCRIPT_HEADER}
+					           {TRANSCRIPT_FOOTER}
+					           """,
 					Attachments = attachments,
 					AllowedMentions = AllowedMentionsProperties.None,
 				});
 			}
 			else
 			{
-				await message.ReplyAsync(new ReplyMessageProperties
+				sentMessage = await message.ReplyAsync(new ReplyMessageProperties
 				{
 					Content = $"""
-					           **Transcript:**
+					           {TRANSCRIPT_HEADER}
 					           > {transcript}
+					           {TRANSCRIPT_FOOTER}
 					           """,
 					AllowedMentions = AllowedMentionsProperties.None,
 				});
 			}
+			await sentMessage.AddReactionAsync(new ReactionEmojiProperties(REMOVAL_EMOJI));
 		}
 	}
 
