@@ -1,0 +1,39 @@
+name: Check PRs
+
+on:
+  pull_request:
+
+env:
+  DOTNET_VERSION: "10.0"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: check
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: false
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}.x
+
+      - name: Download SixLabors sample license
+        run: |
+          mkdir -p licences
+          curl -fsSL https://sixlabors.com/assets/sixlabors.lic -o licences/sixlabors.lic
+
+      - name: Compile
+        run: >
+          dotnet publish
+          --runtime linux-x64
+          --self-contained
+          --configuration Release
