@@ -2,7 +2,6 @@ name: Check PRs
 
 on:
   pull_request:
-if: github.event.pull_request.head.repo.full_name != github.repository
 
 env:
   DOTNET_VERSION: "10.0"
