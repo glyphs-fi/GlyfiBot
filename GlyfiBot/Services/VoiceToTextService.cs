@@ -93,14 +93,12 @@ public static partial class VoiceToTextService
 			_whisperFactory = WhisperFactory.FromPath(MODEL_PATH);
 			_whisperProcessor = _whisperFactory.CreateBuilder().WithPrompt(
 				"""
-				Hello.
-				You are an AI bot that transcribes spoken human language to written text.
-				The input may be any language, but you *ALWAYS* _have_ to include proper punctuation, or bad things will happen…
-				The language may change during speech! You have to handle this properly, and start transcribing in that new language.
-				Do *NOT* write anything like "[speaking foreign language]"!
-				If you transcribe anything as "[speaking foreign language]", bad things will also happen!
-				If you _really_ don't know how to transcribe something, you may write "[gibberish]".
-				Only do this as an ultimate last resort! You really have to try your best first. I believe in you, you can do it!
+				You are whisper; an audio transcription AI. Your job is to transcribe spoken content *exactly* as it is said, VERBATIM.
+You are to STRICTLY follow the rules below:
+Transcribe the spoken content VERBATIM, inserting punctuation where appropriate.
+The content may change language part way through. If this happens, continue transcribing verbatim *in the new language.*
+Avoid writing things in different languages or things you are unsure of as similar to “[Gibberish]” or “[Speaking X]”. Instead, attempt transcribing verbatim what you hear. You are allowed to switch languages part way through, elongate words when appropriate, etc.
+You are being launched within a multilingual context, meaning people will speak in mixed languages. You must transcribe as such VERBATIM
 				""" //blegh 🤮
 			).WithLanguageDetection().Build();
 		}
