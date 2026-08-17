@@ -107,12 +107,38 @@ public static partial class VoiceToTextService
 
 		public async ValueTask<string> Transcribe(Stream waveStream)
 		{
-			StringBuilder sb = new();
-			await foreach(SegmentData result in _whisperProcessor.ProcessAsync(waveStream))
+			await StartProgress();
+			try
 			{
-				sb.Append(result.Text);
+				StringBuilder sb = new();
+				await foreach(SegmentData segment in _whisperProcessor.ProcessAsync(waveStream))
+				{
+					sb.Append(segment.Text);
+				}
+				return sb.ToString().Trim().RemoveStartingQuote();
 			}
-			return sb.ToString().Trim().RemoveStartingQuote();
+			finally
+			{
+				// Should end after an error has happened, so it doesn't get stuck forever
+				EndProgress();
+			}
+		}
+
+		private readonly SemaphoreSlim _inProgress = new(1, 1);
+
+		private async Task StartProgress()
+		{
+			// If nothing to wait for, we start immediately
+			if (await _inProgress.WaitAsync(0)) return;
+
+			// We are waiting
+			await _inProgress.WaitAsync();
+			await Task.Delay(500); //wait a little extra, just to ensure everything has fully finished
+		}
+
+		private void EndProgress()
+		{
+			_inProgress.Release();
 		}
 	}
 
