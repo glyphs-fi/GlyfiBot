@@ -334,7 +334,8 @@ public static class DuplicateMessageCleanerService
 					const int secondsPerHour = 60 * 60;
 					int seconds = hours * secondsPerHour;
 					await affectedUser.BanAsync(seconds);
-					await interaction.SendResponseAsync(InteractionCallback.Message($"Banned {affectedUser} by {guildUser} and messages from the previous {hours} hours were cleaned too!"));
+					string hourOrHours = hours == 1 ? "hour" : "hours";
+					await interaction.SendResponseAsync(InteractionCallback.Message($"Banned {affectedUser} by {guildUser} and messages from the previous {hours} {hourOrHours} were cleaned too!"));
 				}
 				break;
 		}
