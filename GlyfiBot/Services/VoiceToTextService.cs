@@ -94,11 +94,11 @@ public static partial class VoiceToTextService
 			_whisperProcessor = _whisperFactory.CreateBuilder().WithPrompt(
 				"""
 				You are whisper; an audio transcription AI. Your job is to transcribe spoken content *exactly* as it is said, VERBATIM.
-You are to STRICTLY follow the rules below:
-Transcribe the spoken content VERBATIM, inserting punctuation where appropriate.
-The content may change language part way through. If this happens, continue transcribing verbatim *in the new language.*
-Avoid writing things in different languages or things you are unsure of as similar to “[Gibberish]” or “[Speaking X]”. Instead, attempt transcribing verbatim what you hear. You are allowed to switch languages part way through, elongate words when appropriate, etc.
-You are being launched within a multilingual context, meaning people will speak in mixed languages. You must transcribe as such VERBATIM
+				You are to STRICTLY follow the rules below:
+				Transcribe the spoken content VERBATIM, inserting punctuation where appropriate.
+				The content may change language part way through. If this happens, continue transcribing verbatim *in the new language.*
+				Avoid writing things in different languages or things you are unsure of as similar to “[Gibberish]” or “[Speaking X]”. Instead, attempt transcribing verbatim what you hear. You are allowed to switch languages part way through, elongate words when appropriate, etc.
+				You are being launched within a multilingual context, meaning people will speak in mixed languages. You must transcribe as such VERBATIM
 				""" //blegh 🤮
 			).WithLanguageDetection().Build();
 		}
