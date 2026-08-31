@@ -6,11 +6,11 @@ namespace GlyfiBot.Services;
 
 public static partial class FfmpegService
 {
-	private const string FFMPEG_TAG = "autobuild-2026-08-15-13-02";
-	private const string FFMPEG_VERSION = "n8.1.2-44-g7c533d0f86";
-	private const string FFMPEG_HASH_LINUX_X64 = "01f4a27f58acbea7c484232a62a7381f716ddf000e8f311b791f8bfc7c8912aa";
-	private const string FFMPEG_HASH_LINUX_ARM64 = "4951fa5b7e29deaf485d09f699acf3cc4b4030dc5e4e7f5f248438f77873a2a4";
-	private const string FFMPEG_HASH_WINDOWS_X64 = "0e7829b6e1ba867e37bbad17153de258bd3bffaa3b745626a6424df0ea113970";
+	private const string FFMPEG_TAG = "autobuild-2026-08-31-13-27";
+	private const string FFMPEG_VERSION = "n9.0.1-11-ge47273f4d9";
+	private const string FFMPEG_HASH_LINUX_X64 = "182c1b509720e939bb47bfb47dc29cc0c298640401128e3dce8627d10707eb5a";
+	private const string FFMPEG_HASH_LINUX_ARM64 = "e2dd447c8a47849c5812d87e54a47b20ae0f3603d38989440f4a5fe1af8755b1";
+	private const string FFMPEG_HASH_WINDOWS_X64 = "ec9db2cda1f5894ab95446076ad8bf49379db4b53c02e778ad3b49adf91fec83";
 
 	public static FfmpegRunner? Ffmpeg { get; private set; }
 
