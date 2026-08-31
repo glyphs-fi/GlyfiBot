@@ -64,7 +64,7 @@ public class SetModPingCommand : ApplicationCommandModule<SlashCommandContext>
 	{
 		Guild? guild = Context.Guild;
 		if (guild is null) throw new SimpleCommandFailException("`guild` was null!?");
-		_modPings.TryAdd(guild.Id, modsPing);
+		_modPings[guild.Id] = modsPing;
 	}
 
 	private void RemoveModsRegistration()
