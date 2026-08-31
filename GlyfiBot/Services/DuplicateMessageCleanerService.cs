@@ -36,10 +36,10 @@ public static class DuplicateMessageCleanerService
 	private class UserMessage(Message message)
 	{
 		public DateTimeOffset CreatedAt => message.CreatedAt;
-		public ulong? GuildId => message.GuildId;
+		public ulong GuildId => message.GuildId!.Value;
 		public ulong ChannelId => message.ChannelId;
 		public ulong Id => message.Id;
-		public User Author => message.Author;
+		public GuildUser Author => (message.Author as GuildUser)!;
 		public TextChannel? Channel => message.Channel;
 		public MessageReference? MessageReference => message.MessageReference;
 		public async Task Delete() => await message.DeleteAsync();
@@ -162,10 +162,10 @@ public static class DuplicateMessageCleanerService
 		if (authorId == Program.BotUser.Id) return;
 
 		// Do not check in non-guild areas
+		if (thisDiscordMessage.Guild is null) return;
 		if (thisDiscordMessage.Author is not GuildUser guildUser) return;
 
 		// Do not check messages from people who have permissions to delete messages (they're probably admins/mods, who don't need spam checking)
-		if (thisDiscordMessage.Guild is null) return;
 		Permissions permissions = guildUser.GetPermissions(thisDiscordMessage.Guild);
 		if (permissions.HasFlag(Permissions.ManageMessages)) return;
 
@@ -239,21 +239,21 @@ public static class DuplicateMessageCleanerService
 		Guild? guild = interaction.Guild;
 		if (guild is null) return;
 
-		if (interaction.User is not GuildUser guildUser) return;
+		if (interaction.User is not GuildUser actingUser) return;
 
 		InteractionDataContainer<ulong> interactionData = new(interaction.Data.CustomId);
 		if (interactionData.Source != nameof(DuplicateMessageCleanerService)) return;
 
 		string buttonAction = interactionData.Type;
 		GuildUser affectedUser = await guild.GetUserAsync(interactionData.Extra);
-		Permissions permissions = guildUser.GetPermissions(guild);
+		Permissions actingUserPerms = actingUser.GetPermissions(guild);
 
 		switch(buttonAction)
 		{
 			case BUTTON_ACTION_BAN:
-				if (!permissions.HasFlag(Permissions.BanUsers))
+				if (!actingUserPerms.HasFlag(Permissions.BanUsers))
 				{
-					await interaction.SendResponseAsync(InteractionCallback.Message($"You do not have permission to ban users, {guildUser}!"));
+					await interaction.SendResponseAsync(InteractionCallback.Message($"You do not have permission to ban users, {actingUser}!"));
 					return;
 				}
 				await interaction.SendResponseAsync(InteractionCallback.Modal(new ModalProperties(new InteractionDataContainer<ulong>(
@@ -261,7 +261,7 @@ public static class DuplicateMessageCleanerService
 						MODAL_BAN,
 						affectedUser.Id
 					).ToString(),
-					"Ban",
+					$"Ban user \"{await affectedUser.GetNickNameAsync(guild)}\"",
 					[
 						new LabelProperties("Delete more messages?",
 							new RadioGroupProperties(MODAL_BAN_DELETE_RADIOS, [
@@ -279,21 +279,21 @@ public static class DuplicateMessageCleanerService
 			case BUTTON_ACTION_REMOVE_TIMEOUT:
 				try
 				{
-					if (!permissions.HasFlag(Permissions.ModerateUsers))
+					if (!actingUserPerms.HasFlag(Permissions.ModerateUsers))
 					{
-						await interaction.SendResponseAsync(InteractionCallback.Message($"You do not have permission to remove timeouts, {guildUser}!"));
+						await interaction.SendResponseAsync(InteractionCallback.Message($"You do not have permission to remove timeouts, {actingUser}!"));
 						return;
 					}
 					await affectedUser.ModifyAsync(options => options.TimeOutUntil = default(DateTimeOffset));
 				}
 				catch(RestException e)
 				{
-					await interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removal by {guildUser} failed!\n```\n{e}\n```"));
+					await interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removal by {actingUser} failed!\n```\n{e}\n```"));
 				}
 				_userMessages.TryRemove(affectedUser.Id, out _);
 				await Task.WhenAll([
-					DisableAllButtons(interaction.Message),
-					interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removed by {guildUser}!")),
+					DisableAllButtons(interaction.Message, affectedUser),
+					interaction.SendResponseAsync(InteractionCallback.Message($"Timeout removed by {actingUser}!")),
 					NotifyUserOfForgiveness(affectedUser),
 				]);
 				break;
@@ -333,9 +333,13 @@ public static class DuplicateMessageCleanerService
 				{
 					const int secondsPerHour = 60 * 60;
 					int seconds = hours * secondsPerHour;
-					await affectedUser.BanAsync(seconds);
+					await affectedUser.BanAsync(deleteMessageSeconds: seconds);
 					string hourOrHours = hours == 1 ? "hour" : "hours";
 					await interaction.SendResponseAsync(InteractionCallback.Message($"Banned {affectedUser} by {guildUser} and messages from the previous {hours} {hourOrHours} were cleaned too!"));
+				}
+				if (interaction.Message is not null)
+				{
+					await DisableAllButtons(interaction.Message, affectedUser);
 				}
 				break;
 		}
@@ -343,10 +347,8 @@ public static class DuplicateMessageCleanerService
 
 	private static async Task ForwardToMods(UserMessage thisMessage)
 	{
-		ulong? guildId = thisMessage.GuildId;
-		if (guildId == null) return;
-
-		if (_modChannels.TryGetValue(guildId.Value, out ulong channelId))
+		ulong guildId = thisMessage.GuildId;
+		if (_modChannels.TryGetValue(guildId, out ulong channelId))
 		{
 			await _client.Rest.SendMessageAsync(channelId, new MessageProperties
 			{
@@ -357,12 +359,10 @@ public static class DuplicateMessageCleanerService
 
 	private static async Task NotifyMods(UserMessage prevMessage, UserMessage thisMessage)
 	{
-		ulong? guildId = thisMessage.GuildId;
-		if (guildId == null) return;
-
-		if (_modChannels.TryGetValue(guildId.Value, out ulong channelId))
+		ulong guildId = thisMessage.GuildId;
+		if (_modChannels.TryGetValue(guildId, out ulong channelId))
 		{
-			string? modsPing = SetModPingCommand.GetModsPing(guildId.Value);
+			string? modsPing = SetModPingCommand.GetModsPing(guildId);
 			modsPing = modsPing is null ? "" : $", {modsPing}";
 
 			RestMessage buttonMessage = await _client.Rest.SendMessageAsync(channelId, new MessageProperties
@@ -379,14 +379,13 @@ public static class DuplicateMessageCleanerService
 
 			_ = Task.Run(async () =>
 			{
-				const int millisPerMinute = 60 * 1000;
-				await Task.Delay(TIMEOUT_TIME_MINUTES * millisPerMinute);
-				await OnTimeoutRunout(buttonMessage);
+				await Task.Delay(TimeSpan.FromMinutes(TIMEOUT_TIME_MINUTES));
+				await OnTimeoutRunout(buttonMessage, thisMessage.Author);
 			});
 		}
 		else
 		{
-			IReadOnlyList<IGuildChannel> channels = await _client.Rest.GetGuildChannelsAsync(guildId.Value);
+			IReadOnlyList<IGuildChannel> channels = await _client.Rest.GetGuildChannelsAsync(guildId);
 			TextGuildChannel? channel = channels.OfType<TextGuildChannel>().FirstOrDefault(channel => channel.Name.Contains("general", StringComparison.InvariantCultureIgnoreCase));
 			if (channel is not null)
 			{
@@ -402,9 +401,9 @@ public static class DuplicateMessageCleanerService
 		}
 	}
 
-	private static async Task OnTimeoutRunout(RestMessage buttonMessage)
+	private static async Task OnTimeoutRunout(RestMessage buttonMessage, GuildUser userToModerate)
 	{
-		await DisableTimeoutButton(buttonMessage);
+		await DisableTimeoutButton(buttonMessage, userToModerate);
 	}
 
 	/// <summary>
@@ -413,7 +412,7 @@ public static class DuplicateMessageCleanerService
 	/// <param name="userToModerate">The user upon whom the moderation actions will be performed.</param>
 	/// <param name="buttonsDisabled">If any buttons should be disabled, put them in this list. Use <see cref="BUTTON_ACTION_BAN"/> and <see cref="BUTTON_ACTION_REMOVE_TIMEOUT"/>.</param>
 	/// <returns></returns>
-	private static ActionRowProperties CreateModerationActionRow(User userToModerate, List<string>? buttonsDisabled = null)
+	private static ActionRowProperties CreateModerationActionRow(GuildUser userToModerate, List<string>? buttonsDisabled = null)
 	{
 		buttonsDisabled ??= [];
 #if DEBUG
@@ -449,24 +448,27 @@ public static class DuplicateMessageCleanerService
 		]);
 	}
 
-	private static async Task DisableAllButtons(Message message)
+	// Happens on ban and forgiveness
+	private static async Task DisableAllButtons(Message buttonMessage, GuildUser userToModerate)
 	{
-		await message.ModifyAsync(options =>
+		await buttonMessage.ModifyAsync(options =>
 		{
 			options.Components =
 			[
-				CreateModerationActionRow(message.Author, buttonsDisabled: [BUTTON_ACTION_BAN, BUTTON_ACTION_REMOVE_TIMEOUT]),
+				CreateModerationActionRow(userToModerate, buttonsDisabled: [BUTTON_ACTION_BAN, BUTTON_ACTION_REMOVE_TIMEOUT]),
 			];
 		});
 	}
 
-	private static async Task DisableTimeoutButton(RestMessage message)
+	// TODO: Fix that this function will always run whenever the timeout runs out. Even if the user has been banned or forgiven already! (cause this re-enables the ban button)
+	private static async Task DisableTimeoutButton(RestMessage buttonMessage, GuildUser userToModerate)
 	{
-		await message.ModifyAsync(options =>
+		// So if the user has been banned, we don't want to re-create the ModerationActionRow with only the Remove Timeout button disabled.
+		await buttonMessage.ModifyAsync(options =>
 		{
 			options.Components =
 			[
-				CreateModerationActionRow(message.Author, buttonsDisabled: [BUTTON_ACTION_REMOVE_TIMEOUT]),
+				CreateModerationActionRow(userToModerate, buttonsDisabled: [BUTTON_ACTION_REMOVE_TIMEOUT]),
 			];
 		});
 	}
