@@ -41,15 +41,16 @@ public static partial class FfmpegService
 			Process ffmpegCmd = await RunFfmpegCommand("ffmpeg", ["-version"]);
 			if (ffmpegCmd.ExitCode != 0)
 			{
-				throw new InvalidOperationException($"""
-				                                     ffmpeg presence (version) check exited with: {ffmpegCmd.ExitCode}
+				throw new InvalidOperationException(
+					$"""
+					 ffmpeg presence (version) check exited with: {ffmpegCmd.ExitCode}
 
-				                                     --- stderr: ---
-				                                     {await ffmpegCmd.StandardError.ReadToEndAsync()}
+					 --- stderr: ---
+					 {await ffmpegCmd.StandardError.ReadToEndAsync()}
 
-				                                     --- stdout: ---
-				                                     {await ffmpegCmd.StandardOutput.ReadToEndAsync()}
-				                                     """);
+					 --- stdout: ---
+					 {await ffmpegCmd.StandardOutput.ReadToEndAsync()}
+					 """);
 			}
 
 			Console.WriteLine("Using system ffmpeg!");
