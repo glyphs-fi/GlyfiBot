@@ -191,10 +191,11 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 
 		public async Task DeletePreviousMessage()
 		{
-			if (_previousMessageId.HasValue)
+			ulong? previousMessageId = _previousMessageId;
+			if (previousMessageId.HasValue)
 			{
 				await Task.Yield();
-				await _client.Rest.DeleteMessageAsync(channelId, _previousMessageId.Value);
+				await _client.Rest.DeleteMessageAsync(channelId, previousMessageId.Value);
 			}
 		}
 
