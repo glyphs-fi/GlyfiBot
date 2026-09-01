@@ -73,7 +73,7 @@ public static partial class FfmpegService
 
 	private static async Task<Process> RunFfmpegCommand(string executable, List<string> arguments)
 	{
-		ProcessStartInfo startInfo = new(executable, arguments) {RedirectStandardOutput = true, RedirectStandardError = true};
+		ProcessStartInfo startInfo = new(executable, ["-nostdin", ..arguments]) {RedirectStandardOutput = true, RedirectStandardError = true};
 		Process process = new() {StartInfo = startInfo};
 		process.Start();
 		await process.WaitForExitAsync();
