@@ -357,6 +357,16 @@ public static class DuplicateMessageCleanerService
 		}
 	}
 
+	/// <summary>
+	/// When a timeout naturally expires, the buttonMessage is edited to have the Remove Timeout button be disabled.<br/>
+	/// <br/>
+	/// When a user is actively banned or forgiven, the buttonMessage is edited to have BOTH buttons be disabled.<br/>
+	/// If that happens, the timer that disables the Remove Timeout should be cancelled.<br/>
+	/// <br/>
+	/// This Dictionary is used to keep track of the CancellationTokenSources for the timers that disable the Remove Timeout button.
+	/// </summary>
+	private static readonly ConcurrentDictionary<GuildUser, CancellationTokenSource> _timeoutButtonRemovalCancellationTokenSources = new();
+
 	private static async Task NotifyMods(UserMessage prevMessage, UserMessage thisMessage)
 	{
 		ulong guildId = thisMessage.GuildId;
@@ -377,10 +387,24 @@ public static class DuplicateMessageCleanerService
 				],
 			});
 
+			// Set up for timeout button disablement cancellation
+			await CancelTimeoutButtonDisablement(thisMessage.Author);
+			CancellationTokenSource cts = new();
+			_timeoutButtonRemovalCancellationTokenSources.AddOrUpdate(thisMessage.Author, cts, (_, olcCts) =>
+			{
+				olcCts.Cancel();
+				return cts;
+			});
+
 			_ = Task.Run(async () =>
 			{
-				await Task.Delay(TimeSpan.FromMinutes(TIMEOUT_TIME_MINUTES));
-				await OnTimeoutRunout(buttonMessage, thisMessage.Author);
+				try
+				{
+					await Task.Delay(TimeSpan.FromMinutes(TIMEOUT_TIME_MINUTES), cts.Token);
+					// ↑ Throws a TaskCanceledException or OperationCanceledException when cancelled, so that stops running this scope, so the next line won't be called if cancelled.
+					await OnTimeoutRunout(buttonMessage, thisMessage.Author);
+				}
+				catch(OperationCanceledException) {}
 			});
 		}
 		else
@@ -451,6 +475,8 @@ public static class DuplicateMessageCleanerService
 	// Happens on ban and forgiveness
 	private static async Task DisableAllButtons(Message buttonMessage, GuildUser userToModerate)
 	{
+		await CancelTimeoutButtonDisablement(userToModerate);
+
 		await buttonMessage.ModifyAsync(options =>
 		{
 			options.Components =
@@ -460,7 +486,14 @@ public static class DuplicateMessageCleanerService
 		});
 	}
 
-	// TODO: Fix that this function will always run whenever the timeout runs out. Even if the user has been banned or forgiven already! (cause this re-enables the ban button)
+	private static async Task CancelTimeoutButtonDisablement(GuildUser userToModerate)
+	{
+		if (_timeoutButtonRemovalCancellationTokenSources.Remove(userToModerate, out CancellationTokenSource? cts))
+		{
+			await cts.CancelAsync();
+		}
+	}
+
 	private static async Task DisableTimeoutButton(RestMessage buttonMessage, GuildUser userToModerate)
 	{
 		// So if the user has been banned, we don't want to re-create the ModerationActionRow with only the Remove Timeout button disabled.
