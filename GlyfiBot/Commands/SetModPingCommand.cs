@@ -47,6 +47,13 @@ public class SetModPingCommand : ApplicationCommandModule<SlashCommandContext>
 		[SlashCommandParameter(Description = "Ping the moderator role here")]
 		string? modsPing = null)
 	{
+		Guild? guild = Context.Guild;
+		if (guild is null)
+		{
+			await Context.SendEphemeralResponseAsync("Can only be run from in a server.");
+			return;
+		}
+
 		if (modsPing is null || modsPing.IsWhiteSpace())
 		{
 			RemoveModsRegistration();
