@@ -37,7 +37,7 @@ static internal class Program
 	public const string VOICE_TO_TEXT_RUNS_DIR = $"{VOICE_TO_TEXT_DIR}/runs";
 	public const string VOICE_MODEL_DIR = $"{VOICE_TO_TEXT_DIR}/models";
 
-	private static async Task Main()
+	private static async Task Main(string[] args)
 	{
 		// Ensure that the executable is run from the correct directory
 		{
@@ -209,17 +209,22 @@ static internal class Program
 			                       """;
 		});
 
-		await Task.WhenAll([
+		List<Task> services =
+		[
 			ForeverService.RunAsync(),
 			StatusChangerService.RunAsync(client),
-#if !DEBUG
-			UpdateCheckerService.RunAsync(client),
-#endif
 			DuplicateMessageCleanerService.RunAsync(client),
 			RulesUpdaterService.RunAsync(client),
 			FfmpegService.RunAsync(),
 			VoiceToTextService.RunAsync(client),
-		]);
+		];
+
+		if (!args.Contains("--no-updater"))
+		{
+			services.Add(UpdateCheckerService.RunAsync(client));
+		}
+
+		await Task.WhenAll(services);
 	}
 
 	private static async Task StopTheBot()
