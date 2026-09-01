@@ -204,6 +204,7 @@ public static partial class VoiceToTextService
 		{
 			await using FileStream fileStream = File.OpenRead(wavFilePath);
 			string transcript = await transcriber.Transcribe(fileStream);
+			if (transcript.IsNullOrWhiteSpace()) continue;
 			transcripts.Add(transcript);
 		}
 
