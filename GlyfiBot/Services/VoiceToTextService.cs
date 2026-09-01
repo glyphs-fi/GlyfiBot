@@ -189,7 +189,7 @@ public static partial class VoiceToTextService
 
 		foreach(string fileToConvert in inputFilePaths)
 		{
-			string outputFile = Path.ChangeExtension(fileToConvert, "wav");
+			string outputFile = Path.ChangeExtension(fileToConvert, ".16KHz.wav");
 			await ffmpeg.Run("-i", fileToConvert, "-ar", "16000", outputFile);
 			convertedFilePaths.Add(outputFile);
 		}
