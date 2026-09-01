@@ -262,7 +262,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		for(int i = 0; i < allSubmissions.Count; i++)
 		{
 			Attachment submission = allSubmissions[i];
-			string path = Path.Join(imagesDir, $"{challengeType.GetNameForSubmission()}_{i + 1}");
+			string path = Path.Join(imagesDir, $"{challengeType.GetNameForSubmission()}_{i + 1}"); //no extension, because the script wants it so
 
 			await using Stream networkStream = await Program.HttpClient.GetStreamAsync(submission.Url);
 			await using FileStream fileStream = new(path, FileMode.CreateNew);
@@ -394,7 +394,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			// Download the submission
 			{
 				Attachment submissionAttachment = message.Attachments.First(attachment => _supportedExtensions.Contains(Path.GetExtension(attachment.FileName)));
-				string path = Path.Join(imagesDir, $"{challengeType.GetNameForSubmission()}Winner{level.UpperFirst()}");
+				string path = Path.Join(imagesDir, $"{challengeType.GetNameForSubmission()}Winner{level.UpperFirst()}"); //no extension, because the script wants it so
 
 				await using Stream networkStream = await Program.HttpClient.GetStreamAsync(submissionAttachment.Url);
 				await using FileStream fileStream = new(path, FileMode.CreateNew);
