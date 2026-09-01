@@ -62,7 +62,7 @@ public static class UpdateCheckerService
 		string updateVersionDir = Path.Join(Program.UPDATES_STAGING_DIR, latestReleaseHash);
 		if (Directory.Exists(updateVersionDir)) Directory.Delete(updateVersionDir, true);
 
-		Console.WriteLine("Downloading update...");
+		Console.WriteLine("Downloading Glyfi-Bot Update...");
 
 		Directory.CreateDirectory(updateVersionDir);
 		string archivePath = Path.Join(updateVersionDir, filename);
@@ -80,18 +80,18 @@ public static class UpdateCheckerService
 			throw new PlatformNotSupportedException($"Failed to verify the update download!\nLocal hash `{localHash.ToLower()}` did not match remote hash `{remoteHash.ToLower()}`");
 		}
 
-		Console.WriteLine("Extracting update...");
+		Console.WriteLine("Extracting Glyfi-Bot Update...");
 		await ExtractArchive(archivePath);
 		File.Delete(archivePath);
 
-		Console.WriteLine("Update downloaded! Staging...");
+		Console.WriteLine("Glyfi-Bot Update downloaded! Staging...");
 
 		// Clean up the previous update
 		if (Directory.Exists(Program.UPDATE_AVAILABLE_DIR)) Directory.Delete(Program.UPDATE_AVAILABLE_DIR, true);
 
 		Directory.Move(updateVersionDir, Program.UPDATE_AVAILABLE_DIR);
 
-		Console.WriteLine("Update staged and ready to be installed!");
+		Console.WriteLine("Glyfi-Bot Update staged and ready to be installed!");
 
 		await NotifyUsers(client, latestReleaseHash, executableHash);
 	}
