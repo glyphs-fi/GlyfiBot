@@ -183,7 +183,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 				url = animatedDownloadFormat switch
 				{
 					AnimatedDownloadFormat.Original => user.AlwaysGetAvatarUrl(),
-					AnimatedDownloadFormat.WebP => user.AlwaysGetAvatarUrl(ImageFormat.WebP),
+					AnimatedDownloadFormat.WebP => user.AlwaysGetAvatarUrl(ImageFormat.Webp),
 					_ => throw new ArgumentOutOfRangeException(nameof(animatedDownloadFormat), animatedDownloadFormat, null),
 				};
 				string downloadUrl = url is SizeableAvatarUrl sizeableUrl ? sizeableUrl.ToString(size: 4096, animated: true) : url.ToString(animated: true);
@@ -196,7 +196,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 					DownloadFormat.Original => user.AlwaysGetAvatarUrl(),
 					DownloadFormat.PNG => user.AlwaysGetAvatarUrl(ImageFormat.Png),
 					DownloadFormat.Jpeg => user.AlwaysGetAvatarUrl(ImageFormat.Jpeg),
-					DownloadFormat.WebP => user.AlwaysGetAvatarUrl(ImageFormat.WebP),
+					DownloadFormat.WebP => user.AlwaysGetAvatarUrl(ImageFormat.Webp),
 					_ => throw new ArgumentOutOfRangeException(nameof(downloadFormat), downloadFormat, null),
 				};
 				string downloadUrl = url is SizeableAvatarUrl sizeableUrl ? sizeableUrl.ToString(size: 4096) : url.ToString();
@@ -210,7 +210,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 				DownloadFormat.Original => user.AlwaysGetAvatarUrl(),
 				DownloadFormat.PNG => user.AlwaysGetAvatarUrl(ImageFormat.Png),
 				DownloadFormat.Jpeg => user.AlwaysGetAvatarUrl(ImageFormat.Jpeg),
-				DownloadFormat.WebP => user.AlwaysGetAvatarUrl(ImageFormat.WebP),
+				DownloadFormat.WebP => user.AlwaysGetAvatarUrl(ImageFormat.Webp),
 				_ => throw new ArgumentOutOfRangeException(nameof(downloadFormat), downloadFormat, null),
 			};
 
