@@ -232,25 +232,24 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 
 	private static async Task<bool> IsMessageDisqualified(Guild? guild, RestMessage message, ReactionEmojiProperties? disqualificationEmoji)
 	{
-		if (disqualificationEmoji is not null)
+		if (disqualificationEmoji is null) return false;
+
+		if (!message.HasBeenReactedToWith(disqualificationEmoji)) return false;
+
+		await foreach(User user in message.GetReactionsAsync(disqualificationEmoji))
 		{
-			if (!message.HasBeenReactedToWith(disqualificationEmoji)) return false;
-
-			await foreach(User user in message.GetReactionsAsync(disqualificationEmoji))
+			if (guild is not null)
 			{
-				if (guild is not null)
-				{
-					GuildUser guildUser = await guild.GetUserAsync(user.Id);
-					Permissions permissions = guildUser.GetPermissions(guild);
-					if (permissions.HasFlag(Permissions.ManageMessages)) return true;
-				}
-				else
-				{
-					// We're not in a guild, so we're probably in a DM
+				GuildUser guildUser = await guild.GetUserAsync(user.Id);
+				Permissions permissions = guildUser.GetPermissions(guild);
+				if (permissions.HasFlag(Permissions.ManageMessages)) return true;
+			}
+			else
+			{
+				// We're not in a guild, so we're probably in a DM
 
-					// Here, users may disqualify their own messages (dunno why, but let's do it)
-					if (user == message.Author) return true;
-				}
+				// Here, users may disqualify their own messages (dunno why, but let's do it)
+				if (user == message.Author) return true;
 			}
 		}
 		return false;
