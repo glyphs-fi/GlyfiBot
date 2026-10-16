@@ -99,6 +99,8 @@ jobs:
           git --no-pager log "$LATEST_TAG"..HEAD --reverse --no-merges --pretty=format:"\`%H\` %ad  %n**%s**  %n%b%n%n----%n" --date=format:"%H:%M" > notes.md
           # Strip the trailing separator by: ingesting the wh0le file, Inplace, looping over the lines and Printing them, Executing the code
           perl -0777 -i -p -e 's/\s*----\s*$//s' notes.md
+          # Remove Dependabot's separators
+          sed -i '/^---$/d' notes.md
           # Make the actual release
           RELEASE_URL=$(gh release create "v_${{ github.sha }}" --title "$GIT_HASH_SHORT: $GIT_COMMIT_TITLE" --notes-file "notes.md" --latest --fail-on-no-commits artifacts/*)
           echo "url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
