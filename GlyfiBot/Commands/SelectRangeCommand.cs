@@ -202,28 +202,37 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 
 		foreach(RestMessage message in messages)
 		{
+			// Does this message even contain anything that could be a submission?
 			if (message.Attachments.Count == 0) continue;
 
+			// Has this message been marked as a submission, through the reaction emoji?
 			if (!message.HasBeenReactedToWith(emoji)) continue;
 
+			// Is the message disqualified, through the disqualification reaction emoji?
 			if (await IsMessageDisqualified(guild, message, disqualificationEmoji)) continue;
 
+			// Loop over all users who reacted to this message with the submission emoji...
 			await foreach(User user in message.GetReactionsAsync(emoji))
 			{
+				// ...to find the user who submitted the message, because only they themselves are allowed to mark their own message as a submission
 				if (user != message.Author) continue;
 
 				submissionMessageCount++;
-				foreach(Attachment attachment in message.Attachments)
+
+				List<Attachment> allPotentialSubs =
+				[
+					// Check attachments (direct uploads)
+					.. message.Attachments,
+				];
+
+				// Ensure that the `submissions` dictionary has an entry for this author...
+				if (!submissions.TryGetValue(message.Author, out List<Attachment>? authorSubs))
 				{
-					if (submissions.TryGetValue(message.Author, out List<Attachment>? attachmentFiles))
-					{
-						attachmentFiles.Add(attachment);
-					}
-					else
-					{
-						submissions.Add(message.Author, [attachment]);
-					}
+					submissions[message.Author] = authorSubs = [];
 				}
+
+				// ...and then add all the submissions to the dictionary
+				authorSubs.AddRange(allPotentialSubs);
 			}
 		}
 
