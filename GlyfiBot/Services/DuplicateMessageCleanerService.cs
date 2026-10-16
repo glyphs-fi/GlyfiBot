@@ -31,6 +31,7 @@ public static class DuplicateMessageCleanerService
 	private const string MODAL_BAN = "modal_ban";
 	private const string MODAL_BAN_DELETE_RADIOS = "modal_ban-delete-radios";
 
+	/// GuildId, ChannelId
 	private static ConcurrentDictionary<ulong, ulong> _modChannels = null!;
 
 	private class UserMessage(Message message)

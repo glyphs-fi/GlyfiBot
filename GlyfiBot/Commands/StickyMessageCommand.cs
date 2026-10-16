@@ -16,6 +16,7 @@ public class StickyMessageCommand : ApplicationCommandModule<SlashCommandContext
 
 	private const string MESSAGES_FILE = $"{Program.SETTINGS_DIR}/stickies.json";
 
+	/// ChannelId, WatchedChannel
 	private static ConcurrentDictionary<ulong, WatchedChannel> _stickyMessages = null!;
 
 	private static GatewayClient _client = null!;

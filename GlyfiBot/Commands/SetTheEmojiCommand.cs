@@ -16,6 +16,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 	{
 		private readonly string _commandName;
 		private readonly string _emojiFile;
+		/// ChannelId, Emoji
 		private readonly ConcurrentDictionary<ulong, ReactionEmojiProperties> _emojis;
 
 		public InternalEmoji(string commandName)
