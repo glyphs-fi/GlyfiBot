@@ -68,7 +68,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		StringBuilder sbList = new();
 		if (submissionsCount > 0)
 		{
-			string directoryToArchive = await DownloadAttachmentsAsync(Context.Interaction, submissions, sbList, downloadType);
+			string directoryToArchive = await DownloadSubmissionsAsync(Context.Interaction, submissions, sbList, downloadType);
 			submissionArchivePath = Path.Join(Path.GetDirectoryName(directoryToArchive), $"{Context.Interaction.Id}_{Path.GetFileName(directoryToArchive)}.zip");
 			bool includeBaseDirectory = downloadType switch
 			{
@@ -127,7 +127,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		}
 	}
 
-	private static async Task<string> DownloadAttachmentsAsync(SlashCommandInteraction interaction, Dictionary<User, List<Sub>> submissions, StringBuilder sb, DownloadType downloadType)
+	private static async Task<string> DownloadSubmissionsAsync(SlashCommandInteraction interaction, Dictionary<User, List<Sub>> submissions, StringBuilder sb, DownloadType downloadType)
 	{
 		string channelPath = Path.Join(Program.SELECTIONS_DIR, interaction.Channel.Id.ToString());
 		Directory.CreateDirectory(channelPath);
@@ -144,16 +144,16 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			Directory.CreateDirectory(flatPath);
 		}
 
-		foreach((User author, List<Sub> attachmentFiles) in submissions)
+		foreach((User author, List<Sub> submissionFiles) in submissions)
 		{
 			sb.AppendLine($"- {author.ToString()}");
 			string submissionUserPath = Path.Join(rawPath, author.Id.ToString());
 			Directory.CreateDirectory(submissionUserPath);
 			uint antiDuplicateCounter = 0;
-			for(int i = 0; i < attachmentFiles.Count; i++)
+			for(int i = 0; i < submissionFiles.Count; i++)
 			{
-				Sub attachmentFile = attachmentFiles[i];
-				sb.AppendLine($"  - {attachmentFile.Url}");
+				Sub submissionFile = submissionFiles[i];
+				sb.AppendLine($"  - {submissionFile.Url}");
 				string path = CreateDownloadFilePath();
 				if (File.Exists(path))
 				{
@@ -162,21 +162,21 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 				}
 
 				{
-					await using Stream networkStream = await Program.HttpClient.GetStreamAsync(attachmentFile.Url);
+					await using Stream networkStream = await Program.HttpClient.GetStreamAsync(submissionFile.Url);
 					await using FileStream fileStream = new(path, FileMode.CreateNew);
 					await networkStream.CopyToAsync(fileStream);
 				}
 
 				if (downloadType == DownloadType.Flat)
 				{
-					string flatFilename = author.Username + (attachmentFiles.Count > 1 ? $"_{i}" : "") + Path.GetExtension(path);
+					string flatFilename = author.Username + (submissionFiles.Count > 1 ? $"_{i}" : "") + Path.GetExtension(path);
 					File.Copy(path, Path.Join(flatPath, flatFilename));
 				}
 				continue;
 
 				string CreateDownloadFilePath() => antiDuplicateCounter == 0
-					? Path.Join(submissionUserPath, attachmentFile.FileName)
-					: Path.Join(submissionUserPath, $"{Path.GetFileNameWithoutExtension(attachmentFile.FileName)} ({antiDuplicateCounter}){Path.GetExtension(attachmentFile.FileName)}");
+					? Path.Join(submissionUserPath, submissionFile.FileName)
+					: Path.Join(submissionUserPath, $"{Path.GetFileNameWithoutExtension(submissionFile.FileName)} ({antiDuplicateCounter}){Path.GetExtension(submissionFile.FileName)}");
 			}
 		}
 
