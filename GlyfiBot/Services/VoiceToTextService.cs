@@ -48,7 +48,7 @@ public static partial class VoiceToTextService
 		if (_transcriber is null) return;
 
 		string downloadPath = Path.Join(Program.VOICE_TO_TEXT_RUNS_DIR, message.Id.ToString());
-		List<string> downloads = await DownloadAttachments(downloadPath, message.Attachments);
+		List<string> downloads = await DownloadAudioAttachments(downloadPath, message.Attachments);
 		if (downloads.Count == 0) return;
 
 		List<string> convertedFilePaths = await ConvertAudioFilesToWav(downloads);
@@ -142,7 +142,7 @@ public static partial class VoiceToTextService
 
 #region Processing Steps
 
-	private static async ValueTask<List<string>> DownloadAttachments(string downloadPath, IEnumerable<Attachment> attachmentFiles)
+	private static async ValueTask<List<string>> DownloadAudioAttachments(string downloadPath, IEnumerable<Attachment> attachmentFiles)
 	{
 		List<string> paths = [];
 
