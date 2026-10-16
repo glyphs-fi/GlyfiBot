@@ -236,8 +236,8 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, idStart, idEnd);
 
 		// Filter submissions from the messages
-		(Dictionary<User, List<Attachment>> submissions, uint _) = await SelectRangeCommand.FilterSubmissionsFromMessagesAsync(Context.Guild, Context.Channel, messages, emoji);
-		List<Attachment> allSubmissions = submissions.Values //
+		(Dictionary<User, List<SelectRangeCommand.Sub>> submissions, uint _) = await SelectRangeCommand.FilterSubmissionsFromMessagesAsync(Context.Guild, Context.Channel, messages, emoji);
+		List<SelectRangeCommand.Sub> allSubmissions = submissions.Values //
 			.SelectMany(attachments => attachments) //
 			.Where(attachment => _supportedExtensions.Contains(Path.GetExtension(attachment.FileName))) //
 			.ToList();
@@ -261,7 +261,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		// Download submission message attachments
 		for(int i = 0; i < allSubmissions.Count; i++)
 		{
-			Attachment submission = allSubmissions[i];
+			SelectRangeCommand.Sub submission = allSubmissions[i];
 			string path = Path.Join(imagesDir, $"{challengeType.GetNameForSubmission()}_{i + 1}"); //no extension, because the script wants it so
 
 			await using Stream networkStream = await Program.HttpClient.GetStreamAsync(submission.Url);

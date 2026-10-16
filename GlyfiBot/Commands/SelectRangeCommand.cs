@@ -55,7 +55,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 
 		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, idStart, idEnd);
 
-		(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(Context.Guild, Context.Channel, messages, emoji);
+		(Dictionary<User, List<Sub>> submissions, uint submissionMessageCount) = await FilterSubmissionsFromMessagesAsync(Context.Guild, Context.Channel, messages, emoji);
 
 		StringBuilder sbStats = new();
 		sbStats.AppendLine($"Selected messages: {messages.Count}");
@@ -127,7 +127,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		}
 	}
 
-	private static async Task<string> DownloadAttachmentsAsync(SlashCommandInteraction interaction, Dictionary<User, List<Attachment>> submissions, StringBuilder sb, DownloadType downloadType)
+	private static async Task<string> DownloadAttachmentsAsync(SlashCommandInteraction interaction, Dictionary<User, List<Sub>> submissions, StringBuilder sb, DownloadType downloadType)
 	{
 		string channelPath = Path.Join(Program.SELECTIONS_DIR, interaction.Channel.Id.ToString());
 		Directory.CreateDirectory(channelPath);
@@ -144,7 +144,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			Directory.CreateDirectory(flatPath);
 		}
 
-		foreach((User author, List<Attachment> attachmentFiles) in submissions)
+		foreach((User author, List<Sub> attachmentFiles) in submissions)
 		{
 			sb.AppendLine($"- {author.ToString()}");
 			string submissionUserPath = Path.Join(rawPath, author.Id.ToString());
@@ -152,7 +152,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			uint antiDuplicateCounter = 0;
 			for(int i = 0; i < attachmentFiles.Count; i++)
 			{
-				Attachment attachmentFile = attachmentFiles[i];
+				Sub attachmentFile = attachmentFiles[i];
 				sb.AppendLine($"  - {attachmentFile.Url}");
 				string path = CreateDownloadFilePath();
 				if (File.Exists(path))
@@ -188,14 +188,33 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		};
 	}
 
-	public static async Task<(Dictionary<User, List<Attachment>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(
+	public class Sub
+	{
+		public string FileName { get; }
+		public Uri Url { get; }
+
+		public Sub(Attachment fromAttachment)
+		{
+			FileName = fromAttachment.FileName;
+			Url = new Uri(fromAttachment.Url);
+		}
+
+		public Sub(Embed fromEmbed)
+		{
+			// We use the Discord ProxyUrl to try and keep things a little more private and secure. We don't want to connect to suspicious servers if we can avoid it.
+			Url = new Uri(fromEmbed.Thumbnail?.ProxyUrl ?? throw new InvalidOperationException("Embed Thumbnail ProxyUrl is missing"));
+			FileName = fromEmbed.Title ?? Path.GetFileName(Url.AbsolutePath);
+		}
+	}
+
+	public static async Task<(Dictionary<User, List<Sub>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(
 		Guild? guild,
 		TextChannel channel,
 		List<RestMessage> messages,
 		ReactionEmojiProperties emoji
 	)
 	{
-		Dictionary<User, List<Attachment>> submissions = [];
+		Dictionary<User, List<Sub>> submissions = [];
 		uint submissionMessageCount = 0;
 
 		ReactionEmojiProperties? disqualificationEmoji = SetTheEmojiCommand.GetDisqualificationEmoji(channel);
@@ -203,7 +222,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		foreach(RestMessage message in messages)
 		{
 			// Does this message even contain anything that could be a submission?
-			if (message.Attachments.Count == 0) continue;
+			if (message.Attachments.Count == 0 && message.Embeds.Count == 0) continue;
 
 			// Has this message been marked as a submission, through the reaction emoji?
 			if (!message.HasBeenReactedToWith(emoji)) continue;
@@ -219,20 +238,26 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 
 				submissionMessageCount++;
 
-				List<Attachment> allPotentialSubs =
+				List<Sub> allPotentialSubs =
 				[
 					// Check attachments (direct uploads)
-					.. message.Attachments,
+					.. message.Attachments.Select(attachment => new Sub(attachment)),
+					// Check embeds (includes content that might be linked, instead of uploaded)
+					.. message.Embeds.Where(embed => embed.Type == EmbedType.Image).Select(embed => new Sub(embed)),
 				];
+				if (allPotentialSubs.Count == 0) continue;
 
 				// Ensure that the `submissions` dictionary has an entry for this author...
-				if (!submissions.TryGetValue(message.Author, out List<Attachment>? authorSubs))
+				if (!submissions.TryGetValue(message.Author, out List<Sub>? authorSubs))
 				{
 					submissions[message.Author] = authorSubs = [];
 				}
 
 				// ...and then add all the submissions to the dictionary
 				authorSubs.AddRange(allPotentialSubs);
+
+				// We are done here. No need to check any more users.
+				break;
 			}
 		}
 
