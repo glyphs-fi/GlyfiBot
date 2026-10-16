@@ -12,6 +12,54 @@ namespace GlyfiBot.Commands;
 	DefaultGuildPermissions = Permissions.Administrator)]
 public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 {
+	private const string EMOJI_PARAMETER_DESCRIPTION = "Type a `:` and then the rest of the emoji. Let the autocomplete guide you!";
+
+#region Submission
+
+	private const string SUBMISSION_COMMAND_NAME = "submission";
+	private static readonly InternalEmoji _submission = new(SUBMISSION_COMMAND_NAME);
+
+	[SubSlashCommand(SUBMISSION_COMMAND_NAME,
+		"Set the emoji that will mark something as a submission in this channel")]
+	[UsedImplicitly]
+	public async Task Submission(
+		[SlashCommandParameter(Description = EMOJI_PARAMETER_DESCRIPTION)]
+		string? emoji = null)
+	{
+		await _submission.RunCommand(emoji, Context);
+	}
+
+	public static ReactionEmojiProperties? GetSubmissionEmoji(TextChannel channel)
+	{
+		return _submission.GetEmoji(channel);
+	}
+
+#endregion
+
+#region Disqualification
+
+	private const string DISQUALIFICATION_COMMAND_NAME = "disqualification";
+	private static readonly InternalEmoji _disqualification = new(DISQUALIFICATION_COMMAND_NAME);
+
+	[SubSlashCommand(DISQUALIFICATION_COMMAND_NAME,
+		"Set the emoji that will mark something as disqualified in this channel")]
+	[UsedImplicitly]
+	public async Task Disqualification(
+		[SlashCommandParameter(Description = EMOJI_PARAMETER_DESCRIPTION)]
+		string? emoji = null)
+	{
+		await _disqualification.RunCommand(emoji, Context);
+	}
+
+	public static ReactionEmojiProperties? GetDisqualificationEmoji(TextChannel channel)
+	{
+		return _disqualification.GetEmoji(channel);
+	}
+
+#endregion
+
+#region Internal
+
 	private sealed class InternalEmoji
 	{
 		private readonly string _commandName;
@@ -120,50 +168,6 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 			await using FileStream fs = File.Open(_emojiFile, FileMode.Create);
 			await JsonSerializer.SerializeAsync(fs, dict, ToJson.Default.DictionaryUInt64String);
 		}
-	}
-
-	private const string EMOJI_PARAMETER_DESCRIPTION = "Type a `:` and then the rest of the emoji. Let the autocomplete guide you!";
-
-#region Submission
-
-	private const string SUBMISSION_COMMAND_NAME = "submission";
-	private static readonly InternalEmoji _submission = new(SUBMISSION_COMMAND_NAME);
-
-	[SubSlashCommand(SUBMISSION_COMMAND_NAME,
-		"Set the emoji that will mark something as a submission in this channel")]
-	[UsedImplicitly]
-	public async Task Submission(
-		[SlashCommandParameter(Description = EMOJI_PARAMETER_DESCRIPTION)]
-		string? emoji = null)
-	{
-		await _submission.RunCommand(emoji, Context);
-	}
-
-	public static ReactionEmojiProperties? GetSubmissionEmoji(TextChannel channel)
-	{
-		return _submission.GetEmoji(channel);
-	}
-
-#endregion
-
-#region Disqualification
-
-	private const string DISQUALIFICATION_COMMAND_NAME = "disqualification";
-	private static readonly InternalEmoji _disqualification = new(DISQUALIFICATION_COMMAND_NAME);
-
-	[SubSlashCommand(DISQUALIFICATION_COMMAND_NAME,
-		"Set the emoji that will mark something as disqualified in this channel")]
-	[UsedImplicitly]
-	public async Task Disqualification(
-		[SlashCommandParameter(Description = EMOJI_PARAMETER_DESCRIPTION)]
-		string? emoji = null)
-	{
-		await _disqualification.RunCommand(emoji, Context);
-	}
-
-	public static ReactionEmojiProperties? GetDisqualificationEmoji(TextChannel channel)
-	{
-		return _disqualification.GetEmoji(channel);
 	}
 
 #endregion
