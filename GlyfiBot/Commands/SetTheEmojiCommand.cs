@@ -1,5 +1,6 @@
 using JetBrains.Annotations;
 using NetCord;
+using NetCord.Gateway;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
 using System.Collections.Concurrent;
@@ -13,6 +14,11 @@ namespace GlyfiBot.Commands;
 public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	private const string EMOJI_PARAMETER_DESCRIPTION = "Type a `:` and then the rest of the emoji. Let the autocomplete guide you!";
+
+	public static void Init(GatewayClient client)
+	{
+		_submission.SetOnReact(client, OnSubmissionReact);
+	}
 
 #region Submission
 
@@ -32,6 +38,12 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 	public static ReactionEmojiProperties? GetSubmissionEmoji(TextChannel channel)
 	{
 		return _submission.GetEmoji(channel);
+	}
+
+	private static async Task OnSubmissionReact(RestMessage message)
+	{
+		//TODO: Add the actual validation
+		await message.AddReactionAsync(new ReactionEmojiProperties("👍"));
 	}
 
 #endregion
@@ -92,6 +104,24 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 			else
 			{
 				_emojis = new ConcurrentDictionary<ulong, ReactionEmojiProperties>();
+			}
+		}
+
+		public void SetOnReact(GatewayClient client, Func<RestMessage, Task> onSubmissionReact)
+		{
+			foreach((ulong channelId, ReactionEmojiProperties emojiToLookFor) in _emojis)
+			{
+				client.MessageReactionAdd += ProcessReaction;
+				continue;
+
+				async ValueTask ProcessReaction(MessageReactionAddEventArgs e)
+				{
+					if (e.ChannelId != channelId) return;
+					if (!emojiToLookFor.Is(e.Emoji)) return;
+					if (e.UserId == Program.BotUser.Id) return;
+					RestMessage message = await client.Rest.GetMessageAsync(e.ChannelId, e.MessageId);
+					await onSubmissionReact.Invoke(message);
+				}
 			}
 		}
 
