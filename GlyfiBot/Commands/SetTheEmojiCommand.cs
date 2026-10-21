@@ -43,7 +43,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 	private static async Task OnSubmissionReact(RestMessage message)
 	{
 		//TODO: Add the actual validation
-		await message.AddReactionAsync(new ReactionEmojiProperties("👍"));
+		await message.AddReactionAsync(new ReactionEmojiProperties("👍")); //TODO: Allow customising this approval emoji (should be an application emoji)
 	}
 
 #endregion
