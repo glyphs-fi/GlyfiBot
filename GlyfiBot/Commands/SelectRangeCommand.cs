@@ -202,7 +202,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		public Sub(Embed fromEmbed)
 		{
 			// We use the Discord ProxyUrl to try and keep things a little more private and secure. We don't want to connect to suspicious servers if we can avoid it.
-			Url = new Uri(fromEmbed.Thumbnail?.ProxyUrl ?? throw new InvalidOperationException("Embed Thumbnail ProxyUrl is missing"));
+			Url = new Uri(fromEmbed.Image?.ProxyUrl ?? fromEmbed.Thumbnail?.ProxyUrl ?? throw new InvalidOperationException("Embed ProxyUrl is missing"));
 			FileName = fromEmbed.Title ?? Path.GetFileName(Url.AbsolutePath);
 		}
 	}
