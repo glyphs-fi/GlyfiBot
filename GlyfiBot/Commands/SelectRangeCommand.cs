@@ -264,7 +264,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		return (submissions, submissionMessageCount);
 	}
 
-	private static async Task<bool> IsMessageDisqualified(Guild? guild, RestMessage message, ReactionEmojiProperties? disqualificationEmoji)
+	private static async Task<bool> IsMessageDisqualified(RestGuild? guild, RestMessage message, ReactionEmojiProperties? disqualificationEmoji)
 	{
 		if (disqualificationEmoji is null) return false;
 
@@ -280,10 +280,12 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			}
 			else
 			{
-				// We're not in a guild, so we're probably in a DM
+				// We're probably not in a guild, so we're probably in a DM
+				// (If we _are_ in a Guild, then it's still fine to let users disqualify their own messages, I guess...)
+				// Not good that then users with ManageMessages can't disqualify anymore, so not ideal.
 
 				// Here, users may disqualify their own messages (dunno why, but let's do it)
-				if (user == message.Author) return true;
+				if (user.Id == message.Author.Id) return true;
 			}
 		}
 		return false;
