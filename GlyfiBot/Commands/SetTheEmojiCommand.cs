@@ -107,7 +107,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 			}
 		}
 
-		public void SetOnReact(GatewayClient client, Func<RestMessage, Task> onSubmissionReact)
+		public void SetOnReact(GatewayClient client, Func<RestMessage, Task> onReact)
 		{
 			foreach((ulong channelId, ReactionEmojiProperties emojiToLookFor) in _emojis)
 			{
@@ -120,7 +120,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 					if (!emojiToLookFor.Is(e.Emoji)) return;
 					if (e.UserId == Program.BotUser.Id) return;
 					RestMessage message = await client.Rest.GetMessageAsync(e.ChannelId, e.MessageId);
-					await onSubmissionReact.Invoke(message);
+					await onReact.Invoke(message);
 				}
 			}
 		}
