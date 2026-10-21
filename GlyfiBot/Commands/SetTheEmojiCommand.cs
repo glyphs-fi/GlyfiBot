@@ -109,19 +109,17 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 
 		public void SetOnReact(GatewayClient client, Func<RestMessage, Task> onReact)
 		{
-			foreach((ulong channelId, ReactionEmojiProperties emojiToLookFor) in _emojis)
-			{
-				client.MessageReactionAdd += ProcessReaction;
-				continue;
+			client.MessageReactionAdd += ProcessReaction;
+			return;
 
-				async ValueTask ProcessReaction(MessageReactionAddEventArgs e)
-				{
-					if (e.ChannelId != channelId) return;
-					if (!emojiToLookFor.Is(e.Emoji)) return;
-					if (e.UserId == Program.BotUser.Id) return;
-					RestMessage message = await client.Rest.GetMessageAsync(e.ChannelId, e.MessageId);
-					await onReact.Invoke(message);
-				}
+			async ValueTask ProcessReaction(MessageReactionAddEventArgs e)
+			{
+				if (!_emojis.TryGetValue(e.ChannelId, out ReactionEmojiProperties? emojiToLookFor)) return; // Does this channel have an emoji registered? (This is the "Correct channel?" check)
+				if (!emojiToLookFor.Is(e.Emoji)) return;
+				if (e.UserId == Program.BotUser.Id) return;
+
+				RestMessage message = await client.Rest.GetMessageAsync(e.ChannelId, e.MessageId);
+				await onReact.Invoke(message);
 			}
 		}
 
