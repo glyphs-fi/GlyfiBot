@@ -202,9 +202,97 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 		public Sub(Embed fromEmbed)
 		{
 			// We use the Discord ProxyUrl to try and keep things a little more private and secure. We don't want to connect to suspicious servers if we can avoid it.
-			Url = new Uri(fromEmbed.Thumbnail?.ProxyUrl ?? throw new InvalidOperationException("Embed Thumbnail ProxyUrl is missing"));
+			Url = new Uri(fromEmbed.Image?.ProxyUrl ?? fromEmbed.Thumbnail?.ProxyUrl ?? throw new InvalidOperationException("Embed ProxyUrl is missing"));
 			FileName = fromEmbed.Title ?? Path.GetFileName(Url.AbsolutePath);
 		}
+	}
+
+	/// <summary>
+	/// Checks if a message has valid submissions.
+	/// </summary>
+	/// <param name="message">The message to check on</param>
+	/// <param name="submissionEmoji">The submission emoji</param>
+	/// <param name="guild">Optionally, the guild in which the message was sent (used for disqualification emoji permission checks)</param>
+	/// <param name="disqualificationEmoji">Optionally, the disqualification emoji</param>
+	/// <returns>A tuple with:
+	/// - A boolean deciding whether the message is a valid submission at all,<br/>
+	/// - The problem string will be null if there are no problems or warnings. When there are, the problem is returned.<br/>
+	/// Note that a valid submission can still have a problem (in which case it's more like a warning).<br/>
+	/// - A list of valid submissions.
+	/// </returns>
+	public static async Task<(bool valid, string? problem, List<Sub> subs)> ValidateMessage(RestMessage message, ReactionEmojiProperties submissionEmoji, RestGuild? guild, ReactionEmojiProperties? disqualificationEmoji)
+	{
+		// Does this message even contain anything that could be a submission?
+		if (message.Attachments.Count == 0 && message.Embeds.Count == 0) return (false, "No attachments or embeds", []);
+
+		// Has this message been marked as a submission, through the reaction emoji?
+		if (!message.HasBeenReactedToWith(submissionEmoji)) return (false, "The message wasn't reacted to with the submission emoji", []);
+
+		// Has the user who submitted this message reacted to it with the submission emoji _themselves_? (The check above↑ only checks if the emoji is present at all)
+		if (!await message.HasBeenReactedToWithBy(submissionEmoji, message.Author)) return (false, "The message author has not reacted to their own message with the submission emoji", []);
+
+		// Is the message disqualified, through the disqualification reaction emoji?
+		if (await IsMessageDisqualified(guild, message, disqualificationEmoji)) return (false, "Submission is disqualified", []);
+
+		// Check attachments (direct uploads)
+		List<Attachment> validAttachments = [];
+		foreach(Attachment attachment in message.Attachments)
+		{
+			string? type = attachment.ContentType;
+			if (type is null) continue; // Don't know when this would happen, but let's just ignore it...
+
+			if (type.StartsWith("image/"))
+			{
+				validAttachments.Add(attachment);
+			}
+			else
+			{
+				if (!type.StartsWith("video/")) // We allow videos in the same message, along with actual image submissions
+				{
+					return (false, "Message contained an attachment that was not an image", []);
+				}
+			}
+		}
+
+		// Check embeds (includes content that might be linked, instead of uploaded)
+		List<Embed> validEmbeds = [];
+		foreach(Embed embed in message.Embeds)
+		{
+			EmbedType? type = embed.Type;
+			if (type == EmbedType.Image)
+			{
+				if ((embed.Image?.ProxyUrl ?? embed.Thumbnail?.ProxyUrl) is null)
+				{
+					return (false, "Embed does not have a Thumbnail ProxyUrl", []);
+				}
+				validEmbeds.Add(embed);
+			}
+			else
+			{
+				// We allow videos in the same message, along with actual image submissions.
+				// We also allow (ignore) the following:
+				// - Article, for example: ArtStation and GitHub embeds
+				// - Link, for example: technicjelle.com
+				// - Rich, for example: a twitter.com tweet
+				if (type is EmbedType.Video or EmbedType.Article or EmbedType.Link or EmbedType.Rich) continue;
+
+				return (false, $"Message contained an embed that was not an image (`EmbedType.{type}`)", []);
+			}
+		}
+
+		// Combine attachments and embeds into submissions
+		List<Sub> submissions =
+		[
+			.. validAttachments.Select(attachment => new Sub(attachment)),
+			.. validEmbeds.Select(embed => new Sub(embed)),
+		];
+
+		if (submissions.Count == 0)
+		{
+			return (false, "No valid submissions found in this message", []);
+		}
+
+		return (true, submissions.Count == 1 ? null : "_All_ images in this message will be counted as (separate) submissions!", submissions);
 	}
 
 	public static async Task<(Dictionary<User, List<Sub>> submissions, uint submissionMessageCount)> FilterSubmissionsFromMessagesAsync(
@@ -221,31 +309,10 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 
 		foreach(RestMessage message in messages)
 		{
-			// Does this message even contain anything that could be a submission?
-			if (message.Attachments.Count == 0 && message.Embeds.Count == 0) continue;
-
-			// Has this message been marked as a submission, through the reaction emoji?
-			if (!message.HasBeenReactedToWith(emoji)) continue;
-
-			// Is the message disqualified, through the disqualification reaction emoji?
-			if (await IsMessageDisqualified(guild, message, disqualificationEmoji)) continue;
-
-			// Loop over all users who reacted to this message with the submission emoji...
-			await foreach(User user in message.GetReactionsAsync(emoji))
+			(bool valid, _, List<Sub> messageSubmissions) = await ValidateMessage(message, emoji, guild, disqualificationEmoji);
+			if (valid && messageSubmissions.Count > 0)
 			{
-				// ...to find the user who submitted the message, because only they themselves are allowed to mark their own message as a submission
-				if (user != message.Author) continue;
-
 				submissionMessageCount++;
-
-				List<Sub> allPotentialSubs =
-				[
-					// Check attachments (direct uploads)
-					.. message.Attachments.Select(attachment => new Sub(attachment)),
-					// Check embeds (includes content that might be linked, instead of uploaded)
-					.. message.Embeds.Where(embed => embed.Type == EmbedType.Image).Select(embed => new Sub(embed)),
-				];
-				if (allPotentialSubs.Count == 0) continue;
 
 				// Ensure that the `submissions` dictionary has an entry for this author...
 				if (!submissions.TryGetValue(message.Author, out List<Sub>? authorSubs))
@@ -254,17 +321,14 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 				}
 
 				// ...and then add all the submissions to the dictionary
-				authorSubs.AddRange(allPotentialSubs);
-
-				// We are done here. No need to check any more users.
-				break;
+				authorSubs.AddRange(messageSubmissions);
 			}
 		}
 
 		return (submissions, submissionMessageCount);
 	}
 
-	private static async Task<bool> IsMessageDisqualified(Guild? guild, RestMessage message, ReactionEmojiProperties? disqualificationEmoji)
+	private static async Task<bool> IsMessageDisqualified(RestGuild? guild, RestMessage message, ReactionEmojiProperties? disqualificationEmoji)
 	{
 		if (disqualificationEmoji is null) return false;
 
@@ -280,10 +344,12 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			}
 			else
 			{
-				// We're not in a guild, so we're probably in a DM
+				// We're probably not in a guild, so we're probably in a DM
+				// (If we _are_ in a Guild, then it's still fine to let users disqualify their own messages, I guess...)
+				// Not good that then users with ManageMessages can't disqualify anymore, so not ideal.
 
 				// Here, users may disqualify their own messages (dunno why, but let's do it)
-				if (user == message.Author) return true;
+				if (user.Id == message.Author.Id) return true;
 			}
 		}
 		return false;

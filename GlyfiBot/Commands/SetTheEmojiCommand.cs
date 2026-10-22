@@ -1,5 +1,6 @@
 using JetBrains.Annotations;
 using NetCord;
+using NetCord.Gateway;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
 using System.Collections.Concurrent;
@@ -13,6 +14,11 @@ namespace GlyfiBot.Commands;
 public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	private const string EMOJI_PARAMETER_DESCRIPTION = "Type a `:` and then the rest of the emoji. Let the autocomplete guide you!";
+
+	public static void Init(GatewayClient client)
+	{
+		_submission.SetOnReact(client, OnSubmissionReact);
+	}
 
 #region Submission
 
@@ -32,6 +38,26 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 	public static ReactionEmojiProperties? GetSubmissionEmoji(TextChannel channel)
 	{
 		return _submission.GetEmoji(channel);
+	}
+
+	private static async Task OnSubmissionReact(ReactionEmojiProperties submissionEmoji, RestMessage message, RestGuild? guild)
+	{
+		ReactionEmojiProperties? disqualificationEmoji = GetDisqualificationEmoji(message.ChannelId);
+		(bool valid, string? problem, _) = await SelectRangeCommand.ValidateMessage(message, submissionEmoji, guild, disqualificationEmoji);
+
+		if (valid)
+		{
+			await message.AddReactionAsync(new ReactionEmojiProperties("👍")); //TODO: Allow customising this approval emoji (should be an application emoji)
+			if (problem is not null)
+			{
+				await message.ReplyAsync($"Submission notice: {problem}"); //It's more of a warning here
+			}
+		}
+		else
+		{
+			await message.ReplyAsync($"Submission failed: {problem}");
+			await message.DeleteAllReactionsForEmojiAsync(submissionEmoji);
+		}
 	}
 
 #endregion
@@ -54,6 +80,11 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 	public static ReactionEmojiProperties? GetDisqualificationEmoji(TextChannel channel)
 	{
 		return _disqualification.GetEmoji(channel);
+	}
+
+	public static ReactionEmojiProperties? GetDisqualificationEmoji(ulong channelId)
+	{
+		return _disqualification.GetEmoji(channelId);
 	}
 
 #endregion
@@ -92,6 +123,24 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 			else
 			{
 				_emojis = new ConcurrentDictionary<ulong, ReactionEmojiProperties>();
+			}
+		}
+
+		public void SetOnReact(GatewayClient client, Func<ReactionEmojiProperties, RestMessage, RestGuild?, Task> onReact)
+		{
+			client.MessageReactionAdd += ProcessReaction;
+			return;
+
+			async ValueTask ProcessReaction(MessageReactionAddEventArgs e)
+			{
+				if (e.UserId != e.MessageAuthorId) return;
+				if (e.UserId == Program.BotUser.Id) return;
+				if (!_emojis.TryGetValue(e.ChannelId, out ReactionEmojiProperties? emojiToLookFor)) return; // Does this channel have an emoji registered? (This is the "Correct channel?" check)
+				if (!emojiToLookFor.Is(e.Emoji)) return;
+
+				RestMessage message = await client.Rest.GetMessageAsync(e.ChannelId, e.MessageId);
+				RestGuild? guild = e.GuildId.HasValue ? await client.Rest.GetGuildAsync(e.GuildId.Value) : null;
+				await onReact.Invoke(emojiToLookFor, message, guild);
 			}
 		}
 
@@ -155,6 +204,11 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 		public ReactionEmojiProperties? GetEmoji(Channel channel)
 		{
 			return _emojis.GetValueOrDefault(channel.Id);
+		}
+
+		public ReactionEmojiProperties? GetEmoji(ulong channelId)
+		{
+			return _emojis.GetValueOrDefault(channelId);
 		}
 
 		private void RemoveEmojiRegistration(SlashCommandContext context)

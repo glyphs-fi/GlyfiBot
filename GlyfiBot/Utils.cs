@@ -137,34 +137,48 @@ public static partial class Utils
 		}
 	}
 
+	/// <param name="emojiToLookFor">The emoji to look for</param>
+	extension(ReactionEmojiProperties emojiToLookFor)
+	{
+		/// <summary>
+		/// Whether the emoji from the event is the same as the one we are looking for.
+		/// </summary>
+		/// <param name="eventEmoji">The emoji from the event</param>
+		/// <returns>Whether it is the same emoji or not</returns>
+		public bool Is(MessageReactionEmoji eventEmoji)
+		{
+			if (emojiToLookFor.Id is null && eventEmoji.Id is null)
+			{
+				// Both emojis are named.
+				return emojiToLookFor.Name == eventEmoji.Name;
+			}
+
+			// At least one emoji is custom. Due to nullability, this will behave correctly in all three cases of equality.
+			return emojiToLookFor.Id == eventEmoji.Id;
+		}
+	}
+
 	/// <param name="message">The message</param>
 	extension(RestMessage message)
 	{
 		/// <summary>
 		/// Whether a specific message has been reacted to with this specific emoji.
 		/// </summary>
-		/// <param name="emoji">The emoji (may be null → false)</param>
+		/// <param name="emoji">The emoji</param>
 		///
 		/// <returns>Whether it's happened or not</returns>
-		public bool HasBeenReactedToWith(ReactionEmojiProperties? emoji)
+		public bool HasBeenReactedToWith(ReactionEmojiProperties emoji)
 		{
-			if (emoji is null) return false;
-			ulong? id = emoji.Id;
-			string name = emoji.Name;
+			return message.Reactions.Any(messageReaction => emoji.Is(messageReaction.Emoji));
+		}
 
-			foreach(MessageReaction messageReaction in message.Reactions)
+		public async Task<bool> HasBeenReactedToWithBy(ReactionEmojiProperties emoji, User user)
+		{
+			// Loop over all users who reacted to this message with the submission emoji...
+			await foreach(User u in message.GetReactionsAsync(emoji))
 			{
-				ulong? reactionId = messageReaction.Emoji.Id;
-				string? reactionName = messageReaction.Emoji.Name;
-
-				if (id is not null && reactionId is not null)
-				{
-					if (id == reactionId) return true;
-				}
-				else
-				{
-					if (name == reactionName) return true;
-				}
+				// ...to find the user we are looking for
+				if (u.Id == user.Id) return true;
 			}
 
 			return false;
