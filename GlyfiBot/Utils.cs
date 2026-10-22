@@ -172,6 +172,18 @@ public static partial class Utils
 			return message.Reactions.Any(messageReaction => emoji.Is(messageReaction.Emoji));
 		}
 
+		public async Task<bool> HasBeenReactedToWithBy(ReactionEmojiProperties emoji, User user)
+		{
+			// Loop over all users who reacted to this message with the submission emoji...
+			await foreach(User u in message.GetReactionsAsync(emoji))
+			{
+				// ...to find the user we are looking for
+				if (u.Id == user.Id) return true;
+			}
+
+			return false;
+		}
+
 		/// <summary>
 		/// Edit a message with the provided message properties.
 		/// </summary>
