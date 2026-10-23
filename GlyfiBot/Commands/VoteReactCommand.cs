@@ -28,7 +28,7 @@ public class VoteReactCommand : ApplicationCommandModule<SlashCommandContext>
 	)
 	{
 		// This is going to take a moment
-		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
+		await this.Defer();
 
 		// Parse messages and get references to them
 		string[] messageIDs = messages.Split(" ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);

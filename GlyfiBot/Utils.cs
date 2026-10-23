@@ -116,6 +116,14 @@ public static partial class Utils
 		}
 	}
 
+	extension(ApplicationCommandModule<SlashCommandContext> module)
+	{
+		public async Task Defer()
+		{
+			await module.RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
+		}
+	}
+
 	extension(SlashCommandContext context)
 	{
 		/// <summary>

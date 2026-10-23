@@ -51,7 +51,7 @@ public class SelectRangeCommand : ApplicationCommandModule<SlashCommandContext>
 			idEnd = idEndLocal;
 		}
 
-		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
+		await this.Defer();
 
 		List<RestMessage> messages = await GetMessagesBetweenAsync(Context, idStart, idEnd);
 

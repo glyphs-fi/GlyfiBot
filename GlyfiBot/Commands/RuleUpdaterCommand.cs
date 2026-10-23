@@ -25,8 +25,9 @@ public class RuleUpdaterCommand : ApplicationCommandModule<SlashCommandContext>
 
 		if (channelId is null || channelId.IsWhiteSpace())
 		{
+			await this.Defer(); //Deleting all the old rules messages will probably take a moment
 			await RulesUpdaterService.ClearChannelId();
-			await Context.SendEphemeralResponseAsync("""
+			await Context.ModifyEphemeralResponseAsync("""
 			                                         Cleared the registered rules channel.
 			                                         Remember to `/set-rules-channel` it to something again, so that the rules will be properly posted and updated again!
 			                                         """);

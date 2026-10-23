@@ -64,7 +64,7 @@ public class ProfilePicturesCommand : ApplicationCommandModule<SlashCommandConte
 			}
 		}
 
-		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
+		await this.Defer();
 
 		ulong? guildId = Context.Guild?.Id;
 		User[] users = guildId is null

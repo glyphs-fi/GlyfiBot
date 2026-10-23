@@ -125,7 +125,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		int? ppi = null
 	)
 	{
-		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
+		await this.Defer();
 		await _progressTracker.Start(Context);
 
 		string typstExe = await SetupTypst(Context);
@@ -197,7 +197,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 			                                     """);
 		}
 
-		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
+		await this.Defer();
 		await _progressTracker.Start(Context);
 
 		string typstExe = await SetupTypst(Context);
@@ -329,7 +329,7 @@ public class TypstCommand : ApplicationCommandModule<SlashCommandContext>
 		int? ppi = null
 	)
 	{
-		await RespondAsync(InteractionCallback.DeferredMessage(MessageFlags.Ephemeral));
+		await this.Defer();
 		await _progressTracker.Start(Context);
 
 		string typstExe = await SetupTypst(Context);
