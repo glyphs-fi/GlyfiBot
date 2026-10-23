@@ -53,9 +53,10 @@ public static class RulesUpdaterService
 
 	public static async Task ClearChannelId()
 	{
-		if (_channelId is not null)
+		if (_channelId.HasValue)
 		{
-			await ClearOldRules(_channelId.Value);
+			List<RestMessage> messages = await GetBotMessages(_channelId.Value);
+			await ClearOldRules(messages);
 		}
 
 		_channelId = null;
@@ -72,7 +73,7 @@ public static class RulesUpdaterService
 
 	private static void SaveRulesChannel()
 	{
-		if (_channelId is null)
+		if (!_channelId.HasValue)
 		{
 			File.Delete(RULES_CHANNEL_FILE);
 		}
@@ -84,7 +85,7 @@ public static class RulesUpdaterService
 
 	private static async Task UpdateRules(bool force = false)
 	{
-		if (_channelId is null) return;
+		if (!_channelId.HasValue) return;
 		ulong channelId = _channelId.Value;
 
 		(string allRulesDir, bool didDownload) = await DownloadRepo(RULES_REPO_NAME, Program.RULES_DIR);
@@ -102,14 +103,14 @@ public static class RulesUpdaterService
 		}).ToArray();
 		files.Sort();
 
-		List<RestMessage> messages = await GetMessages(channelId);
+		List<RestMessage> messages = await GetBotMessages(channelId);
 		if (messages.Count == files.Length)
 		{
 			await EditRuleMessages(messages, files);
 		}
 		else
 		{
-			await ClearAndReSendRuleMessages(channelId, files);
+			await ClearAndReSendRuleMessages(channelId, files, messages);
 		}
 	}
 
@@ -141,14 +142,16 @@ public static class RulesUpdaterService
 			}
 			catch(RestException e)
 			{
+				Console.Error.WriteLine(e);
 				await message.Edit(GetMessagePropertiesForError(e, file));
+				throw;
 			}
 		}
 	}
 
-	private static async Task ClearAndReSendRuleMessages(ulong channelId, string[] files)
+	private static async Task ClearAndReSendRuleMessages(ulong channelId, string[] files, List<RestMessage> oldMessages)
 	{
-		await ClearOldRules(channelId);
+		await ClearOldRules(oldMessages);
 
 		foreach(string file in files)
 		{
@@ -158,22 +161,39 @@ public static class RulesUpdaterService
 			}
 			catch(RestException e)
 			{
+				Console.Error.WriteLine(e);
 				await _client.Rest.SendMessageAsync(channelId, GetMessagePropertiesForError(e, file));
+				throw;
 			}
 			catch(JsonException e)
 			{
+				Console.Error.WriteLine(e);
 				await _client.Rest.SendMessageAsync(channelId, GetMessagePropertiesForError(e, file));
+				throw;
 			}
 		}
 	}
 
-	private static async Task ClearOldRules(ulong channelId)
+	private static async Task ClearOldRules(List<RestMessage> oldMessages)
 	{
-		List<RestMessage> messages = await GetMessages(channelId);
-		await _client.Rest.DeleteMessagesAsync(channelId, messages.Select(message => message.Id));
+		// Cannot bulk-delete messages, because Discord only allows doing that on messages newer than 14 days,
+		// and these rule updates probably won't happen often enough to hit that.
+		// So we do it one-by-one...
+		try
+		{
+			foreach(RestMessage message in oldMessages)
+			{
+				await message.DeleteAsync();
+			}
+		}
+		catch(Exception e)
+		{
+			Console.Error.WriteLine(e);
+			throw;
+		}
 	}
 
-	private static async Task<List<RestMessage>> GetMessages(ulong channelId)
+	private static async Task<List<RestMessage>> GetBotMessages(ulong channelId)
 	{
 		IAsyncEnumerable<RestMessage> asyncEnumerable = _client.Rest.GetMessagesAsync(channelId, new PaginationProperties<ulong> {Direction = PaginationDirection.Before});
 		List<RestMessage> messages = await asyncEnumerable.Where(message => message.Author.Id == Program.BotUser.Id).ToListAsync();
