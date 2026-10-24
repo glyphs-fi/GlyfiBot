@@ -14,16 +14,26 @@ namespace GlyfiBot.Commands;
 public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 {
 	private const string EMOJI_PARAMETER_DESCRIPTION = "Type a `:` and then the rest of the emoji. Let the autocomplete guide you!";
+	private const string APPROVAL_EMOJI_NAME = "confirmed";
 
-	public static void Init(GatewayClient client)
+	public static async Task Init(GatewayClient client)
 	{
 		_submission.SetOnReact(client, OnSubmissionReact);
+		_approvalEmoji = await FindApprovalEmoji(client);
+		if (_approvalEmoji is null)
+		{
+			await Console.Error.WriteLineAsync($"""
+			                                    WARNING: The bot does not have an :{APPROVAL_EMOJI_NAME}: emoji!
+			                                    	Upload one here: https://discord.com/developers/applications/{client.Id}/emojis
+			                                    """);
+		}
 	}
 
 #region Submission
 
 	private const string SUBMISSION_COMMAND_NAME = "submission";
 	private static readonly InternalEmoji _submission = new(SUBMISSION_COMMAND_NAME);
+	private static ReactionEmojiProperties? _approvalEmoji;
 
 	[SubSlashCommand(SUBMISSION_COMMAND_NAME,
 		"Set the emoji that will mark something as a submission in this channel")]
@@ -40,6 +50,14 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 		return _submission.GetEmoji(channel);
 	}
 
+	private static async Task<ReactionEmojiProperties?> FindApprovalEmoji(GatewayClient client)
+	{
+		IReadOnlyList<ApplicationEmoji> applicationEmojis = await client.Rest.GetApplicationEmojisAsync(client.Id);
+		ApplicationEmoji? approvalApplicationEmoji = applicationEmojis.FirstOrDefault(x => x.Name == APPROVAL_EMOJI_NAME);
+		if (approvalApplicationEmoji == null) return null;
+		return new ReactionEmojiProperties(approvalApplicationEmoji.Name, approvalApplicationEmoji.Id);
+	}
+
 	private static async Task OnSubmissionReact(ReactionEmojiProperties submissionEmoji, RestMessage message, RestGuild? guild)
 	{
 		ReactionEmojiProperties? disqualificationEmoji = GetDisqualificationEmoji(message.ChannelId);
@@ -47,7 +65,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 
 		if (valid)
 		{
-			await message.AddReactionAsync(new ReactionEmojiProperties("👍")); //TODO: Allow customising this approval emoji (should be an application emoji)
+			await message.AddReactionAsync(_approvalEmoji ?? new ReactionEmojiProperties("👍"));
 			if (problem is not null)
 			{
 				await message.ReplyAsync($"Submission notice: {problem}"); //It's more of a warning here
@@ -136,6 +154,13 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 				if (e.UserId != e.MessageAuthorId) return;
 				if (e.UserId == Program.BotUser.Id) return;
 				if (!_emojis.TryGetValue(e.ChannelId, out ReactionEmojiProperties? emojiToLookFor)) return; // Does this channel have an emoji registered? (This is the "Correct channel?" check)
+				if (_approvalEmoji is not null && _approvalEmoji.Is(e.Emoji))
+				{
+					// No-one else should be able to react with the approval emoji. Only the bot.
+					await client.Rest.DeleteUserMessageReactionAsync(e.ChannelId, e.MessageId, _approvalEmoji, e.UserId);
+					return;
+				}
+
 				if (!emojiToLookFor.Is(e.Emoji)) return;
 
 				RestMessage message = await client.Rest.GetMessageAsync(e.ChannelId, e.MessageId);
