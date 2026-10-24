@@ -25,6 +25,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 			await Console.Error.WriteLineAsync($"""
 			                                    WARNING: The bot does not have an :{APPROVAL_EMOJI_NAME}: emoji!
 			                                    	Upload one here: https://discord.com/developers/applications/{client.Id}/emojis
+			                                    	And then restart the bot to register the new emoji.
 			                                    """);
 		}
 	}
