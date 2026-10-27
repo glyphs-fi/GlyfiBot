@@ -51,6 +51,14 @@ static internal class Program
 			}
 		}
 
+		// Ensure that the bot is run from a terminal, and not double-clicked
+		if (Console.IsInputRedirected)
+		{
+			Console.WriteLine("The bot should be run from a terminal");
+			await StopTheBot();
+			return;
+		}
+
 		Directory.CreateDirectory(DATA_DIR);
 		Directory.CreateDirectory(SETTINGS_DIR);
 
