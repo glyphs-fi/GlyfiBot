@@ -37,6 +37,8 @@ static internal class Program
 	public const string VOICE_TO_TEXT_RUNS_DIR = $"{VOICE_TO_TEXT_DIR}/runs";
 	public const string VOICE_MODEL_DIR = $"{VOICE_TO_TEXT_DIR}/models";
 
+	private static FileStream _lockFile = null!;
+
 	private static async Task Main(string[] args)
 	{
 		// Ensure that the executable is run from the correct directory
@@ -55,6 +57,18 @@ static internal class Program
 		if (Console.IsInputRedirected)
 		{
 			Console.WriteLine("The bot should be run from a terminal");
+			await StopTheBot();
+			return;
+		}
+
+		// Ensure that only a single instance of the bot is running
+		try
+		{
+			_lockFile = new FileStream("running.lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+		}
+		catch(IOException)
+		{
+			Console.WriteLine("Cannot run multiple instances of the bot");
 			await StopTheBot();
 			return;
 		}
@@ -234,6 +248,10 @@ static internal class Program
 		}
 
 		await Task.WhenAll(services);
+
+		// This technically won't ever happen, but I include this here anyway, to ensure no funny business happens with the file reference.
+		// (And to silence the "this variable is assigned but never used" warning.)
+		Console.WriteLine(_lockFile);
 	}
 
 	private static async Task StopTheBot()
