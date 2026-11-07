@@ -18,7 +18,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 
 	public static async Task Init(GatewayClient client)
 	{
-		_submission.SetOnReact(client, OnSubmissionReact);
+		_submission.SetOnReact(client, OnSubmissionReact, OnSubmissionRemove);
 		ReactionEmojiProperties? approvalEmoji = await FindApprovalEmoji(client);
 		if (approvalEmoji is null)
 		{
@@ -79,6 +79,11 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 			await message.ReplyAsync($"Submission failed: {problem}");
 			await message.DeleteAllReactionsForEmojiAsync(submissionEmoji);
 		}
+	}
+
+	private static async Task OnSubmissionRemove(RestMessage message)
+	{
+		await message.DeleteAllReactionsForEmojiAsync(_approvalEmoji);
 	}
 
 #endregion
@@ -147,16 +152,18 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 			}
 		}
 
-		public void SetOnReact(GatewayClient client, Func<ReactionEmojiProperties, RestMessage, RestGuild?, Task> onReact)
+		public void SetOnReact(GatewayClient client, Func<ReactionEmojiProperties, RestMessage, RestGuild?, Task> onReact, Func<RestMessage, Task> onRemove)
 		{
 			client.MessageReactionAdd += ProcessReaction;
+			client.MessageReactionRemove += RemoveReaction;
 			return;
 
 			async ValueTask ProcessReaction(MessageReactionAddEventArgs e)
 			{
-				if (e.UserId != e.MessageAuthorId) return;
+				// Ignore bot events
 				if (e.UserId == Program.BotUser.Id) return;
-				if (!_emojis.TryGetValue(e.ChannelId, out ReactionEmojiProperties? emojiToLookFor)) return; // Does this channel have an emoji registered? (This is the "Correct channel?" check)
+
+				// If the emoji is the approval emoji, remove it
 				if (_approvalEmoji.Is(e.Emoji))
 				{
 					// No-one else should be able to react with the approval emoji. Only the bot.
@@ -164,11 +171,43 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 					return;
 				}
 
+				// Does this channel have an emoji registered? (This is the "Correct channel?" check)
+				if (!_emojis.TryGetValue(e.ChannelId, out ReactionEmojiProperties? emojiToLookFor)) return;
+
+				// Was the reaction the emoji we're looking for?
 				if (!emojiToLookFor.Is(e.Emoji)) return;
 
+				// Was the reaction from the message author themselves?
+				if (e.UserId != e.MessageAuthorId)
+				{
+					// No-one else should be able to react with the submission emoji. Only the message author themselves.
+					await client.Rest.DeleteUserMessageReactionAsync(e.ChannelId, e.MessageId, emojiToLookFor, e.UserId);
+					return;
+				}
+
+				// Finally call the function
 				RestMessage message = await client.Rest.GetMessageAsync(e.ChannelId, e.MessageId);
 				RestGuild? guild = e.GuildId.HasValue ? await client.Rest.GetGuildAsync(e.GuildId.Value) : null;
 				await onReact.Invoke(emojiToLookFor, message, guild);
+			}
+
+			async ValueTask RemoveReaction(MessageReactionRemoveEventArgs e)
+			{
+				// Ignore bot events
+				if (e.UserId == Program.BotUser.Id) return;
+
+				// Does this channel have an emoji registered? (This is the "Correct channel?" check)
+				if (!_emojis.TryGetValue(e.ChannelId, out ReactionEmojiProperties? emojiToLookFor)) return;
+
+				// Was the reaction the emoji we're looking for?
+				if (!emojiToLookFor.Is(e.Emoji)) return;
+
+				RestMessage message = await client.Rest.GetMessageAsync(e.ChannelId, e.MessageId);
+
+				// Was the reaction removal from the message author themselves?
+				if (e.UserId != message.Author.Id) return;
+
+				await onRemove.Invoke(message);
 			}
 		}
 
