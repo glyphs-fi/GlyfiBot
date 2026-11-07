@@ -19,8 +19,8 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 	public static async Task Init(GatewayClient client)
 	{
 		_submission.SetOnReact(client, OnSubmissionReact);
-		_approvalEmoji = await FindApprovalEmoji(client);
-		if (_approvalEmoji is null)
+		ReactionEmojiProperties? approvalEmoji = await FindApprovalEmoji(client);
+		if (approvalEmoji is null)
 		{
 			await Console.Error.WriteLineAsync($"""
 			                                    WARNING: The bot does not have an :{APPROVAL_EMOJI_NAME}: emoji!
@@ -28,13 +28,15 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 			                                    	And then restart the bot to register the new emoji.
 			                                    """);
 		}
+		else
+			_approvalEmoji = approvalEmoji;
 	}
 
 #region Submission
 
 	private const string SUBMISSION_COMMAND_NAME = "submission";
 	private static readonly InternalEmoji _submission = new(SUBMISSION_COMMAND_NAME);
-	private static ReactionEmojiProperties? _approvalEmoji;
+	private static ReactionEmojiProperties _approvalEmoji = new("👍");
 
 	[SubSlashCommand(SUBMISSION_COMMAND_NAME,
 		"Set the emoji that will mark something as a submission in this channel")]
@@ -66,7 +68,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 
 		if (valid)
 		{
-			await message.AddReactionAsync(_approvalEmoji ?? new ReactionEmojiProperties("👍"));
+			await message.AddReactionAsync(_approvalEmoji);
 			if (problem is not null)
 			{
 				await message.ReplyAsync($"Submission notice: {problem}"); //It's more of a warning here
@@ -155,7 +157,7 @@ public class SetTheEmojiCommand : ApplicationCommandModule<SlashCommandContext>
 				if (e.UserId != e.MessageAuthorId) return;
 				if (e.UserId == Program.BotUser.Id) return;
 				if (!_emojis.TryGetValue(e.ChannelId, out ReactionEmojiProperties? emojiToLookFor)) return; // Does this channel have an emoji registered? (This is the "Correct channel?" check)
-				if (_approvalEmoji is not null && _approvalEmoji.Is(e.Emoji))
+				if (_approvalEmoji.Is(e.Emoji))
 				{
 					// No-one else should be able to react with the approval emoji. Only the bot.
 					await client.Rest.DeleteUserMessageReactionAsync(e.ChannelId, e.MessageId, _approvalEmoji, e.UserId);
